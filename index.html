@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>存股計畫追蹤 — 00878 & 006208</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111822;
+    --border: #1e2d3d;
+    --text: #cdd9e5;
+    --muted: #546e7a;
+    --accent: #4fc3f7;
+    --green: #43d9ad;
+    --red: #f47067;
+    --gold: #ffd080;
+    --purple: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1, h2, h3 { font-family: 'Syne', sans-serif; }
+
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .header p { color: var(--muted); font-size: 11px; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media(max-width: 600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+  .big-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .gold { color: var(--gold); }
+  .accent { color: var(--accent); }
+  .purple { color: var(--purple); }
+
+  /* Input controls */
+  .input-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .input-row:last-child { border-bottom: none; }
+  .input-label { color: var(--muted); font-size: 11px; }
+  .input-val {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+    width: 120px;
+    text-align: right;
+  }
+  .input-val:focus { outline: none; border-color: var(--accent); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th {
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+  }
+  th:first-child { text-align: left; }
+  td {
+    padding: 7px 8px;
+    text-align: right;
+    border-bottom: 1px solid #151e28;
+  }
+  td:first-child { text-align: left; color: var(--muted); }
+  tr:hover td { background: #0d1520; }
+  tr.phase-header td {
+    background: #0d1520;
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 8px;
+  }
+
+  /* Progress bar */
+  .progress-wrap { background: var(--border); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Monthly log */
+  .log-entry {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 6px;
+    width: 100%;
+    text-align: right;
+  }
+  .log-input:focus { outline: none; border-color: var(--accent); }
+  .log-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 4px 0 8px;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 500;
+    letter-spacing: 1px;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .note {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 12px;
+    line-height: 1.6;
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+  }
+
+  .separator { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* Chart bars */
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-top: 12px; }
+  .bar-group { display: flex; gap: 2px; align-items: flex-end; flex: 1; }
+  .bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height 0.3s;
+  }
+  .bar-label { font-size: 9px; color: var(--muted); text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 存股計畫追蹤</h1>
+  <p>00878 &amp; 006208 · DCA Dashboard · 6-Year Plan</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid-3" id="summary-cards">
+  <div class="card">
+    <div class="card-title">Total Deployed</div>
+    <div class="big-number accent" id="total-deployed">NT$0</div>
+    <div class="sub" id="deployed-pct">0% of 6-year plan</div>
+    <div class="progress-wrap"><div class="progress-bar" id="deployed-bar" style="width:0%;background:var(--accent)"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Total Dividends Collected</div>
+    <div class="big-number green" id="total-div">NT$0</div>
+    <div class="sub" id="div-sub">Across all quarters</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Estimated Portfolio Value</div>
+    <div class="big-number gold" id="total-value">NT$0</div>
+    <div class="sub" id="value-sub">Based on current prices</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('settings')">⚙ Settings</button>
+  <button class="tab" onclick="showTab('plan')">📋 6-Year Plan</button>
+  <button class="tab" onclick="showTab('log')">📝 Monthly Log</button>
+  <button class="tab" onclick="showTab('projection')">🔭 Projection</button>
+</div>
+
+<!-- Settings Tab -->
+<div class="tab-content active" id="tab-settings">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">00878 Settings</div>
+      <div class="input-row">
+        <span class="input-label">Initial lump sum (NT$)</span>
+        <input class="input-val" id="s-878-lump" type="number" value="200000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Monthly DCA Yr 1 (NT$)</span>
+        <input class="input-val" id="s-878-m1" type="number" value="30000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Monthly DCA Yr 2–6 (NT$)</span>
+        <input class="input-val" id="s-878-m2" type="number" value="20000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Current price (NT$)</span>
+        <input class="input-val" id="s-878-price" type="number" value="22.5" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Annual dividend yield (%)</span>
+        <input class="input-val" id="s-878-yield" type="number" value="7.39" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Annual capital growth (%)</span>
+        <input class="input-val" id="s-878-growth" type="number" value="3" oninput="recalc()">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">006208 Settings</div>
+      <div class="input-row">
+        <span class="input-label">Initial lump sum (NT$)</span>
+        <input class="input-val" id="s-208-lump" type="number" value="160000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Monthly DCA Yr 1 (NT$)</span>
+        <input class="input-val" id="s-208-m1" type="number" value="10000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Monthly DCA Yr 2–6 (NT$)</span>
+        <input class="input-val" id="s-208-m2" type="number" value="10000" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Current price (NT$)</span>
+        <input class="input-val" id="s-208-price" type="number" value="85" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Annual dividend yield (%)</span>
+        <input class="input-val" id="s-208-yield" type="number" value="2.5" oninput="recalc()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Annual capital growth (%)</span>
+        <input class="input-val" id="s-208-growth" type="number" value="8" oninput="recalc()">
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">3711 Position (for recovery tracking)</div>
+    <div class="grid-2">
+      <div>
+        <div class="input-row">
+          <span class="input-label">Lot 2 entry price (NT$)</span>
+          <input class="input-val" id="s-3711-entry" type="number" value="360" oninput="recalc()">
+        </div>
+        <div class="input-row">
+          <span class="input-label">Current 3711 price (NT$)</span>
+          <input class="input-val" id="s-3711-price" type="number" value="344" oninput="recalc()">
+        </div>
+        <div class="input-row">
+          <span class="input-label">Realized loss (NT$)</span>
+          <input class="input-val" id="s-3711-loss" type="number" value="10702" oninput="recalc()">
+        </div>
+        <div class="input-row">
+          <span class="input-label">Full recovery target (NT$)</span>
+          <input class="input-val" id="s-3711-target" type="number" value="373" oninput="recalc()">
+        </div>
+      </div>
+      <div id="recovery-card" style="padding:16px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Plan Tab -->
+<div class="tab-content" id="tab-plan">
+  <div class="card">
+    <div class="card-title">6-Year Deployment Plan</div>
+    <table id="plan-table">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Phase</th>
+          <th>00878 Annual</th>
+          <th>006208 Annual</th>
+          <th>Total Annual</th>
+          <th>Cumulative</th>
+        </tr>
+      </thead>
+      <tbody id="plan-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Monthly Log Tab -->
+<div class="tab-content" id="tab-log">
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Monthly Purchase Log</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="exportCSV()">Export CSV</button>
+        <button class="btn" onclick="addMonth()">+ Add Month</button>
+      </div>
+    </div>
+    <div class="log-header">
+      <span>Month</span>
+      <span style="text-align:right">00878 Amt</span>
+      <span style="text-align:right">006208 Amt</span>
+      <span style="text-align:right">Dividend</span>
+      <span style="text-align:right">Notes</span>
+    </div>
+    <div id="log-entries"></div>
+    <div class="separator"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span style="color:var(--muted);font-size:11px">Total logged: </span>
+        <span class="green" id="log-total">NT$0</span>
+        <span style="color:var(--muted);font-size:11px;margin-left:16px">Total dividends: </span>
+        <span class="gold" id="log-div-total">NT$0</span>
+      </div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:12px">
+    💾 Data is saved automatically in your browser's local storage. Clear browser data will reset the log.<br>
+    📤 Use Export CSV to save a backup copy.
+  </div>
+</div>
+
+<!-- Projection Tab -->
+<div class="tab-content" id="tab-projection">
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">6-Year Projected Portfolio Value</div>
+    <table id="proj-table">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>00878 Value</th>
+          <th>006208 Value</th>
+          <th>Dividends (yr)</th>
+          <th>Cumul. Dividends</th>
+          <th>Total Value</th>
+          <th>Total Return %</th>
+        </tr>
+      </thead>
+      <tbody id="proj-body"></tbody>
+    </table>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">6-Year Summary</div>
+      <div id="proj-summary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Annual Dividend Income (Year 6)</div>
+      <div class="big-number gold" id="yr6-div">—</div>
+      <div class="sub">Quarterly payments of approx:</div>
+      <div class="big-number green" style="font-size:18px;margin-top:8px" id="quarterly-div">—</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:32px;color:var(--muted);font-size:10px;letter-spacing:1px">
+  ⚠ FOR PERSONAL TRACKING ONLY · NOT INVESTMENT ADVICE · PAST PERFORMANCE ≠ FUTURE RESULTS
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+let logData = JSON.parse(localStorage.getItem('dca_log') || '[]');
+
+// ─── Tabs ────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  recalc();
+}
+
+// ─── Helpers ─────────────────────────────────────────────
+const fmt = n => 'NT$' + Math.round(n).toLocaleString();
+const pct = n => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+const g = id => parseFloat(document.getElementById(id).value) || 0;
+
+// ─── Main Recalc ─────────────────────────────────────────
+function recalc() {
+  calc3711Recovery();
+  calcPlan();
+  calcProjection();
+  calcSummaryCards();
+  renderLog();
+}
+
+// ─── 3711 Recovery ───────────────────────────────────────
+function calc3711Recovery() {
+  const entry = g('s-3711-entry');
+  const price = g('s-3711-price');
+  const loss = g('s-3711-loss');
+  const target = g('s-3711-target');
+  const unrealized = (price - entry) * 1000;
+  const totalPL = unrealized - loss;
+  const gapToTarget = target - price;
+  const pctToTarget = ((target - price) / price * 100).toFixed(1);
+  const progressPct = Math.max(0, Math.min(100, (price - (entry - 60)) / (target - (entry - 60)) * 100));
+
+  document.getElementById('recovery-card').innerHTML = `
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">3711 RECOVERY STATUS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div style="color:var(--muted);font-size:10px">Current price</div>
+        <div style="color:${price >= entry ? 'var(--green)' : 'var(--red)'};font-size:16px;font-family:'Syne',sans-serif;font-weight:700">NT$${price}</div>
+      </div>
+      <div>
+        <div style="color:var(--muted);font-size:10px">Target NT$${target}</div>
+        <div style="color:var(--gold);font-size:16px;font-family:'Syne',sans-serif;font-weight:700">+${pctToTarget}% away</div>
+      </div>
+      <div>
+        <div style="color:var(--muted);font-size:10px">Unrealized P&L</div>
+        <div style="color:${unrealized >= 0 ? 'var(--green)' : 'var(--red)'};font-size:13px">${fmt(unrealized)}</div>
+      </div>
+      <div>
+        <div style="color:var(--muted);font-size:10px">Total P&L (incl. lot1)</div>
+        <div style="color:${totalPL >= 0 ? 'var(--green)' : 'var(--red)'};font-size:13px">${fmt(totalPL)}</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+        <span>Recovery progress</span><span>${progressPct.toFixed(0)}%</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${progressPct}%;background:var(--gold)"></div></div>
+    </div>
+  `;
+}
+
+// ─── 6-Year Plan Table ───────────────────────────────────
+function calcPlan() {
+  const m878_1 = g('s-878-m1'); const m878_2 = g('s-878-m2');
+  const m208_1 = g('s-208-m1'); const m208_2 = g('s-208-m2');
+  const lump878 = g('s-878-lump'); const lump208 = g('s-208-lump');
+
+  const phases = ['Deployment', 'Accumulation', 'Accumulation', 'Compounding', 'Compounding', 'Compounding'];
+  let cumul = 0;
+  let html = '';
+  for (let yr = 1; yr <= 6; yr++) {
+    const a878 = yr === 1 ? lump878 + m878_1 * 12 : m878_2 * 12;
+    const a208 = yr === 1 ? lump208 + m208_1 * 12 : m208_2 * 12;
+    const total = a878 + a208;
+    cumul += total;
+    const phaseColor = yr === 1 ? 'var(--accent)' : yr <= 3 ? 'var(--green)' : 'var(--gold)';
+    html += `<tr>
+      <td>Year ${yr}</td>
+      <td><span class="badge" style="background:${phaseColor}22;color:${phaseColor}">${phases[yr-1]}</span></td>
+      <td class="accent">${fmt(a878)}</td>
+      <td class="purple">${fmt(a208)}</td>
+      <td style="color:#fff">${fmt(total)}</td>
+      <td class="gold">${fmt(cumul)}</td>
+    </tr>`;
+  }
+  document.getElementById('plan-body').innerHTML = html;
+}
+
+// ─── Projection ──────────────────────────────────────────
+function calcProjection() {
+  const m878_1 = g('s-878-m1'); const m878_2 = g('s-878-m2');
+  const m208_1 = g('s-208-m1'); const m208_2 = g('s-208-m2');
+  const lump878 = g('s-878-lump'); const lump208 = g('s-208-lump');
+  const yield878 = g('s-878-yield') / 100;
+  const yield208 = g('s-208-yield') / 100;
+  const growth878 = 1 + g('s-878-growth') / 100;
+  const growth208 = 1 + g('s-208-growth') / 100;
+
+  let val878 = 0, val208 = 0, cumulDiv = 0;
+  let html = ''; let totalDeployed = 0;
+
+  for (let yr = 1; yr <= 6; yr++) {
+    const add878 = yr === 1 ? lump878 + m878_1 * 12 : m878_2 * 12;
+    const add208 = yr === 1 ? lump208 + m208_1 * 12 : m208_2 * 12;
+    val878 = (val878 + add878) * growth878;
+    val208 = (val208 + add208) * growth208;
+    const div878 = val878 * yield878;
+    const div208 = val208 * yield208;
+    const totalDiv = div878 + div208;
+    cumulDiv += totalDiv;
+    totalDeployed += add878 + add208;
+    const totalVal = val878 + val208 + cumulDiv;
+    const retPct = ((totalVal - totalDeployed) / totalDeployed * 100);
+
+    html += `<tr>
+      <td>Year ${yr}</td>
+      <td class="accent">${fmt(val878)}</td>
+      <td class="purple">${fmt(val208)}</td>
+      <td class="green">${fmt(totalDiv)}</td>
+      <td class="gold">${fmt(cumulDiv)}</td>
+      <td style="color:#fff;font-weight:600">${fmt(totalVal)}</td>
+      <td style="color:${retPct >= 0 ? 'var(--green)' : 'var(--red)'}">${pct(retPct)}</td>
+    </tr>`;
+
+    if (yr === 6) {
+      document.getElementById('yr6-div').textContent = fmt(totalDiv);
+      document.getElementById('quarterly-div').textContent = fmt(totalDiv / 4) + ' / quarter';
+      document.getElementById('proj-summary').innerHTML = `
+        <div class="input-row"><span class="input-label">Total capital deployed</span><span class="accent">${fmt(totalDeployed)}</span></div>
+        <div class="input-row"><span class="input-label">Portfolio value (yr 6)</span><span style="color:#fff">${fmt(val878 + val208)}</span></div>
+        <div class="input-row"><span class="input-label">Total dividends collected</span><span class="gold">${fmt(cumulDiv)}</span></div>
+        <div class="input-row"><span class="input-label">Grand total value</span><span class="green" style="font-size:15px;font-family:'Syne',sans-serif;font-weight:700">${fmt(totalVal)}</span></div>
+        <div class="input-row"><span class="input-label">Total return</span><span class="${retPct >= 0 ? 'green' : 'red'}">${pct(retPct)}</span></div>
+      `;
+    }
+  }
+  document.getElementById('proj-body').innerHTML = html;
+}
+
+// ─── Summary Cards ───────────────────────────────────────
+function calcSummaryCards() {
+  let totalDeployed = 0, totalDivCollected = 0;
+  logData.forEach(e => {
+    totalDeployed += (parseFloat(e.amt878) || 0) + (parseFloat(e.amt208) || 0);
+    totalDivCollected += parseFloat(e.dividend) || 0;
+  });
+
+  // 6-year plan total for progress
+  const lump878 = g('s-878-lump'); const lump208 = g('s-208-lump');
+  const m878_1 = g('s-878-m1'); const m878_2 = g('s-878-m2');
+  const m208_1 = g('s-208-m1'); const m208_2 = g('s-208-m2');
+  const planTotal = (lump878 + lump208) + (m878_1 + m208_1) * 12 + (m878_2 + m208_2) * 12 * 5;
+  const pctDone = Math.min(100, (totalDeployed / planTotal * 100));
+
+  // Estimate current value
+  const p878 = g('s-878-price'); const p208 = g('s-208-price');
+  // rough estimate from log
+  let units878 = 0, units208 = 0;
+  logData.forEach(e => {
+    units878 += (parseFloat(e.amt878) || 0) / p878;
+    units208 += (parseFloat(e.amt208) || 0) / p208;
+  });
+  const estValue = units878 * p878 + units208 * p208 + totalDivCollected;
+
+  document.getElementById('total-deployed').textContent = fmt(totalDeployed);
+  document.getElementById('deployed-pct').textContent = pctDone.toFixed(1) + '% of 6-year plan';
+  document.getElementById('deployed-bar').style.width = pctDone + '%';
+  document.getElementById('total-div').textContent = fmt(totalDivCollected);
+  document.getElementById('div-sub').textContent = logData.length + ' months logged';
+  document.getElementById('total-value').textContent = fmt(estValue || 0);
+  document.getElementById('value-sub').textContent = 'At current prices';
+}
+
+// ─── Monthly Log ─────────────────────────────────────────
+function renderLog() {
+  const container = document.getElementById('log-entries');
+  if (logData.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:11px">No entries yet. Click "+ Add Month" to start.</div>';
+    document.getElementById('log-total').textContent = 'NT$0';
+    document.getElementById('log-div-total').textContent = 'NT$0';
+    return;
+  }
+  let totalAmt = 0, totalDiv = 0;
+  let html = '';
+  logData.forEach((e, i) => {
+    const rowTotal = (parseFloat(e.amt878) || 0) + (parseFloat(e.amt208) || 0);
+    totalAmt += rowTotal;
+    totalDiv += parseFloat(e.dividend) || 0;
+    html += `<div class="log-entry">
+      <input class="log-input" value="${e.month}" onchange="updateLog(${i},'month',this.value)" placeholder="2026-04">
+      <input class="log-input" type="number" value="${e.amt878 || ''}" onchange="updateLog(${i},'amt878',this.value)" placeholder="30000">
+      <input class="log-input" type="number" value="${e.amt208 || ''}" onchange="updateLog(${i},'amt208',this.value)" placeholder="10000">
+      <input class="log-input" type="number" value="${e.dividend || ''}" onchange="updateLog(${i},'dividend',this.value)" placeholder="0">
+      <div style="display:flex;gap:4px;align-items:center">
+        <input class="log-input" value="${e.notes || ''}" onchange="updateLog(${i},'notes',this.value)" placeholder="—" style="width:80px">
+        <button onclick="deleteLog(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">×</button>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+  document.getElementById('log-total').textContent = fmt(totalAmt);
+  document.getElementById('log-div-total').textContent = fmt(totalDiv);
+}
+
+function addMonth() {
+  const now = new Date();
+  const label = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  logData.push({ month: label, amt878: g('s-878-m2'), amt208: g('s-208-m2'), dividend: 0, notes: '' });
+  saveLog();
+  showTab('log');
+}
+
+function updateLog(i, key, val) {
+  logData[i][key] = val;
+  saveLog();
+  calcSummaryCards();
+}
+
+function deleteLog(i) {
+  if (confirm('Delete this entry?')) {
+    logData.splice(i, 1);
+    saveLog();
+    recalc();
+  }
+}
+
+function saveLog() {
+  localStorage.setItem('dca_log', JSON.stringify(logData));
+  renderLog();
+  calcSummaryCards();
+}
+
+// ─── Export CSV ──────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Month', '00878 Amount', '006208 Amount', 'Dividend', 'Notes']];
+  logData.forEach(e => rows.push([e.month, e.amt878 || 0, e.amt208 || 0, e.dividend || 0, e.notes || '']));
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dca_log.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Init ────────────────────────────────────────────────
+recalc();
+</script>
+</body>
+</html>
