@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>存股計畫追蹤 v2</title>
+<title>存股計畫追蹤 v3</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -17,120 +17,90 @@
     --red: #f47067;
     --gold: #ffd080;
     --purple: #bc8cff;
+    --orange: #ffab40;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    min-height: 100vh;
-    padding: 24px 16px;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; min-height: 100vh; padding: 24px 16px; }
   h1, h2, h3 { font-family: 'Syne', sans-serif; }
-
   .header { text-align: center; margin-bottom: 32px; }
   .header h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
   .header p { color: var(--muted); font-size: 11px; margin-top: 6px; letter-spacing: 1px; text-transform: uppercase; }
-
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
   .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  @media(max-width: 700px) { .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; } }
-
+  @media(max-width: 700px) { .grid-2,.grid-4 { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
   .card-title { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
   .big-number { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; color: #fff; }
   .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
   .green { color: var(--green); } .red { color: var(--red); }
   .gold { color: var(--gold); } .accent { color: var(--accent); }
-  .purple { color: var(--purple); }
-
-  .input-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .purple { color: var(--purple); } .orange { color: var(--orange); }
+  .input-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); gap: 8px; }
   .input-row:last-child { border-bottom: none; }
-  .input-label { color: var(--muted); font-size: 11px; }
-  .input-val {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
-    padding: 4px 8px; width: 130px; text-align: right;
-  }
+  .input-label { color: var(--muted); font-size: 11px; flex: 1; }
+  .input-val { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 4px 8px; width: 130px; text-align: right; }
   .input-val:focus { outline: none; border-color: var(--accent); }
-
   table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th { color: var(--muted); font-weight: 400; letter-spacing: 1px; text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 10px; }
+  th { color: var(--muted); font-weight: 400; text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 10px; }
   th:first-child { text-align: left; }
   td { padding: 7px 8px; text-align: right; border-bottom: 1px solid #151e28; }
   td:first-child { text-align: left; color: var(--muted); }
   tr:hover td { background: #0d1520; }
-
   .progress-wrap { background: var(--border); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
   .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
   .tab { padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; letter-spacing: 1px; transition: all 0.15s; }
   .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
-
-  .log-header { display: grid; grid-template-columns: 90px 1fr 1fr 1fr 80px 24px; gap: 6px; padding: 4px 0 8px; color: var(--muted); font-size: 10px; letter-spacing: 1px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .log-header { display: grid; grid-template-columns: 90px 1fr 1fr 1fr 80px 24px; gap: 6px; padding: 4px 0 8px; color: var(--muted); font-size: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
   .log-entry { display: grid; grid-template-columns: 90px 1fr 1fr 1fr 80px 24px; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
   .log-entry:last-child { border-bottom: none; }
   .log-input { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; padding: 3px 6px; width: 100%; text-align: right; }
   .log-input:focus { outline: none; border-color: var(--accent); }
-
-  .btn { background: var(--accent); color: var(--bg); border: none; border-radius: 6px; padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; font-weight: 500; letter-spacing: 1px; transition: opacity 0.15s; }
+  .btn { background: var(--accent); color: var(--bg); border: none; border-radius: 6px; padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; font-weight: 500; letter-spacing: 1px; }
   .btn:hover { opacity: 0.85; }
   .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
   .btn-sm { padding: 4px 10px; font-size: 10px; }
-
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; letter-spacing: 1px; }
   .separator { height: 1px; background: var(--border); margin: 16px 0; }
   .note { font-size: 10px; color: var(--muted); margin-top: 12px; line-height: 1.6; border-left: 2px solid var(--border); padding-left: 10px; }
-
   .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-
-  /* 3711 recovery meter */
-  .recovery-meter { position: relative; height: 8px; background: var(--border); border-radius: 4px; overflow: visible; margin: 12px 0 20px; }
-  .recovery-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-  .recovery-marker { position: absolute; top: -4px; width: 2px; height: 16px; background: #fff; border-radius: 1px; }
-  .recovery-label { position: absolute; top: 16px; font-size: 9px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; border: 1px solid; margin-left: 6px; }
+  .badge-active { color: var(--green); border-color: var(--green); background: rgba(67,217,173,0.08); }
+  .badge-watching { color: var(--gold); border-color: var(--gold); background: rgba(255,208,128,0.08); }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>📈 存股計畫追蹤</h1>
-  <p>00878 DCA · 006208 Hold · 3711 Recovery · Started Mar 2026</p>
+  <h1>📈 存股計畫追蹤 v3</h1>
+  <p>00878 DCA · 006208 Lot1 held + Lot2 pending · 2330 Recovery · Apr 2026</p>
 </div>
 
-<!-- Top 4 KPI cards -->
-<div class="grid-4" id="kpi-cards">
+<div class="grid-4">
   <div class="card">
-    <div class="card-title">00878 Total Invested</div>
-    <div class="big-number accent" id="kpi-878">NT$0</div>
-    <div class="sub" id="kpi-878-sub">0 months of DCA</div>
-    <div class="progress-wrap"><div class="progress-bar" id="bar-878" style="width:0%;background:var(--accent)"></div></div>
+    <div class="card-title">Overall Return</div>
+    <div class="big-number green" id="kpi-return">—</div>
+    <div class="sub" id="kpi-pnl">—</div>
+    <div class="progress-wrap"><div class="progress-bar" id="bar-return" style="width:0%;background:var(--green)"></div></div>
   </div>
   <div class="card">
-    <div class="card-title">006208 Position</div>
-    <div class="big-number purple">NT$176,900</div>
-    <div class="sub" id="kpi-208-sub">1,000 shares @ NT$176.9</div>
-    <div class="sub" id="kpi-208-pnl" style="margin-top:4px">—</div>
+    <div class="card-title">00878</div>
+    <div class="big-number accent" id="kpi-878-val">—</div>
+    <div class="sub" id="kpi-878-sub">1,809 shares @ NT$22.10</div>
   </div>
   <div class="card">
-    <div class="card-title">Total Dividends</div>
-    <div class="big-number gold" id="kpi-div">NT$0</div>
-    <div class="sub" id="kpi-div-sub">Across all ETFs</div>
+    <div class="card-title">006208 Lot 1 P&L</div>
+    <div class="big-number purple" id="kpi-208-pnl">—</div>
+    <div class="sub" id="kpi-208-sub">1,000 shares @ NT$177.05</div>
   </div>
   <div class="card">
-    <div class="card-title">3711 Recovery</div>
-    <div class="big-number" id="kpi-3711-price" style="color:var(--red)">NT$333</div>
-    <div class="sub" id="kpi-3711-sub">Target NT$373</div>
-    <div class="progress-wrap" style="margin-top:8px"><div class="progress-bar" id="bar-3711" style="width:0%;background:var(--gold)"></div></div>
+    <div class="card-title">2330 P&L</div>
+    <div class="big-number orange" id="kpi-2330-pnl">—</div>
+    <div class="sub" id="kpi-2330-sub">100 shares @ NT$1,756.50</div>
   </div>
 </div>
 
-<!-- Tabs -->
 <div class="tabs">
   <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
   <button class="tab" onclick="showTab('settings')">⚙ Settings</button>
@@ -138,82 +108,77 @@
   <button class="tab" onclick="showTab('projection')">🔭 Projection</button>
 </div>
 
-<!-- Overview Tab -->
+<!-- OVERVIEW -->
 <div class="tab-content active" id="tab-overview">
   <div class="grid-2">
-
-    <!-- 00878 Card -->
     <div class="card">
-      <div class="card-title">
-        <span class="status-dot" style="background:var(--accent)"></span>
-        00878 — 定期定額 NT$40,000/month
-      </div>
+      <div class="card-title"><span class="status-dot" style="background:var(--accent)"></span>00878 — 國泰永續高股息</div>
       <div id="overview-878"></div>
     </div>
-
-    <!-- 006208 Card -->
     <div class="card">
-      <div class="card-title">
-        <span class="status-dot" style="background:var(--purple)"></span>
-        006208 — 1 張 Lump Sum (Set & Forget)
-      </div>
-      <div id="overview-208"></div>
+      <div class="card-title"><span class="status-dot" style="background:var(--orange)"></span>2330 — 台積電</div>
+      <div id="overview-2330"></div>
     </div>
   </div>
-
-  <!-- 3711 Recovery -->
-  <div class="card">
-    <div class="card-title">
-      <span class="status-dot" style="background:var(--gold)"></span>
-      3711 日月光 — Recovery Tracker
-    </div>
-    <div id="overview-3711"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title"><span class="status-dot" style="background:var(--purple)"></span>006208 — 富邦台50</div>
+    <div id="overview-208"></div>
   </div>
-
-  <!-- Portfolio Total -->
-  <div class="card" style="margin-top:16px;border-color:var(--accent)">
-    <div class="card-title">📦 Total Portfolio Snapshot</div>
+  <div class="card" style="border-color:var(--accent)">
+    <div class="card-title">📦 Total Portfolio</div>
     <div id="overview-total"></div>
   </div>
 </div>
 
-<!-- Settings Tab -->
+<!-- SETTINGS -->
 <div class="tab-content" id="tab-settings">
   <div class="grid-2">
     <div class="card">
       <div class="card-title">00878 Settings</div>
-      <div class="input-row"><span class="input-label">Monthly DCA amount (NT$)</span><input class="input-val" id="s-878-monthly" type="number" value="40000" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-878-price" type="number" value="22.5" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Annual dividend yield (%)</span><input class="input-val" id="s-878-yield" type="number" value="7.39" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Annual price growth (%)</span><input class="input-val" id="s-878-growth" type="number" value="3" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">DCA start month</span><input class="input-val" id="s-878-start" type="month" value="2026-03" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Current DCA/month (NT$)</span><input class="input-val" id="s-878-monthly" type="number" value="40000" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">DCA from Apr 24 (NT$)</span><input class="input-val" id="s-878-monthly2" type="number" value="80000" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Shares held</span><input class="input-val" id="s-878-shares" type="number" value="1809" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Avg cost (NT$)</span><input class="input-val" id="s-878-cost" type="number" value="22.10" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-878-price" type="number" value="24.06" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Annual yield (%)</span><input class="input-val" id="s-878-yield" type="number" value="7.39" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Annual growth (%)</span><input class="input-val" id="s-878-growth" type="number" value="3" oninput="recalc()"></div>
     </div>
     <div class="card">
-      <div class="card-title">006208 Settings</div>
-      <div class="input-row"><span class="input-label">Shares held</span><input class="input-val" id="s-208-shares" type="number" value="1000" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Entry price (NT$)</span><input class="input-val" id="s-208-entry" type="number" value="176.9" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-208-price" type="number" value="176.9" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Annual dividend yield (%)</span><input class="input-val" id="s-208-yield" type="number" value="2.5" oninput="recalc()"></div>
-      <div class="input-row"><span class="input-label">Annual price growth (%)</span><input class="input-val" id="s-208-growth" type="number" value="8" oninput="recalc()"></div>
+      <div class="card-title">2330 Settings</div>
+      <div class="input-row"><span class="input-label">Shares held</span><input class="input-val" id="s-2330-shares" type="number" value="100" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Avg cost (NT$)</span><input class="input-val" id="s-2330-cost" type="number" value="1756.50" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-2330-price" type="number" value="2030" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">Hard stop (NT$)</span><input class="input-val" id="s-2330-stop" type="number" value="1700" oninput="recalc()"></div>
+      <div class="input-row"><span class="input-label">3711 loss to recover (NT$)</span><input class="input-val" id="s-3711-loss" type="number" value="9308" oninput="recalc()"></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">3711 Settings</div>
+    <div class="card-title">006208 Settings</div>
     <div class="grid-2">
       <div>
-        <div class="input-row"><span class="input-label">Lot 2 entry price (NT$)</span><input class="input-val" id="s-3711-entry" type="number" value="360" oninput="recalc()"></div>
-        <div class="input-row"><span class="input-label">Shares (lot 2)</span><input class="input-val" id="s-3711-shares" type="number" value="1000" oninput="recalc()"></div>
-        <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-3711-price" type="number" value="333" oninput="recalc()"></div>
-        <div class="input-row"><span class="input-label">Realized loss lot 1 (NT$)</span><input class="input-val" id="s-3711-loss" type="number" value="10702" oninput="recalc()"></div>
-        <div class="input-row"><span class="input-label">Full recovery target (NT$)</span><input class="input-val" id="s-3711-target" type="number" value="373" oninput="recalc()"></div>
-        <div class="input-row"><span class="input-label">Hard stop (NT$)</span><input class="input-val" id="s-3711-stop" type="number" value="300" oninput="recalc()"></div>
+        <div style="color:var(--purple);font-size:10px;letter-spacing:1px;margin-bottom:10px">LOT 1 — HOLDING ✅</div>
+        <div class="input-row"><span class="input-label">Shares</span><input class="input-val" id="s-208-shares1" type="number" value="1000" oninput="recalc()"></div>
+        <div class="input-row"><span class="input-label">Avg cost (NT$)</span><input class="input-val" id="s-208-cost1" type="number" value="177.05" oninput="recalc()"></div>
+        <div class="input-row"><span class="input-label">Current price (NT$)</span><input class="input-val" id="s-208-price" type="number" value="194.85" oninput="recalc()"></div>
+        <div class="input-row"><span class="input-label">Annual yield (%)</span><input class="input-val" id="s-208-yield" type="number" value="2.5" oninput="recalc()"></div>
+        <div class="input-row"><span class="input-label">Annual growth (%)</span><input class="input-val" id="s-208-growth" type="number" value="8" oninput="recalc()"></div>
       </div>
-      <div style="padding:16px;background:var(--bg);border-radius:8px;border:1px solid var(--border)" id="s-3711-preview"></div>
+      <div>
+        <div style="color:var(--gold);font-size:10px;letter-spacing:1px;margin-bottom:10px">LOT 2 — PENDING ⏳</div>
+        <div class="input-row"><span class="input-label">Planned shares</span><input class="input-val" id="s-208-shares2" type="number" value="1000" oninput="recalc()"></div>
+        <div class="input-row"><span class="input-label">Target entry (NT$)</span><input class="input-val" id="s-208-target2" type="number" value="185" oninput="recalc()"></div>
+        <div class="note" style="margin-top:16px">
+          Entry conditions:<br>
+          ① 2330 外資 net buy 2-3 consecutive days<br>
+          ② 籌碼狀態 → 籌碼集中<br>
+          ③ 5日集中 turning positive
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Monthly Log Tab -->
+<!-- LOG -->
 <div class="tab-content" id="tab-log">
   <div class="card">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
@@ -226,40 +191,41 @@
     <div class="log-header">
       <span>Month</span>
       <span style="text-align:right">00878 Amt</span>
-      <span style="text-align:right">878 Dividend</span>
-      <span style="text-align:right">208 Dividend</span>
+      <span style="text-align:right">878 Div</span>
+      <span style="text-align:right">208 Div</span>
       <span style="text-align:right">Notes</span>
       <span></span>
     </div>
     <div id="log-entries"></div>
     <div class="separator"></div>
     <div style="display:flex;gap:24px;flex-wrap:wrap">
-      <div><span style="color:var(--muted);font-size:11px">Total 00878 invested: </span><span class="accent" id="log-878-total">NT$0</span></div>
-      <div><span style="color:var(--muted);font-size:11px">Total 878 dividends: </span><span class="gold" id="log-878-div">NT$0</span></div>
-      <div><span style="color:var(--muted);font-size:11px">Total 208 dividends: </span><span class="purple" id="log-208-div">NT$0</span></div>
+      <div><span style="color:var(--muted);font-size:11px">Total 00878: </span><span class="accent" id="log-878-total">NT$0</span></div>
+      <div><span style="color:var(--muted);font-size:11px">878 dividends: </span><span class="gold" id="log-878-div">NT$0</span></div>
+      <div><span style="color:var(--muted);font-size:11px">208 dividends: </span><span class="purple" id="log-208-div">NT$0</span></div>
     </div>
   </div>
   <div class="note" style="margin-top:12px">
-    💾 Data saved automatically in browser. Use Export CSV for backup.<br>
-    📌 006208 is a one-time lump sum — no monthly entry needed for it.
+    💾 Auto-saved in browser. Export CSV for backup.<br>
+    📅 DCA increases NT$40K → NT$80K/month from April 24, 2026.<br>
+    📌 006208 is lump sum — no monthly entry needed.
   </div>
 </div>
 
-<!-- Projection Tab -->
+<!-- PROJECTION -->
 <div class="tab-content" id="tab-projection">
   <div class="card" style="margin-bottom:16px">
-    <div class="card-title">6-Year Projection (00878 DCA + 006208 Hold)</div>
+    <div class="card-title">6-Year Projection — 00878 @ NT$80K/month + 006208 × 2 張</div>
     <table>
       <thead>
         <tr>
           <th>Year</th>
-          <th>00878 Invested</th>
-          <th>00878 Value</th>
-          <th>006208 Value</th>
-          <th>878 Dividends</th>
-          <th>208 Dividends</th>
+          <th>878 Invested</th>
+          <th>878 Value</th>
+          <th>208 Value</th>
+          <th>878 Div</th>
+          <th>208 Div</th>
           <th>Total Value</th>
-          <th>Return %</th>
+          <th>Return</th>
         </tr>
       </thead>
       <tbody id="proj-body"></tbody>
@@ -271,23 +237,26 @@
       <div id="proj-summary"></div>
     </div>
     <div class="card">
-      <div class="card-title">Year 6 Annual Dividend Income</div>
+      <div class="card-title">Year 6 Passive Income</div>
       <div class="big-number gold" id="yr6-div">—</div>
-      <div class="sub">Quarterly payment approx:</div>
+      <div class="sub">Per quarter:</div>
       <div class="big-number green" style="font-size:18px;margin-top:8px" id="quarterly-div">—</div>
       <div class="separator"></div>
-      <div class="sub" style="color:var(--muted)">Monthly equivalent:</div>
+      <div class="sub">Monthly equivalent:</div>
       <div class="big-number accent" style="font-size:18px;margin-top:4px" id="monthly-div">—</div>
+      <div class="separator"></div>
+      <div class="sub">vs 1-yr time deposit (2%):</div>
+      <div class="big-number green" style="font-size:15px;margin-top:4px" id="vs-deposit">—</div>
     </div>
   </div>
 </div>
 
 <div style="text-align:center;margin-top:32px;color:var(--muted);font-size:10px;letter-spacing:1px">
-  ⚠ PERSONAL TRACKING ONLY · NOT INVESTMENT ADVICE · PAST PERFORMANCE ≠ FUTURE RESULTS
+  ⚠ PERSONAL TRACKING ONLY · NOT INVESTMENT ADVICE · Broker data: 元大 Apr 17, 2026
 </div>
 
 <script>
-let logData = JSON.parse(localStorage.getItem('dca_log_v2') || '[]');
+let logData = JSON.parse(localStorage.getItem('dca_log_v3') || '[]');
 
 function showTab(id) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -298,272 +267,199 @@ function showTab(id) {
 }
 
 const fmt = n => 'NT$' + Math.round(n).toLocaleString();
-const pct = n => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+const pct = n => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
 const g = id => parseFloat(document.getElementById(id).value) || 0;
 
-function recalc() {
-  calcOverview();
-  calcProjection();
-  calcKPIs();
-  renderLog();
-}
+function recalc() { calcOverview(); calcKPIs(); calcProjection(); renderLog(); }
 
 function calcOverview() {
   // 00878
-  const monthly878 = g('s-878-monthly');
-  const price878 = g('s-878-price');
-  const yield878 = g('s-878-yield');
-  let total878 = 0, div878 = 0;
-  logData.forEach(e => {
-    total878 += parseFloat(e.amt878) || 0;
-    div878 += parseFloat(e.div878) || 0;
-  });
-  const shares878 = price878 > 0 ? total878 / price878 : 0;
-  const estVal878 = shares878 * price878;
-  const annualDiv878 = estVal878 * yield878 / 100;
+  const sh878 = g('s-878-shares'), co878 = g('s-878-cost'), pr878 = g('s-878-price');
+  const yl878 = g('s-878-yield'), m878 = g('s-878-monthly'), m878b = g('s-878-monthly2');
+  const cost878 = sh878 * co878, val878 = sh878 * pr878;
+  const pnl878 = val878 - cost878, pp878 = cost878 > 0 ? pnl878/cost878*100 : 0;
+  const adiv878 = val878 * yl878 / 100;
+  let dl878 = 0; logData.forEach(e => dl878 += parseFloat(e.div878)||0);
 
   document.getElementById('overview-878').innerHTML = `
-    <div class="input-row"><span class="input-label">Total invested</span><span class="accent">${fmt(total878)}</span></div>
-    <div class="input-row"><span class="input-label">Est. shares held</span><span style="color:#fff">${Math.round(shares878).toLocaleString()}</span></div>
-    <div class="input-row"><span class="input-label">Est. current value</span><span class="accent">${fmt(estVal878)}</span></div>
-    <div class="input-row"><span class="input-label">Dividends collected</span><span class="gold">${fmt(div878)}</span></div>
-    <div class="input-row"><span class="input-label">Projected annual div.</span><span class="green">${fmt(annualDiv878)}</span></div>
-    <div class="input-row"><span class="input-label">Months logged</span><span style="color:#fff">${logData.length}</span></div>
-    <div class="note" style="margin-top:8px">定期定額 running every month automatically ✅</div>
-  `;
+    <div class="input-row"><span class="input-label">Current DCA</span><span class="accent">NT$${m878.toLocaleString()}/month</span></div>
+    <div class="input-row"><span class="input-label">From Apr 24</span><span class="green">NT$${m878b.toLocaleString()}/month ▲</span></div>
+    <div class="input-row"><span class="input-label">Shares held</span><span style="color:#fff">${sh878.toLocaleString()}</span></div>
+    <div class="input-row"><span class="input-label">Avg cost</span><span class="accent">NT$${co878.toFixed(2)}</span></div>
+    <div class="input-row"><span class="input-label">Current value</span><span style="color:#fff">${fmt(val878)}</span></div>
+    <div class="input-row"><span class="input-label">Unrealized P&L</span><span class="${pnl878>=0?'green':'red'}">${fmt(pnl878)} (${pct(pp878)})</span></div>
+    <div class="input-row"><span class="input-label">Projected annual div.</span><span class="gold">${fmt(adiv878)}</span></div>
+    <div class="input-row"><span class="input-label">Dividends collected</span><span class="gold">${fmt(dl878)}</span></div>
+    <div class="note" style="margin-top:8px">定期定額 running ✅ · ~7.4% yield · quarterly</div>`;
+
+  // 2330
+  const sh33 = g('s-2330-shares'), co33 = g('s-2330-cost'), pr33 = g('s-2330-price');
+  const st33 = g('s-2330-stop'), l3711 = g('s-3711-loss');
+  const cost33 = sh33*co33, val33 = sh33*pr33, pnl33 = val33-cost33;
+  const pp33 = cost33>0 ? pnl33/cost33*100 : 0;
+  const recovered = pnl33 >= l3711;
+
+  document.getElementById('overview-2330').innerHTML = `
+    <div class="input-row"><span class="input-label">Shares (odd lot)</span><span style="color:#fff">${sh33}</span></div>
+    <div class="input-row"><span class="input-label">Avg cost</span><span class="orange">NT$${co33.toFixed(2)}</span></div>
+    <div class="input-row"><span class="input-label">Current price</span><span class="${pr33>=co33?'green':'red'}">NT$${pr33.toLocaleString()}</span></div>
+    <div class="input-row"><span class="input-label">Unrealized P&L</span><span class="${pnl33>=0?'green':'red'}">${fmt(pnl33)} (${pct(pp33)})</span></div>
+    <div class="input-row"><span class="input-label">3711 recovered?</span><span class="${recovered?'green':'gold'}">${recovered?'✅ FULLY RECOVERED':'NT$'+Math.round(l3711-pnl33).toLocaleString()+' remaining'}</span></div>
+    <div class="input-row"><span class="input-label">Hard stop</span><span class="red">NT$${st33.toLocaleString()}</span></div>
+    <div class="input-row"><span class="input-label">Buffer to stop</span><span class="${(pr33-st33)>200?'green':'red'}">NT$${(pr33-st33).toLocaleString()}</span></div>
+    <div class="note" style="margin-top:8px">Hold · Watch 2330 外資 before adding · TSMC earnings Apr 16 ✅</div>`;
 
   // 006208
-  const shares208 = g('s-208-shares');
-  const entry208 = g('s-208-entry');
-  const price208 = g('s-208-price');
-  const yield208 = g('s-208-yield');
-  const cost208 = shares208 * entry208;
-  const val208 = shares208 * price208;
-  const pnl208 = val208 - cost208;
-  const pnlPct208 = cost208 > 0 ? (pnl208 / cost208 * 100) : 0;
-  let div208 = 0;
-  logData.forEach(e => div208 += parseFloat(e.div208) || 0);
-  const annualDiv208 = val208 * yield208 / 100;
+  const sh1 = g('s-208-shares1'), co1 = g('s-208-cost1'), pr208 = g('s-208-price');
+  const sh2 = g('s-208-shares2'), tg2 = g('s-208-target2'), yl208 = g('s-208-yield');
+  const cost1 = sh1*co1, val1 = sh1*pr208, pnl1 = val1-cost1;
+  const pp1 = cost1>0 ? pnl1/cost1*100 : 0;
+  const adiv208 = val1*yl208/100;
+  const blended = (cost1+sh2*tg2)/(sh1+sh2);
+  const gap = pr208 - tg2;
+  let dl208 = 0; logData.forEach(e => dl208 += parseFloat(e.div208)||0);
 
   document.getElementById('overview-208').innerHTML = `
-    <div class="input-row"><span class="input-label">Entry price</span><span class="purple">NT$${entry208}</span></div>
-    <div class="input-row"><span class="input-label">Shares held</span><span style="color:#fff">${shares208.toLocaleString()} (1 張)</span></div>
-    <div class="input-row"><span class="input-label">Cost basis</span><span class="purple">${fmt(cost208)}</span></div>
-    <div class="input-row"><span class="input-label">Current value</span><span style="color:#fff">${fmt(val208)}</span></div>
-    <div class="input-row"><span class="input-label">Unrealized P&L</span><span class="${pnl208 >= 0 ? 'green' : 'red'}">${fmt(pnl208)} (${pct(pnlPct208)})</span></div>
-    <div class="input-row"><span class="input-label">Dividends collected</span><span class="gold">${fmt(div208)}</span></div>
-    <div class="input-row"><span class="input-label">Projected annual div.</span><span class="green">${fmt(annualDiv208)}</span></div>
-    <div class="note" style="margin-top:8px">One-time lump sum — set & forget ✅</div>
-  `;
-
-  // 3711
-  const entry3711 = g('s-3711-entry');
-  const shares3711 = g('s-3711-shares');
-  const price3711 = g('s-3711-price');
-  const loss3711 = g('s-3711-loss');
-  const target3711 = g('s-3711-target');
-  const stop3711 = g('s-3711-stop');
-  const unrealized = (price3711 - entry3711) * shares3711;
-  const totalPL = unrealized - loss3711;
-  const gapToTarget = target3711 - price3711;
-  const pctToTarget = (gapToTarget / price3711 * 100).toFixed(1);
-  const stopGap = price3711 - stop3711;
-  const progressPct = Math.max(0, Math.min(100, ((price3711 - stop3711) / (target3711 - stop3711)) * 100));
-
-  // markers
-  const entryPct = ((entry3711 - stop3711) / (target3711 - stop3711) * 100).toFixed(1);
-  const currentPct = progressPct.toFixed(1);
-
-  document.getElementById('overview-3711').innerHTML = `
-    <div class="grid-2" style="margin-bottom:12px">
+    <div class="grid-2">
       <div>
-        <div class="input-row"><span class="input-label">Lot 2 entry</span><span style="color:#fff">NT$${entry3711}</span></div>
-        <div class="input-row"><span class="input-label">Current price</span><span class="${price3711 >= entry3711 ? 'green' : 'red'}">NT$${price3711}</span></div>
-        <div class="input-row"><span class="input-label">Unrealized P&L</span><span class="${unrealized >= 0 ? 'green' : 'red'}">${fmt(unrealized)}</span></div>
-        <div class="input-row"><span class="input-label">Lot 1 realized loss</span><span class="red">−${fmt(loss3711)}</span></div>
-        <div class="input-row"><span class="input-label">Total P&L</span><span class="${totalPL >= 0 ? 'green' : 'red'}">${fmt(totalPL)}</span></div>
+        <div style="color:var(--purple);font-size:10px;letter-spacing:1px;margin-bottom:8px">LOT 1 <span class="badge badge-active">✅ HOLDING</span></div>
+        <div class="input-row"><span class="input-label">Shares</span><span class="purple">${sh1.toLocaleString()} (1 張)</span></div>
+        <div class="input-row"><span class="input-label">Avg cost</span><span class="purple">NT$${co1.toFixed(2)}</span></div>
+        <div class="input-row"><span class="input-label">Current value</span><span style="color:#fff">${fmt(val1)}</span></div>
+        <div class="input-row"><span class="input-label">Unrealized P&L</span><span class="${pnl1>=0?'green':'red'}">${fmt(pnl1)} (${pct(pp1)})</span></div>
+        <div class="input-row"><span class="input-label">Annual dividend</span><span class="gold">${fmt(adiv208)}</span></div>
+        <div class="input-row"><span class="input-label">Dividends collected</span><span class="gold">${fmt(dl208)}</span></div>
       </div>
       <div>
-        <div class="input-row"><span class="input-label">Full recovery target</span><span class="gold">NT$${target3711}</span></div>
-        <div class="input-row"><span class="input-label">Gap to target</span><span class="gold">NT$${gapToTarget.toFixed(1)} (+${pctToTarget}%)</span></div>
-        <div class="input-row"><span class="input-label">Hard stop</span><span class="red">NT$${stop3711}</span></div>
-        <div class="input-row"><span class="input-label">Buffer to stop</span><span class="${stopGap > 20 ? 'green' : 'red'}">NT$${stopGap.toFixed(1)}</span></div>
-        <div class="input-row"><span class="input-label">Next catalyst</span><span style="color:#fff">Apr 23 Earnings</span></div>
+        <div style="color:var(--gold);font-size:10px;letter-spacing:1px;margin-bottom:8px">LOT 2 <span class="badge badge-watching">⏳ WATCHING</span></div>
+        <div class="input-row"><span class="input-label">Target entry</span><span class="gold">NT$${tg2}</span></div>
+        <div class="input-row"><span class="input-label">vs current</span><span class="${gap>0?'red':'green'}">NT$${gap.toFixed(1)} ${gap>0?'▲ above target':'▼ at/below'}</span></div>
+        <div class="input-row"><span class="input-label">Planned</span><span style="color:#fff">${sh2.toLocaleString()} shares (1 張)</span></div>
+        <div class="input-row"><span class="input-label">Planned cost</span><span class="gold">${fmt(sh2*tg2)}</span></div>
+        <div class="input-row"><span class="input-label">Blended avg</span><span class="gold">NT$${blended.toFixed(2)}</span></div>
       </div>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Recovery path: Stop NT$${stop3711} → Current NT$${price3711} → Target NT$${target3711}</div>
-    <div class="recovery-meter">
-      <div class="recovery-fill" style="width:${progressPct}%;background:linear-gradient(90deg,var(--red),var(--gold))"></div>
-      <div class="recovery-marker" style="left:${Math.min(98,Math.max(2,entryPct))}%">
-        <div class="recovery-label">Entry<br>NT$${entry3711}</div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('s-3711-preview').innerHTML = `
-    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">QUICK STATUS</div>
-    <div style="font-size:22px;font-family:'Syne',sans-serif;font-weight:700;color:${price3711 >= entry3711 ? 'var(--green)' : 'var(--red)'}">NT$${price3711}</div>
-    <div style="font-size:11px;color:var(--muted);margin:4px 0 12px">${pct(pnlPct208)} from entry</div>
-    <div style="font-size:11px;color:var(--gold)">🎯 Need +${pctToTarget}% for full recovery</div>
-    <div style="font-size:11px;color:var(--red);margin-top:6px">🛑 Stop: NT$${stop3711} (${fmt(-stopGap * shares3711)} risk)</div>
-  `;
+    </div>`;
 
   // Total
-  const totalInvested = total878 + cost208;
-  const totalCurrentVal = estVal878 + val208;
-  const totalDiv = div878 + div208;
-  const totalPLAll = totalCurrentVal - totalInvested + totalDiv;
+  const totalCost = cost878 + cost1 + sh33*co33;
+  const totalVal = val878 + val1 + val33;
+  const totalPnl = totalVal - totalCost;
+  const totalPct = totalCost>0 ? totalPnl/totalCost*100 : 0;
+  const totalDiv = adiv878 + adiv208;
 
   document.getElementById('overview-total').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px">
-      <div><div style="color:var(--muted);font-size:10px">ETF Total Invested</div><div class="accent" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">${fmt(totalInvested)}</div></div>
-      <div><div style="color:var(--muted);font-size:10px">ETF Current Value</div><div style="color:#fff;font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">${fmt(totalCurrentVal)}</div></div>
-      <div><div style="color:var(--muted);font-size:10px">Dividends Collected</div><div class="gold" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">${fmt(totalDiv)}</div></div>
-      <div><div style="color:var(--muted);font-size:10px">3711 Total P&L</div><div class="${totalPL >= 0 ? 'green' : 'red'}" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">${fmt(totalPL)}</div></div>
-    </div>
-  `;
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px">
+      <div><div style="color:var(--muted);font-size:10px">Total Cost (Broker)</div><div class="accent" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">NT$392,680</div></div>
+      <div><div style="color:var(--muted);font-size:10px">Market Value (Broker)</div><div style="color:#fff;font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">NT$441,375</div></div>
+      <div><div style="color:var(--muted);font-size:10px">Total P&L (Broker)</div><div class="green" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">+NT$47,221</div></div>
+      <div><div style="color:var(--muted);font-size:10px">Return (Broker)</div><div class="green" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">+12.03%</div></div>
+      <div><div style="color:var(--muted);font-size:10px">Projected Annual Div.</div><div class="gold" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">${fmt(totalDiv)}</div></div>
+      <div><div style="color:var(--muted);font-size:10px">vs Time Deposit NT$2M</div><div class="green" style="font-size:18px;font-family:'Syne',sans-serif;font-weight:700;margin-top:4px">+${fmt(totalDiv-40000)}</div></div>
+    </div>`;
 }
 
 function calcKPIs() {
-  let total878 = 0, totalDiv = 0, div878 = 0, div208 = 0;
-  logData.forEach(e => {
-    total878 += parseFloat(e.amt878) || 0;
-    div878 += parseFloat(e.div878) || 0;
-    div208 += parseFloat(e.div208) || 0;
-  });
-  totalDiv = div878 + div208;
+  const sh878=g('s-878-shares'), co878=g('s-878-cost'), pr878=g('s-878-price');
+  const val878=sh878*pr878, pnl878=val878-sh878*co878;
+  document.getElementById('kpi-878-val').textContent = fmt(val878);
+  document.getElementById('kpi-878-sub').textContent = sh878.toLocaleString()+' shares @ NT$'+co878.toFixed(2)+' · '+pct((pr878-co878)/co878*100);
 
-  const monthly878 = g('s-878-monthly');
-  const plan6yr = monthly878 * 12 * 6;
-  const pctDone = plan6yr > 0 ? Math.min(100, total878 / plan6yr * 100) : 0;
+  const sh1=g('s-208-shares1'), co1=g('s-208-cost1'), pr208=g('s-208-price');
+  const pnl1=(pr208-co1)*sh1;
+  document.getElementById('kpi-208-pnl').textContent = (pnl1>=0?'+':'')+fmt(pnl1);
+  document.getElementById('kpi-208-sub').textContent = sh1.toLocaleString()+' shares @ NT$'+co1.toFixed(2)+' · '+pct((pr208-co1)/co1*100);
 
-  document.getElementById('kpi-878').textContent = fmt(total878);
-  document.getElementById('kpi-878-sub').textContent = logData.length + ' months · ' + pctDone.toFixed(1) + '% of 6yr plan';
-  document.getElementById('bar-878').style.width = pctDone + '%';
+  const sh33=g('s-2330-shares'), co33=g('s-2330-cost'), pr33=g('s-2330-price');
+  const pnl33=(pr33-co33)*sh33;
+  document.getElementById('kpi-2330-pnl').textContent = (pnl33>=0?'+':'')+fmt(pnl33);
+  document.getElementById('kpi-2330-sub').textContent = sh33+' shares @ NT$'+co33.toFixed(2)+' · '+pct((pr33-co33)/co33*100);
 
-  const price208 = g('s-208-price');
-  const entry208 = g('s-208-entry');
-  const pnl208 = (price208 - entry208) * 1000;
-  document.getElementById('kpi-208-pnl').textContent = (pnl208 >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(pnl208)) + ' P&L';
-  document.getElementById('kpi-208-pnl').style.color = pnl208 >= 0 ? 'var(--green)' : 'var(--red)';
-
-  document.getElementById('kpi-div').textContent = fmt(totalDiv);
-  document.getElementById('kpi-div-sub').textContent = '878: ' + fmt(div878) + ' · 208: ' + fmt(div208);
-
-  const price3711 = g('s-3711-price');
-  const target3711 = g('s-3711-target');
-  const stop3711 = g('s-3711-stop');
-  const entry3711 = g('s-3711-entry');
-  const prog = Math.max(0, Math.min(100, (price3711 - stop3711) / (target3711 - stop3711) * 100));
-  document.getElementById('kpi-3711-price').textContent = 'NT$' + price3711;
-  document.getElementById('kpi-3711-price').style.color = price3711 >= entry3711 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('kpi-3711-sub').textContent = 'Target NT$' + target3711 + ' · ' + prog.toFixed(0) + '% there';
-  document.getElementById('bar-3711').style.width = prog + '%';
+  // Use broker confirmed numbers for KPI header
+  document.getElementById('kpi-return').textContent = '+12.03%';
+  document.getElementById('kpi-pnl').textContent = '+NT$47,221 (broker confirmed)';
+  document.getElementById('bar-return').style.width = '36%';
 }
 
 function calcProjection() {
-  const monthly878 = g('s-878-monthly');
-  const yield878 = g('s-878-yield') / 100;
-  const growth878 = 1 + g('s-878-growth') / 100;
-  const shares208 = g('s-208-shares');
-  const entry208 = g('s-208-entry');
-  const yield208 = g('s-208-yield') / 100;
-  const growth208 = 1 + g('s-208-growth') / 100;
+  const m878 = g('s-878-monthly2');
+  const yl878 = g('s-878-yield')/100, gr878 = 1+g('s-878-growth')/100;
+  const sh1=g('s-208-shares1'), tg2=g('s-208-target2'), sh2=g('s-208-shares2');
+  const yl208=g('s-208-yield')/100, gr208=1+g('s-208-growth')/100;
+  const pr208=g('s-208-price'), pr878=g('s-878-price'), sh878=g('s-878-shares');
 
-  let val878 = 0, val208 = shares208 * entry208;
-  let cumulDiv = 0, totalInvested = val208;
-  let html = '';
+  let val878=sh878*pr878, val208=(sh1+sh2)*pr208;
+  let cumulDiv=0, totalInvested=sh878*g('s-878-cost')+sh1*g('s-208-cost1')+sh2*tg2;
+  let html='';
 
-  for (let yr = 1; yr <= 6; yr++) {
-    val878 = (val878 + monthly878 * 12) * growth878;
-    val208 = val208 * growth208;
-    totalInvested += monthly878 * 12;
-    const div878yr = val878 * yield878;
-    const div208yr = val208 * yield208;
-    const totalDivYr = div878yr + div208yr;
-    cumulDiv += totalDivYr;
-    const totalVal = val878 + val208 + cumulDiv;
-    const retPct = (totalVal - totalInvested) / totalInvested * 100;
-
-    html += `<tr>
-      <td>Year ${yr}</td>
-      <td class="accent">${fmt(monthly878 * 12 * yr)}</td>
-      <td class="accent">${fmt(val878)}</td>
-      <td class="purple">${fmt(val208)}</td>
-      <td class="gold">${fmt(div878yr)}</td>
-      <td class="purple">${fmt(div208yr)}</td>
-      <td style="color:#fff;font-weight:600">${fmt(totalVal)}</td>
-      <td style="color:${retPct >= 0 ? 'var(--green)' : 'var(--red)'}">${pct(retPct)}</td>
-    </tr>`;
-
-    if (yr === 6) {
-      document.getElementById('yr6-div').textContent = fmt(totalDivYr);
-      document.getElementById('quarterly-div').textContent = fmt(totalDivYr / 4) + ' / quarter';
-      document.getElementById('monthly-div').textContent = fmt(totalDivYr / 12) + ' / month';
+  for (let yr=1; yr<=6; yr++) {
+    val878 = (val878+m878*12)*gr878;
+    val208 = val208*gr208;
+    totalInvested += m878*12;
+    const d878=val878*yl878, d208=val208*yl208, dtot=d878+d208;
+    cumulDiv += dtot;
+    const tot=val878+val208+cumulDiv;
+    const r=(tot-totalInvested)/totalInvested*100;
+    html += `<tr><td>Year ${yr}</td><td class="accent">${fmt(m878*12*yr)}</td><td class="accent">${fmt(val878)}</td><td class="purple">${fmt(val208)}</td><td class="gold">${fmt(d878)}</td><td class="purple">${fmt(d208)}</td><td style="color:#fff;font-weight:600">${fmt(tot)}</td><td style="color:${r>=0?'var(--green)':'var(--red)'}">${pct(r)}</td></tr>`;
+    if (yr===6) {
+      document.getElementById('yr6-div').textContent = fmt(dtot);
+      document.getElementById('quarterly-div').textContent = fmt(dtot/4)+' / quarter';
+      document.getElementById('monthly-div').textContent = fmt(dtot/12)+' / month';
+      document.getElementById('vs-deposit').textContent = '+'+fmt(dtot-40000)+' vs NT$2M deposit';
       document.getElementById('proj-summary').innerHTML = `
-        <div class="input-row"><span class="input-label">Total capital deployed</span><span class="accent">${fmt(totalInvested)}</span></div>
-        <div class="input-row"><span class="input-label">00878 portfolio value</span><span class="accent">${fmt(val878)}</span></div>
-        <div class="input-row"><span class="input-label">006208 portfolio value</span><span class="purple">${fmt(val208)}</span></div>
-        <div class="input-row"><span class="input-label">Total dividends collected</span><span class="gold">${fmt(cumulDiv)}</span></div>
-        <div class="input-row"><span class="input-label">Grand total value</span><span class="green" style="font-size:15px;font-family:'Syne',sans-serif;font-weight:700">${fmt(totalVal)}</span></div>
-        <div class="input-row"><span class="input-label">Total return</span><span class="${retPct >= 0 ? 'green' : 'red'}" style="font-size:15px">${pct(retPct)}</span></div>
-      `;
+        <div class="input-row"><span class="input-label">Capital deployed</span><span class="accent">${fmt(totalInvested)}</span></div>
+        <div class="input-row"><span class="input-label">00878 value</span><span class="accent">${fmt(val878)}</span></div>
+        <div class="input-row"><span class="input-label">006208 × 2 value</span><span class="purple">${fmt(val208)}</span></div>
+        <div class="input-row"><span class="input-label">Cumulative dividends</span><span class="gold">${fmt(cumulDiv)}</span></div>
+        <div class="input-row"><span class="input-label">Grand total</span><span class="green" style="font-size:15px;font-family:'Syne',sans-serif;font-weight:700">${fmt(tot)}</span></div>
+        <div class="input-row"><span class="input-label">Total return</span><span class="${r>=0?'green':'red'}" style="font-size:15px">${pct(r)}</span></div>`;
     }
   }
   document.getElementById('proj-body').innerHTML = html;
 }
 
 function renderLog() {
-  const container = document.getElementById('log-entries');
-  if (logData.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:11px">No entries yet. Click "+ Add Month" to log your first DCA purchase.</div>';
-    document.getElementById('log-878-total').textContent = 'NT$0';
-    document.getElementById('log-878-div').textContent = 'NT$0';
-    document.getElementById('log-208-div').textContent = 'NT$0';
+  const c = document.getElementById('log-entries');
+  if (logData.length===0) {
+    c.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px;font-size:11px">No entries yet. Click "+ Add Month" to start.</div>';
+    ['log-878-total','log-878-div','log-208-div'].forEach(id => document.getElementById(id).textContent='NT$0');
     return;
   }
-  let total878 = 0, div878 = 0, div208 = 0;
-  let html = '';
-  logData.forEach((e, i) => {
-    total878 += parseFloat(e.amt878) || 0;
-    div878 += parseFloat(e.div878) || 0;
-    div208 += parseFloat(e.div208) || 0;
+  let t878=0, d878=0, d208=0, html='';
+  logData.forEach((e,i) => {
+    t878 += parseFloat(e.amt878)||0;
+    d878 += parseFloat(e.div878)||0;
+    d208 += parseFloat(e.div208)||0;
     html += `<div class="log-entry">
       <input class="log-input" value="${e.month}" onchange="updateLog(${i},'month',this.value)" placeholder="2026-04">
-      <input class="log-input" type="number" value="${e.amt878 || ''}" onchange="updateLog(${i},'amt878',this.value)" placeholder="40000">
-      <input class="log-input" type="number" value="${e.div878 || ''}" onchange="updateLog(${i},'div878',this.value)" placeholder="0">
-      <input class="log-input" type="number" value="${e.div208 || ''}" onchange="updateLog(${i},'div208',this.value)" placeholder="0">
-      <input class="log-input" value="${e.notes || ''}" onchange="updateLog(${i},'notes',this.value)" placeholder="—">
+      <input class="log-input" type="number" value="${e.amt878||''}" onchange="updateLog(${i},'amt878',this.value)" placeholder="40000">
+      <input class="log-input" type="number" value="${e.div878||''}" onchange="updateLog(${i},'div878',this.value)" placeholder="0">
+      <input class="log-input" type="number" value="${e.div208||''}" onchange="updateLog(${i},'div208',this.value)" placeholder="0">
+      <input class="log-input" value="${e.notes||''}" onchange="updateLog(${i},'notes',this.value)" placeholder="—">
       <button onclick="deleteLog(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0">×</button>
     </div>`;
   });
-  container.innerHTML = html;
-  document.getElementById('log-878-total').textContent = fmt(total878);
-  document.getElementById('log-878-div').textContent = fmt(div878);
-  document.getElementById('log-208-div').textContent = fmt(div208);
+  c.innerHTML=html;
+  document.getElementById('log-878-total').textContent=fmt(t878);
+  document.getElementById('log-878-div').textContent=fmt(d878);
+  document.getElementById('log-208-div').textContent=fmt(d208);
 }
 
 function addMonth() {
-  const now = new Date();
-  const label = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  logData.push({ month: label, amt878: g('s-878-monthly'), div878: 0, div208: 0, notes: '' });
-  saveLog();
-  showTab('log');
+  const now=new Date();
+  const label=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  logData.push({month:label, amt878:g('s-878-monthly'), div878:0, div208:0, notes:''});
+  saveLog(); showTab('log');
 }
-
-function updateLog(i, key, val) { logData[i][key] = val; saveLog(); calcKPIs(); }
-function deleteLog(i) { if (confirm('Delete this entry?')) { logData.splice(i, 1); saveLog(); recalc(); } }
-function saveLog() { localStorage.setItem('dca_log_v2', JSON.stringify(logData)); renderLog(); }
-
-function exportCSV() {
-  const rows = [['Month', '00878 Amount', '00878 Dividend', '006208 Dividend', 'Notes']];
-  logData.forEach(e => rows.push([e.month, e.amt878||0, e.div878||0, e.div208||0, e.notes||'']));
-  const csv = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'dca_log_v2.csv'; a.click();
+function updateLog(i,key,val){logData[i][key]=val; saveLog(); calcKPIs();}
+function deleteLog(i){if(confirm('Delete?')){logData.splice(i,1); saveLog(); recalc();}}
+function saveLog(){localStorage.setItem('dca_log_v3',JSON.stringify(logData)); renderLog();}
+function exportCSV(){
+  const rows=[['Month','00878 Amount','00878 Dividend','006208 Dividend','Notes']];
+  logData.forEach(e=>rows.push([e.month,e.amt878||0,e.div878||0,e.div208||0,e.notes||'']));
+  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='dca_log_v3.csv'; a.click();
 }
-
 recalc();
 </script>
 </body>
