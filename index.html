@@ -1158,44 +1158,25 @@ function saveDiv(editId) {
 
 // ── Price Fetch ────────────────────────────────────────────────────────────
 async function fetchLivePrice(ticker) {
-  // 1st: TWSE MIS real-time API (listed stocks, works during trading hours)
-  try {
-    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${ticker}.tw&json=1&delay=0`;
-    const r = await fetch(url, { cache: 'no-cache' });
-    if (r.ok) {
-      const d = await r.json();
-      const info = d?.msgArray?.[0];
-      const price = parseFloat(info?.z || info?.y); // z=current, y=yesterday close
-      if (price && price > 0) {
-        const isCurrent = !!parseFloat(info?.z);
-        return { price, state: isCurrent ? 'REGULAR' : 'CLOSED', source: 'TWSE即時' };
-      }
-    }
-  } catch {}
-
-  // 2nd: OTC (櫃買) MIS real-time API
-  try {
-    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=otc_${ticker}.tw&json=1&delay=0`;
-    const r = await fetch(url, { cache: 'no-cache' });
-    if (r.ok) {
-      const d = await r.json();
-      const info = d?.msgArray?.[0];
-      const price = parseFloat(info?.z || info?.y);
-      if (price && price > 0) {
-        const isCurrent = !!parseFloat(info?.z);
-        return { price, state: isCurrent ? 'REGULAR' : 'CLOSED', source: 'OTC即時' };
-      }
-    }
-  } catch {}
-
-  // 3rd: TWSE OpenAPI (closing price, always available after market close)
+  // 1st: TWSE OpenAPI — listed stocks (上市), updates during trading hours
   try {
     const r = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL', { cache: 'no-cache' });
     if (r.ok) {
       const data = await r.json();
       const stock = data.find(s => s.Code === ticker);
-      const price = parseFloat((stock?.ClosingPrice || '').replace(',', ''));
-      if (price > 0) return { price, state: 'CLOSED', source: 'TWSE收盤' };
+      const price = parseFloat((stock?.ClosingPrice || '').replace(/,/g, ''));
+      if (price > 0) return { price, state: 'REGULAR', source: 'TWSE上市' };
+    }
+  } catch {}
+
+  // 2nd: TPEx OpenAPI — OTC stocks (上櫃), e.g. some ETFs
+  try {
+    const r = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes', { cache: 'no-cache' });
+    if (r.ok) {
+      const data = await r.json();
+      const stock = data.find(s => s.SecuritiesCompanyCode === ticker);
+      const price = parseFloat((stock?.Close || '').replace(/,/g, ''));
+      if (price > 0) return { price, state: 'REGULAR', source: 'TPEx上櫃' };
     }
   } catch {}
 
