@@ -161,6 +161,10 @@ tr:hover td{background:var(--bg)}
   .tabs{gap:2px}
   .tab-btn{padding:7px 6px;font-size:11px}
 }
+.refresh-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 7px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s;line-height:1}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l)}
+.refresh-btn.spinning{animation:spin .7s linear infinite;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -184,6 +188,9 @@ tr:hover td{background:var(--bg)}
 
   <!-- DASHBOARD -->
   <div class="tab-content active" id="tab-dashboard">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-outline btn-sm" id="refresh-all-btn" onclick="refreshAllPrices()">🔄 更新所有股價 Refresh All Prices</button>
+    </div>
     <div class="grid-5" id="kpi-row"></div>
     <div class="grid-2" style="margin-bottom:16px">
       <div class="card"><div class="card-title">持股配置 Portfolio Allocation</div><div class="chart-wrap"><canvas id="chart-alloc"></canvas></div></div>
@@ -610,8 +617,9 @@ function dcaCard(pos) {
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
-          <input class="price-input" type="number" value="${pos.currentPrice || ''}" step="0.01"
+          <input class="price-input" id="price-dca-${pos.id}" type="number" value="${pos.currentPrice || ''}" step="0.01"
             onchange="updPrice('dca','${pos.id}',this.value)">
+          <button class="refresh-btn" id="rbtn-dca-${pos.id}" onclick="refreshPrice('dca','${pos.id}')" title="Fetch live price">🔄</button>
         </label>
         <button class="btn btn-outline btn-sm" onclick="openModal('add-lump','${pos.id}')">＋ 加碼 Lump Sum</button>
         <button class="btn btn-ghost btn-sm" onclick="openModal('edit-dca','${pos.id}')">✎</button>
@@ -685,8 +693,9 @@ function directCard(pos) {
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
-          <input class="price-input" type="number" value="${pos.currentPrice || ''}" step="0.01"
+          <input class="price-input" id="price-direct-${pos.id}" type="number" value="${pos.currentPrice || ''}" step="0.01"
             onchange="updPrice('direct','${pos.id}',this.value)">
+          <button class="refresh-btn" id="rbtn-direct-${pos.id}" onclick="refreshPrice('direct','${pos.id}')" title="Fetch live price">🔄</button>
         </label>
         <button class="btn btn-primary btn-sm" onclick="openModal('add-txn','${pos.id}')">＋ 買入 Add Buy</button>
         <button class="btn btn-ghost btn-sm" onclick="openModal('edit-direct','${pos.id}')">✎</button>
@@ -1136,6 +1145,68 @@ function saveDiv(editId) {
     toast('股利已記錄 Dividend added', 'ok');
   }
   S.dirty = true; closeModal(); renderAll();
+}
+
+// ── Price Fetch ────────────────────────────────────────────────────────────
+async function fetchLivePrice(ticker) {
+  // Try .TW first (TWSE listed), then .TWO (OTC)
+  const suffixes = ['.TW', '.TWO'];
+  for (const sfx of suffixes) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}${sfx}?interval=1d&range=1d`;
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      const state = d?.chart?.result?.[0]?.meta?.marketState; // REGULAR, PRE, POST, CLOSED
+      if (price) return { price, symbol: ticker + sfx, state };
+    } catch {}
+  }
+  throw new Error('查無報價 Price not found for ' + ticker);
+}
+
+async function refreshPrice(type, id) {
+  const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === id);
+  if (!pos) return;
+  const btn = document.getElementById(`rbtn-${type}-${id}`);
+  const input = document.getElementById(`price-${type}-${id}`);
+  if (btn) btn.classList.add('spinning');
+  try {
+    const { price, state } = await fetchLivePrice(pos.ticker);
+    pos.currentPrice = price;
+    if (input) input.value = price;
+    S.dirty = true;
+    renderDashboard();
+    const stateLabel = state === 'REGULAR' ? '盤中' : state === 'CLOSED' ? '收盤' : state;
+    toast(`${pos.ticker} NT$${price} (${stateLabel})`, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+async function refreshAllPrices() {
+  const btn = document.getElementById('refresh-all-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 更新中…'; }
+  const all = [
+    ...S.data.dca.map(p => ({ type: 'dca', pos: p })),
+    ...S.data.direct.map(p => ({ type: 'direct', pos: p }))
+  ];
+  let ok = 0, fail = 0;
+  await Promise.all(all.map(async ({ type, pos }) => {
+    try {
+      const { price } = await fetchLivePrice(pos.ticker);
+      pos.currentPrice = price;
+      const input = document.getElementById(`price-${type}-${pos.id}`);
+      if (input) input.value = price;
+      ok++;
+    } catch { fail++; }
+  }));
+  S.dirty = true;
+  renderDashboard();
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 更新所有股價 Refresh All Prices'; }
+  toast(`更新完成 Updated ${ok} ticker${ok!==1?'s':''}${fail ? `，${fail} 失敗 failed` : ''}`, fail ? 'err' : 'ok');
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
