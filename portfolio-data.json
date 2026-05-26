@@ -1,0 +1,81 @@
+{
+  "dca": [
+    {
+      "id": "163bd84b-241d-454d-bc8d-2d69d91fd8a4",
+      "ticker": "00878",
+      "name": "國泰永續高股息",
+      "type": "ETF",
+      "deductionDay": 25,
+      "monthlyAmount": 40000,
+      "currentPrice": 29.62,
+      "annualYield": 7.9,
+      "dividendTracking": true,
+      "entries": [
+        {
+          "id": "701c56d9-18dd-4dc6-b635-6a0024ec3025",
+          "date": "2026-05-24",
+          "amount": 120000,
+          "shares": 4757,
+          "pricePerShare": 25.13,
+          "type": "scheduled",
+          "notes": "mar-may/2026"
+        }
+      ],
+      "dividends": [
+        {
+          "id": "da656977-6ab9-43f5-8869-680e2548b678",
+          "date": "2026-06-12",
+          "amount": 2243,
+          "notes": "Q1/2026"
+        }
+      ]
+    }
+  ],
+  "direct": [
+    {
+      "id": "d13007a2-6226-4494-97bc-b274a4f25934",
+      "ticker": "006208",
+      "name": "富邦台50",
+      "type": "ETF",
+      "currentPrice": 232.55,
+      "annualYield": 3.23,
+      "dividendTracking": true,
+      "transactions": [
+        {
+          "id": "c3efad54-df32-4129-aaa0-23f6a359bae2",
+          "date": "2026-03-25",
+          "shares": 1000,
+          "costPerShare": 176.9,
+          "totalCost": 176900,
+          "notes": ""
+        },
+        {
+          "id": "0eb779ec-eb22-44c8-9a1c-56cc0c67cdfd",
+          "date": "2026-05-13",
+          "shares": 1000,
+          "costPerShare": 219.7,
+          "totalCost": 219700,
+          "notes": ""
+        },
+        {
+          "id": "1dfb887f-cf25-4434-ba4c-14c112961667",
+          "date": "2026-05-26",
+          "shares": 500,
+          "costPerShare": 232.65,
+          "totalCost": 116325,
+          "notes": ""
+        }
+      ],
+      "dividends": [
+        {
+          "id": "112065a4-044b-4a94-b480-971d133548ef",
+          "date": "2026-07-16",
+          "amount": 8620,
+          "notes": "Q1/2026",
+          "sharesAtPayout": 2500
+        }
+      ]
+    }
+  ],
+  "lastUpdated": "2026-05-26T07:02:56.748Z"
+}
