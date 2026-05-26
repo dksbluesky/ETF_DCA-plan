@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投資組合追蹤 · Portfolio Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f7fafc;--border:#e2e8f0;
+  --text:#2d3748;--muted:#718096;
+  --accent:#4299e1;--accent-l:#ebf8ff;
+  --green:#38a169;--green-l:#f0fff4;
+  --red:#e53e3e;--red-l:#fff5f5;
+  --gold:#d69e2e;--gold-l:#fffff0;
+  --purple:#805ad5;--purple-l:#faf5ff;
+  --teal:#319795;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;font-size:14px;min-height:100vh}
+
+/* Header */
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}
+.app-header h1{font-size:18px;font-weight:700}
+.app-header h1 span{color:var(--muted);font-weight:400;font-size:13px;margin-left:8px}
+.header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sync-status{font-size:12px;color:var(--muted)}
+.sync-status.saving{color:var(--gold)}
+.sync-status.saved{color:var(--green)}
+.sync-status.error{color:var(--red)}
+
+/* Layout */
+.main{max-width:1100px;margin:0 auto;padding:20px 16px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px}
+.tab-btn{flex:1;padding:8px 10px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{background:var(--bg);color:var(--text)}
+.tab-btn.active{background:var(--accent);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:900px){.grid-5{grid-template-columns:1fr 1fr 1fr}.grid-2,.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid-5,.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* KPI */
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.kpi-value{font-size:21px;font-weight:700;line-height:1.2}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.kpi.c-accent{border-color:var(--accent);background:var(--accent-l)}
+.kpi.c-green{border-color:var(--green);background:var(--green-l)}
+.kpi.c-red{border-color:var(--red);background:var(--red-l)}
+.kpi.c-gold{border-color:var(--gold);background:var(--gold-l)}
+
+/* Ticker card */
+.ticker-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ticker-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--surface2)}
+.ticker-sym{font-size:17px;font-weight:700}
+.ticker-nm{font-size:12px;color:var(--muted);margin-top:1px}
+.ticker-body{padding:16px 18px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--bg);border-radius:8px;padding:9px 12px}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.stat-val{font-size:14px;font-weight:600}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.b-etf{background:#ebf8ff;color:#2b6cb0}.b-stock{background:var(--purple-l);color:#553c9a}
+.b-dca{background:var(--green-l);color:#276749}.b-direct{background:var(--gold-l);color:#975a16}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--muted);font-weight:500;text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+th:first-child{text-align:left}
+td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--border)}
+td:first-child{text-align:left}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3182ce}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#276749}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#c53030}
+.btn-ghost{background:transparent;border:none;color:var(--muted);padding:4px 8px;font-size:12px;border-radius:6px;cursor:pointer}
+.btn-ghost:hover{color:var(--text);background:var(--bg)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:6px}
+
+/* Forms */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
+.form-input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--surface);transition:border-color .15s}
+.form-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(66,153,225,.12)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23718096' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.form-row{grid-template-columns:1fr}}
+.price-input{width:110px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;text-align:right;background:var(--surface);color:var(--text)}
+.price-input:focus{outline:none;border-color:var(--accent)}
+
+/* Upcoming */
+.upcoming-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.upcoming-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:8px}
+.upcoming-item.overdue{border-color:var(--gold);background:var(--gold-l)}
+.upcoming-date{font-size:13px;font-weight:600}
+.upcoming-amt{font-size:12px;color:var(--muted)}
+
+/* Collapsible */
+.coll-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0;cursor:pointer;border-top:1px solid var(--border);margin-top:12px;color:var(--muted);font-size:12px;font-weight:500;user-select:none}
+.coll-toggle:hover{color:var(--text)}
+.coll-body{padding-top:12px}
+
+/* Colors */
+.c-green{color:var(--green)}.c-red{color:var(--red)}.c-gold{color:var(--gold)}.c-accent{color:var(--accent)}.c-muted{color:var(--muted)}
+
+/* Charts */
+.chart-wrap{position:relative;height:220px}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* Section header */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:16px;font-weight:700}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .ico{font-size:40px;margin-bottom:12px}
+.empty p{font-size:14px;margin-bottom:16px}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-hd{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700}
+.modal-body{padding:20px}
+.modal-ft{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px;border-radius:6px;line-height:1}
+.close-btn:hover{background:var(--bg)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+.toast.ok{background:var(--green)}
+
+@media(max-width:600px){
+  .app-header{padding:10px 14px}
+  .main{padding:14px 12px}
+  .tabs{gap:2px}
+  .tab-btn{padding:7px 6px;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div><h1>📊 投資組合追蹤 <span>Portfolio Tracker</span></h1></div>
+  <div class="header-actions">
+    <span class="sync-status" id="sync-status">—</span>
+    <button class="btn btn-primary btn-sm" onclick="saveData()">💾 Save 儲存</button>
+    <button class="btn btn-outline btn-sm" onclick="syncConfirm()">↺ Sync 同步</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">📊 總覽 Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('dca')">📈 定期定額 DCA</button>
+    <button class="tab-btn" onclick="switchTab('direct')">🛒 直接買入 Direct Buy</button>
+    <button class="tab-btn" onclick="switchTab('settings')">⚙️ 設定 Settings</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="grid-5" id="kpi-row"></div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card"><div class="card-title">持股配置 Portfolio Allocation</div><div class="chart-wrap"><canvas id="chart-alloc"></canvas></div></div>
+      <div class="card"><div class="card-title">各股盈虧 P&amp;L by Ticker</div><div class="chart-wrap"><canvas id="chart-pnl"></canvas></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">定期定額累計投入 DCA Cumulative</div><div class="chart-wrap"><canvas id="chart-line"></canvas></div></div>
+      <div class="card"><div class="card-title">股利收入 Dividend Income</div><div class="chart-wrap"><canvas id="chart-div"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- DCA -->
+  <div class="tab-content" id="tab-dca">
+    <div class="sec-header">
+      <div class="sec-title">定期定額 DCA Positions</div>
+      <button class="btn btn-primary" onclick="openModal('add-dca')">＋ 新增 Add Ticker</button>
+    </div>
+    <div id="dca-list"></div>
+  </div>
+
+  <!-- DIRECT -->
+  <div class="tab-content" id="tab-direct">
+    <div class="sec-header">
+      <div class="sec-title">直接買入 Direct Buy Positions</div>
+      <button class="btn btn-primary" onclick="openModal('add-direct')">＋ 新增 Add Ticker</button>
+    </div>
+    <div id="direct-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="tab-content" id="tab-settings">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">GitHub 連線設定 GitHub Connection</div>
+        <div class="form-group">
+          <label class="form-label">Personal Access Token (PAT)</label>
+          <input type="password" class="form-input" id="s-pat" placeholder="ghp_xxxxxxxxxxxx" oninput="savePAT()">
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">只存在瀏覽器 localStorage，不會上傳。Stored locally only, never uploaded.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Repository</label>
+          <input class="form-input" id="s-repo" value="dksbluesky/ETF_DCA-plan" oninput="saveRepoSettings()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data File</label>
+          <input class="form-input" id="s-file" value="portfolio-data.json" oninput="saveRepoSettings()">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="testConn()">🔗 測試連線 Test</button>
+          <button class="btn btn-outline btn-sm" onclick="syncConfirm()">↺ Load from GitHub</button>
+          <button class="btn btn-primary btn-sm" onclick="saveData()">💾 Save to GitHub</button>
+        </div>
+        <div id="conn-result" style="margin-top:12px;font-size:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">資料管理 Data Management</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-outline" onclick="exportJSON()">📥 匯出備份 Export JSON</button>
+          <button class="btn btn-outline" onclick="document.getElementById('imp-file').click()">📤 匯入 Import JSON</button>
+          <input type="file" id="imp-file" accept=".json" style="display:none" onchange="handleImport(event)">
+          <div class="divider"></div>
+          <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑️ 清除所有資料 Clear All</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">使用說明 How to Use</div>
+      <div style="font-size:13px;line-height:2;color:var(--muted)">
+        <p><strong style="color:var(--text)">1. 設定 PAT：</strong>GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。建立 token 時選擇此 repo 的 Contents 讀寫權限，貼到上方欄位即可。</p>
+        <p><strong style="color:var(--text)">2. 跨裝置同步：</strong>手機瀏覽器開啟此頁，同樣輸入 PAT 一次。之後點「Sync 同步」即可載入最新資料。</p>
+        <p><strong style="color:var(--text)">3. 年成長率 Annual Growth %（原 App 說明）：</strong>僅用於預測模型，假設股價每年以此比率成長。不影響實際損益計算。</p>
+        <p><strong style="color:var(--text)">4. 更新股價：</strong>在每個標的卡片右上角的「現價 Price」欄位直接輸入最新價格，儲存後自動重新計算。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeBg(event)">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title" id="m-title"></span>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-ft" id="m-foot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const S = {
+  data: { dca: [], direct: [], lastUpdated: null },
+  sha: null,
+  dirty: false,
+  charts: {},
+  activeTab: 'dashboard',
+  mCtx: null
+};
+
+const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0;
+  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+});
+
+// ── GitHub API ─────────────────────────────────────────────────────────────
+const getPAT  = () => localStorage.getItem('p_pat') || '';
+const getRepo = () => localStorage.getItem('p_repo') || 'dksbluesky/ETF_DCA-plan';
+const getFile = () => localStorage.getItem('p_file') || 'portfolio-data.json';
+
+function syncConfirm() {
+  if (S.dirty && (S.data.dca.length || S.data.direct.length)) {
+    if (!confirm('⚠️ 你有未儲存的資料！\nYou have unsaved data!\n\n點「確定」會從 GitHub 載入並覆蓋本機資料。\nOK = Load from GitHub (local changes will be LOST)\n\n建議先按「Save 儲存」再同步。\nSuggested: Save first, then Sync.')) return;
+  }
+  loadData();
+}
+
+async function loadData() {
+  setSS('saving', '↺ Loading…');
+  try {
+    const h = { Accept: 'application/vnd.github.v3+json' };
+    if (getPAT()) h['Authorization'] = `token ${getPAT()}`;
+    const r = await fetch(`https://api.github.com/repos/${getRepo()}/contents/${getFile()}`, { headers: h });
+    if (r.status === 404) { setSS('', '—'); toast('尚無資料檔 No data file yet — add positions and save.'); return; }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    S.sha = j.sha;
+    S.data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
+    S.dirty = false;
+    renderAll();
+    setSS('saved', '✓ Synced');
+    toast('已載入 Loaded from GitHub', 'ok');
+  } catch (e) {
+    setSS('error', '✗ Error');
+    toast('載入失敗 ' + e.message, 'err');
+  }
+}
+
+async function saveData() {
+  if (!getPAT()) { toast('請先在設定中填寫 PAT Please configure PAT in Settings', 'err'); switchTab('settings'); return; }
+  setSS('saving', '↑ Saving…');
+  S.data.lastUpdated = new Date().toISOString();
+  try {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(S.data, null, 2))));
+    const body = { message: `Update portfolio ${new Date().toLocaleDateString('zh-TW')}`, content };
+    if (S.sha) body.sha = S.sha;
+    const r = await fetch(`https://api.github.com/repos/${getRepo()}/contents/${getFile()}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${getPAT()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.message || `HTTP ${r.status}`); }
+    S.sha = (await r.json()).content.sha;
+    S.dirty = false;
+    setSS('saved', '✓ Saved ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }));
+    toast('已儲存至 GitHub Saved', 'ok');
+  } catch (e) {
+    setSS('error', '✗ Error');
+    toast('儲存失敗 Save failed: ' + e.message, 'err');
+  }
+}
+
+async function testConn() {
+  const el = document.getElementById('conn-result');
+  el.textContent = '測試中…'; el.style.color = 'var(--muted)';
+  try {
+    const h = { Accept: 'application/vnd.github.v3+json' };
+    if (getPAT()) h['Authorization'] = `token ${getPAT()}`;
+    const r = await fetch(`https://api.github.com/repos/${getRepo()}`, { headers: h });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    el.innerHTML = `✅ 連線成功 <strong>${j.full_name}</strong> (${j.visibility})`;
+    el.style.color = 'var(--green)';
+  } catch (e) {
+    el.textContent = '❌ 失敗 ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+function savePAT() {
+  const v = document.getElementById('s-pat').value.trim();
+  v ? localStorage.setItem('p_pat', v) : localStorage.removeItem('p_pat');
+}
+function saveRepoSettings() {
+  localStorage.setItem('p_repo', document.getElementById('s-repo').value.trim());
+  localStorage.setItem('p_file', document.getElementById('s-file').value.trim());
+}
+function exportJSON() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S.data, null, 2)], { type: 'application/json' }));
+  a.download = 'portfolio-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+}
+function handleImport(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try { S.data = JSON.parse(ev.target.result); S.dirty = true; renderAll(); toast('已匯入 Imported', 'ok'); }
+    catch { toast('Invalid JSON', 'err'); }
+  };
+  r.readAsText(f);
+}
+function clearAll() {
+  if (!confirm('清除所有資料？Clear all data? This cannot be undone.')) return;
+  S.data = { dca: [], direct: [], lastUpdated: null }; S.dirty = true; renderAll();
+  toast('已清除 Cleared');
+}
+
+// ── Calculations ───────────────────────────────────────────────────────────
+function dcaCalc(pos) {
+  const entries = (pos.entries || []).filter(e => e.type !== 'skipped');
+  const totalShares = entries.reduce((s, e) => s + (+e.shares || 0), 0);
+  const totalCost   = entries.reduce((s, e) => s + (+e.amount || 0), 0);
+  const avgCost     = totalShares > 0 ? totalCost / totalShares : 0;
+  const val         = totalShares * (+pos.currentPrice || 0);
+  const pnl         = val - totalCost;
+  const pnlPct      = totalCost > 0 ? pnl / totalCost * 100 : 0;
+  const divRcvd     = (pos.dividends || []).reduce((s, d) => s + (+d.amount || 0), 0);
+  const divProj     = val * (+pos.annualYield || 0) / 100;
+  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, divProj };
+}
+
+function directCalc(pos) {
+  const txns       = pos.transactions || [];
+  const totalShares = txns.reduce((s, t) => s + (+t.shares || 0), 0);
+  const totalCost   = txns.reduce((s, t) => s + (+t.totalCost || +t.shares * +t.costPerShare || 0), 0);
+  const avgCost     = totalShares > 0 ? totalCost / totalShares : 0;
+  const val         = totalShares * (+pos.currentPrice || 0);
+  const pnl         = val - totalCost;
+  const pnlPct      = totalCost > 0 ? pnl / totalCost * 100 : 0;
+  const divRcvd     = (pos.dividends || []).reduce((s, d) => s + (+d.amount || 0), 0);
+  const totalReturn = pnl + divRcvd;
+  const totalRetPct = totalCost > 0 ? totalReturn / totalCost * 100 : 0;
+  const divProj     = val * (+pos.annualYield || 0) / 100;
+  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, totalReturn, totalRetPct, divProj };
+}
+
+function totals() {
+  let cost = 0, val = 0, divRcvd = 0, divProj = 0;
+  S.data.dca.forEach(p => { const c = dcaCalc(p); cost += c.totalCost; val += c.val; divRcvd += c.divRcvd; divProj += c.divProj; });
+  S.data.direct.forEach(p => { const c = directCalc(p); cost += c.totalCost; val += c.val; divRcvd += c.divRcvd; divProj += c.divProj; });
+  const pnl = val - cost, pnlPct = cost > 0 ? pnl / cost * 100 : 0;
+  return { cost, val, pnl, pnlPct, divRcvd, divProj };
+}
+
+function upcoming(pos) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const res = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, pos.deductionDay || 1);
+    const ds = d.toISOString().split('T')[0];
+    if (!(pos.entries || []).some(e => e.date === ds)) {
+      res.push({ date: ds, amount: pos.monthlyAmount || 0, overdue: d < today });
+    }
+  }
+  return res;
+}
+
+// ── Formatting ─────────────────────────────────────────────────────────────
+const fmt     = n => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+const fmtN    = n => (+n || 0).toLocaleString('zh-TW');
+const pct     = n => (n >= 0 ? '+' : '') + (+n || 0).toFixed(2) + '%';
+const pnlCls  = n => n >= 0 ? 'c-green' : 'c-red';
+const fmtDate = s => s ? s.replace(/-/g, '/') : '—';
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+const COLORS = ['#4299e1','#38a169','#d69e2e','#805ad5','#319795','#e53e3e','#667eea','#f6ad55','#68d391','#fc8181'];
+
+function killChart(k) { if (S.charts[k]) { S.charts[k].destroy(); delete S.charts[k]; } }
+
+function renderCharts() {
+  ['alloc','pnl','line','div'].forEach(killChart);
+  const all = [...S.data.dca.map(p => ({ ...dcaCalc(p), ticker: p.ticker })),
+               ...S.data.direct.map(p => ({ ...directCalc(p), ticker: p.ticker }))];
+
+  // Allocation donut
+  const al = all.filter(p => p.val > 0);
+  const c1 = document.getElementById('chart-alloc');
+  if (c1 && al.length) {
+    S.charts.alloc = new Chart(c1, {
+      type: 'doughnut',
+      data: { labels: al.map(p => p.ticker), datasets: [{ data: al.map(p => p.val), backgroundColor: al.map((_, i) => COLORS[i % COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, boxWidth: 12 } } } }
+    });
+  }
+
+  // P&L bar
+  const c2 = document.getElementById('chart-pnl');
+  if (c2 && all.length) {
+    S.charts.pnl = new Chart(c2, {
+      type: 'bar',
+      data: { labels: all.map(p => p.ticker), datasets: [{ data: all.map(p => Math.round(p.pnl)), backgroundColor: all.map(p => p.pnl >= 0 ? '#38a169' : '#e53e3e'), borderRadius: 6 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { grid: { color: '#e2e8f0' }, ticks: { font: { size: 10 }, callback: v => v >= 0 ? '+NT$' + (v/1000).toFixed(0) + 'K' : '-NT$' + Math.abs(v/1000).toFixed(0) + 'K' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+      }
+    });
+  }
+
+  // DCA cumulative line
+  const c3 = document.getElementById('chart-line');
+  if (c3) {
+    const datasets = [];
+    S.data.dca.forEach((pos, i) => {
+      const sorted = (pos.entries || []).filter(e => e.type !== 'skipped').sort((a, b) => a.date.localeCompare(b.date));
+      if (!sorted.length) return;
+      let cum = 0;
+      datasets.push({ label: pos.ticker, data: sorted.map(e => { cum += +e.amount || 0; return { x: e.date, y: cum }; }), borderColor: COLORS[i % COLORS.length], backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderWidth: 2 });
+    });
+    if (datasets.length) {
+      S.charts.line = new Chart(c3, {
+        type: 'line', data: { datasets },
+        options: { responsive: true, maintainAspectRatio: false, parsing: { xAxisKey: 'x', yAxisKey: 'y' }, plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12 } } }, scales: { x: { type: 'category', grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 7 } }, y: { grid: { color: '#e2e8f0' }, ticks: { font: { size: 10 }, callback: v => 'NT$' + (v/1000).toFixed(0) + 'K' } } } }
+      });
+    } else {
+      const ctx = c3.getContext('2d');
+      ctx.fillStyle = '#a0aec0'; ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('確認定期定額後顯示 Confirm DCA entries to see chart', c3.offsetWidth / 2 || 200, 110);
+    }
+  }
+
+  // Dividend stacked bar by ticker
+  const allPosDivs = [...S.data.dca, ...S.data.direct].filter(p => (p.dividends || []).length);
+  const divMonths = new Set();
+  allPosDivs.forEach(p => (p.dividends || []).forEach(d => { if (d.date) divMonths.add(d.date.substring(0, 7)); }));
+  const divKeys = [...divMonths].sort();
+  const c4 = document.getElementById('chart-div');
+  if (c4 && divKeys.length) {
+    const divDatasets = allPosDivs.map((p, i) => {
+      const map = {};
+      (p.dividends || []).forEach(d => {
+        const ym = (d.date || '').substring(0, 7);
+        if (ym) map[ym] = (map[ym] || 0) + (+d.amount || 0);
+      });
+      return { label: p.ticker, data: divKeys.map(k => map[k] || 0), backgroundColor: COLORS[i % COLORS.length], borderRadius: 3, stack: 'div' };
+    });
+    S.charts.div = new Chart(c4, {
+      type: 'bar',
+      data: { labels: divKeys, datasets: divDatasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12 } } },
+        scales: {
+          y: { stacked: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 10 }, callback: v => 'NT$' + v.toLocaleString() } },
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  } else if (c4) {
+    const ctx = c4.getContext('2d');
+    ctx.fillStyle = '#a0aec0'; ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('新增股利記錄後顯示 Add dividend entries to see chart', c4.offsetWidth / 2 || 200, 110);
+  }
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const t = totals();
+  const pC = t.pnl >= 0 ? 'c-green' : 'c-red';
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi c-accent"><div class="kpi-label">總市值 Total Value</div><div class="kpi-value c-accent">${fmt(t.val)}</div></div>
+    <div class="kpi"><div class="kpi-label">總成本 Total Cost</div><div class="kpi-value">${fmt(t.cost)}</div></div>
+    <div class="kpi ${t.pnl >= 0 ? 'c-green' : 'c-red'}"><div class="kpi-label">未實現損益 Unrealized P&amp;L</div><div class="kpi-value ${pC}">${fmt(t.pnl)}</div><div class="kpi-sub">${pct(t.pnlPct)}</div></div>
+    <div class="kpi c-gold"><div class="kpi-label">預計年股利 Projected Ann. Div.</div><div class="kpi-value c-gold">${fmt(t.divProj)}</div><div class="kpi-sub">≈ ${fmt(t.divProj / 12)}/月 mo.</div></div>
+    <div class="kpi"><div class="kpi-label">已收股利 Dividends Rcvd</div><div class="kpi-value c-gold">${fmt(t.divRcvd)}</div></div>`;
+  renderCharts();
+}
+
+// ── DCA render ─────────────────────────────────────────────────────────────
+function renderDCA() {
+  const el = document.getElementById('dca-list');
+  if (!S.data.dca.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">📈</div><p>尚無定期定額 No DCA positions</p><button class="btn btn-primary" onclick="openModal('add-dca')">＋ 新增 Add</button></div>`;
+    return;
+  }
+  el.innerHTML = S.data.dca.map(p => dcaCard(p)).join('');
+}
+
+function dcaCard(pos) {
+  const c = dcaCalc(pos);
+  const ups = upcoming(pos);
+  const uHTML = !ups.length
+    ? `<p class="c-muted" style="font-size:12px">近3個月無待確認扣款 No pending entries in next 3 months</p>`
+    : ups.map(u => `
+      <div class="upcoming-item${u.overdue ? ' overdue' : ''}">
+        <div>
+          <div class="upcoming-date">${fmtDate(u.date)}${u.overdue ? ' <span style="color:var(--gold);font-size:11px">⚠ 逾期 Overdue</span>' : ''}</div>
+          <div class="upcoming-amt">預計 Scheduled: ${fmt(u.amount)}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success btn-xs" onclick="openConfirm('${pos.id}','${u.date}',${u.amount})">✓ 確認 Confirm</button>
+          <button class="btn btn-ghost btn-xs" onclick="skipDCA('${pos.id}','${u.date}')">略過 Skip</button>
+        </div>
+      </div>`).join('');
+
+  const confirmed = (pos.entries || []).filter(e => e.type !== 'skipped').sort((a, b) => b.date.localeCompare(a.date));
+  const hHTML = !confirmed.length
+    ? `<p class="c-muted" style="font-size:12px">尚無確認記錄 No confirmed entries</p>`
+    : `<table><thead><tr><th>日期 Date</th><th>類型 Type</th><th>金額 Amount</th><th>股數 Shares</th><th>均價 Price</th><th></th></tr></thead><tbody>
+      ${confirmed.map(e => `<tr>
+        <td>${fmtDate(e.date)}</td>
+        <td><span class="badge ${e.type === 'lumpsum' ? 'b-direct' : 'b-dca'}">${e.type === 'lumpsum' ? '加碼 Lump' : '定扣 DCA'}</span></td>
+        <td>${fmt(e.amount || 0)}</td><td>${fmtN(e.shares || 0)}</td>
+        <td>${e.pricePerShare ? 'NT$' + (+e.pricePerShare).toFixed(2) : '—'}</td>
+        <td style="display:flex;gap:4px;justify-content:flex-end">
+          <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-entry','${pos.id}|${e.id}')">✎</button>
+          <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delEntry('dca','${pos.id}','${e.id}')">✕</button>
+        </td>
+      </tr>`).join('')}
+      </tbody></table>`;
+
+  const dvHTML = pos.dividendTracking ? divTable(pos.dividends || [], 'dca', pos.id) : '';
+
+  return `
+  <div class="ticker-card">
+    <div class="ticker-header">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div><div class="ticker-sym">${pos.ticker}</div><div class="ticker-nm">${pos.name || ''}</div></div>
+        <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
+        <span class="badge b-dca">DCA</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
+          <input class="price-input" type="number" value="${pos.currentPrice || ''}" step="0.01"
+            onchange="updPrice('dca','${pos.id}',this.value)">
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="openModal('add-lump','${pos.id}')">＋ 加碼 Lump Sum</button>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('edit-dca','${pos.id}')">✎</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="delTicker('dca','${pos.id}')">✕</button>
+      </div>
+    </div>
+    <div class="ticker-body">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-lbl">持股 Shares</div><div class="stat-val">${fmtN(c.totalShares)}</div></div>
+        <div class="stat"><div class="stat-lbl">均價 Avg Cost</div><div class="stat-val">${c.avgCost > 0 ? 'NT$' + c.avgCost.toFixed(2) : '—'}</div></div>
+        <div class="stat"><div class="stat-lbl">總成本 Cost</div><div class="stat-val">${fmt(c.totalCost)}</div></div>
+        <div class="stat"><div class="stat-lbl">市值 Value</div><div class="stat-val c-accent">${fmt(c.val)}</div></div>
+        <div class="stat"><div class="stat-lbl">損益 P&amp;L</div><div class="stat-val ${pnlCls(c.pnl)}">${fmt(c.pnl)}<br><small>${pct(c.pnlPct)}</small></div></div>
+        <div class="stat"><div class="stat-lbl">月扣 Monthly DCA</div><div class="stat-val c-accent">${fmt(pos.monthlyAmount || 0)}</div></div>
+        <div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>
+        ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">待確認扣款 Upcoming Entries</div>
+      <div class="upcoming-list">${uHTML}</div>
+      <div class="coll-toggle" onclick="togColl('h-dca-${pos.id}')">
+        <span>📋 交易記錄 History (${confirmed.length})</span><span>▾</span>
+      </div>
+      <div class="coll-body" id="h-dca-${pos.id}" style="display:none">${hHTML}</div>
+      ${pos.dividendTracking ? `
+      <div class="coll-toggle" onclick="togColl('d-dca-${pos.id}')">
+        <span>💰 股利記錄 Dividends (${(pos.dividends || []).length})</span>
+        <span><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('add-div','dca|${pos.id}')">＋ Add</button> ▾</span>
+      </div>
+      <div class="coll-body" id="d-dca-${pos.id}" style="display:none">${dvHTML}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── Direct render ──────────────────────────────────────────────────────────
+function renderDirect() {
+  const el = document.getElementById('direct-list');
+  if (!S.data.direct.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">🛒</div><p>尚無直接買入 No direct buy positions</p><button class="btn btn-primary" onclick="openModal('add-direct')">＋ 新增 Add</button></div>`;
+    return;
+  }
+  el.innerHTML = S.data.direct.map(p => directCard(p)).join('');
+}
+
+function directCard(pos) {
+  const c = directCalc(pos);
+  const txns = [...(pos.transactions || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const tHTML = !txns.length
+    ? `<p class="c-muted" style="font-size:12px">尚無交易記錄 No transactions</p>`
+    : `<table><thead><tr><th>日期 Date</th><th>股數 Shares</th><th>成本/股 Cost/Sh</th><th>總成本 Total</th><th>備註 Notes</th><th></th></tr></thead><tbody>
+      ${txns.map(t => `<tr>
+        <td>${fmtDate(t.date)}</td><td>${fmtN(t.shares)}</td>
+        <td>NT$${(+t.costPerShare).toFixed(2)}</td>
+        <td>${fmt(t.totalCost || t.shares * t.costPerShare)}</td>
+        <td class="c-muted">${t.notes || ''}</td>
+        <td style="display:flex;gap:4px;justify-content:flex-end">
+          <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-txn','${pos.id}|${t.id}')">✎</button>
+          <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delTxn('${pos.id}','${t.id}')">✕</button>
+        </td>
+      </tr>`).join('')}
+      </tbody></table>`;
+
+  const dvHTML = pos.dividendTracking ? divTable(pos.dividends || [], 'direct', pos.id) : '';
+
+  return `
+  <div class="ticker-card">
+    <div class="ticker-header">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div><div class="ticker-sym">${pos.ticker}</div><div class="ticker-nm">${pos.name || ''}</div></div>
+        <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
+        <span class="badge b-direct">Direct</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
+          <input class="price-input" type="number" value="${pos.currentPrice || ''}" step="0.01"
+            onchange="updPrice('direct','${pos.id}',this.value)">
+        </label>
+        <button class="btn btn-primary btn-sm" onclick="openModal('add-txn','${pos.id}')">＋ 買入 Add Buy</button>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('edit-direct','${pos.id}')">✎</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="delTicker('direct','${pos.id}')">✕</button>
+      </div>
+    </div>
+    <div class="ticker-body">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-lbl">持股 Shares</div><div class="stat-val">${fmtN(c.totalShares)}</div></div>
+        <div class="stat"><div class="stat-lbl">均價 Avg Cost</div><div class="stat-val">${c.avgCost > 0 ? 'NT$' + c.avgCost.toFixed(2) : '—'}</div></div>
+        <div class="stat"><div class="stat-lbl">總成本 Cost</div><div class="stat-val">${fmt(c.totalCost)}</div></div>
+        <div class="stat"><div class="stat-lbl">市值 Value</div><div class="stat-val c-accent">${fmt(c.val)}</div></div>
+        <div class="stat"><div class="stat-lbl">未實現損益 P&amp;L</div><div class="stat-val ${pnlCls(c.pnl)}">${fmt(c.pnl)}<br><small>${pct(c.pnlPct)}</small></div></div>
+        <div class="stat"><div class="stat-lbl">總報酬 Total Return</div><div class="stat-val ${pnlCls(c.totalReturn)}">${fmt(c.totalReturn)}<br><small>${pct(c.totalRetPct)}</small></div></div>
+        ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
+        ${pos.annualYield ? `<div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>` : ''}
+      </div>
+      <div class="coll-toggle" onclick="togColl('h-dir-${pos.id}')">
+        <span>📋 交易記錄 Transactions (${txns.length})</span>
+        <span><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('add-txn','${pos.id}')">＋ Add</button> ▾</span>
+      </div>
+      <div class="coll-body" id="h-dir-${pos.id}" style="display:none">${tHTML}</div>
+      ${pos.dividendTracking ? `
+      <div class="coll-toggle" onclick="togColl('d-dir-${pos.id}')">
+        <span>💰 股利記錄 Dividends (${(pos.dividends || []).length})</span>
+        <span><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('add-div','direct|${pos.id}')">＋ Add</button> ▾</span>
+      </div>
+      <div class="coll-body" id="d-dir-${pos.id}" style="display:none">${dvHTML}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function divTable(divs, type, posId) {
+  if (!divs.length) return `<p class="c-muted" style="font-size:12px">尚無股利記錄 No dividends logged</p>`;
+  const sorted = [...divs].sort((a, b) => b.date.localeCompare(a.date));
+  const total = divs.reduce((s, d) => s + (+d.amount || 0), 0);
+  return `<table><thead><tr><th>日期 Date</th><th>每股 /Share</th><th>持股 Shares</th><th>實領 Amount</th><th>備註 Notes</th><th></th></tr></thead><tbody>
+    ${sorted.map(d => `<tr>
+      <td>${fmtDate(d.date)}</td>
+      <td class="c-muted">${d.perShare ? 'NT$' + (+d.perShare).toFixed(4) : '—'}</td>
+      <td class="c-muted">${d.sharesAtPayout ? fmtN(d.sharesAtPayout) : '—'}</td>
+      <td class="c-gold">${fmt(d.amount || 0)}</td>
+      <td class="c-muted">${d.notes || ''}</td>
+      <td style="display:flex;gap:4px;justify-content:flex-end">
+        <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-div','${type}|${posId}|${d.id}')">✎</button>
+        <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delDiv('${type}','${posId}','${d.id}')">✕</button>
+      </td>
+    </tr>`).join('')}
+  </tbody></table>
+  <div style="text-align:right;margin-top:8px;font-size:13px">累計 Total: <strong class="c-gold">${fmt(total)}</strong></div>`;
+}
+
+// ── Settings render ────────────────────────────────────────────────────────
+function renderSettings() {
+  document.getElementById('s-repo').value = getRepo();
+  document.getElementById('s-file').value = getFile();
+  if (getPAT()) document.getElementById('s-pat').placeholder = '●●●●●●●● (已設定 Configured)';
+}
+
+// ── Render all ─────────────────────────────────────────────────────────────
+function renderAll() {
+  renderDashboard();
+  renderDCA();
+  renderDirect();
+  renderSettings();
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function switchTab(id) {
+  S.activeTab = id;
+  document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const idx = { dashboard: 0, dca: 1, direct: 2, settings: 3 };
+  document.querySelectorAll('.tab-btn')[idx[id]].classList.add('active');
+  if (id === 'dashboard') setTimeout(renderCharts, 50);
+}
+
+function togColl(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function setSS(cls, msg) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.className = 'sync-status' + (cls ? ' ' + cls : '');
+}
+
+let tTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(tTimer);
+  tTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+function updPrice(type, id, val) {
+  const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === id);
+  if (pos) { pos.currentPrice = parseFloat(val) || 0; S.dirty = true; renderDashboard(); }
+}
+
+// ── Data mutations ─────────────────────────────────────────────────────────
+function delTicker(type, id) {
+  if (!confirm('刪除此標的及所有記錄？Delete this ticker and all its data?')) return;
+  if (type === 'dca') S.data.dca = S.data.dca.filter(p => p.id !== id);
+  else S.data.direct = S.data.direct.filter(p => p.id !== id);
+  S.dirty = true; renderAll();
+}
+function delEntry(type, posId, entryId) {
+  const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (pos) { pos.entries = (pos.entries || []).filter(e => e.id !== entryId); S.dirty = true; renderAll(); }
+}
+function delTxn(posId, txnId) {
+  const pos = S.data.direct.find(p => p.id === posId);
+  if (pos) { pos.transactions = pos.transactions.filter(t => t.id !== txnId); S.dirty = true; renderAll(); }
+}
+function updateEntry(posId, entryId) {
+  const pos = S.data.dca.find(p => p.id === posId);
+  const e = (pos?.entries || []).find(x => x.id === entryId);
+  if (!e) return;
+  const shares = gf('f-shares'), amount = gf('f-amt');
+  if (!shares || !amount) { toast('請輸入股數和金額 Enter shares and amount', 'err'); return; }
+  e.date = gv('f-date'); e.amount = amount; e.shares = shares;
+  e.pricePerShare = gf('f-price') || (amount / shares);
+  e.notes = gv('f-notes');
+  S.dirty = true; closeModal(); renderAll(); toast('已更新 Updated', 'ok');
+}
+function updateTxn(posId, txnId) {
+  const pos = S.data.direct.find(p => p.id === posId);
+  const t = (pos?.transactions || []).find(x => x.id === txnId);
+  if (!t) return;
+  const shares = gf('f-shares'), costPerShare = gf('f-price');
+  if (!shares || !costPerShare) { toast('請輸入股數和均價 Enter shares and price', 'err'); return; }
+  t.date = gv('f-date'); t.shares = shares; t.costPerShare = costPerShare;
+  t.totalCost = gf('f-total') || shares * costPerShare;
+  t.notes = gv('f-notes');
+  S.dirty = true; closeModal(); renderAll(); toast('已更新 Updated', 'ok');
+}
+function delDiv(type, posId, divId) {
+  const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (pos) { pos.dividends = (pos.dividends || []).filter(d => d.id !== divId); S.dirty = true; renderAll(); }
+}
+function skipDCA(posId, date) {
+  const pos = S.data.dca.find(p => p.id === posId);
+  if (pos) { (pos.entries = pos.entries || []).push({ id: uuid(), date, type: 'skipped' }); S.dirty = true; renderDCA(); }
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function openModal(type, ctx) {
+  S.mCtx = ctx || null;
+  let title = '', body = '', foot = '';
+
+  if (type === 'add-dca' || type === 'edit-dca') {
+    const p = type === 'edit-dca' ? S.data.dca.find(x => x.id === ctx) : null;
+    title = p ? '編輯 DCA 標的' : '新增 DCA 標的 Add DCA Ticker';
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 00878"></div>
+        <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-type"><option value="ETF"${p?.type==='ETF'?' selected':''}>ETF</option><option value="Stock"${p?.type==='Stock'?' selected':''}>Stock 股票</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">名稱 Full Name</label><input class="form-input" id="f-name" value="${p?.name||''}" placeholder="e.g. 國泰永續高股息"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">扣款日 Deduction Day (1–28)</label><input class="form-input" id="f-day" type="number" min="1" max="28" value="${p?.deductionDay||15}"></div>
+        <div class="form-group"><label class="form-label">月扣金額 Monthly Amount (NT$)</label><input class="form-input" id="f-monthly" type="number" value="${p?.monthlyAmount||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"></div>
+        <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%)</label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
+        <input type="checkbox" id="f-divtrack"${p?.dividendTracking?' checked':''}>
+        開啟股利追蹤 Enable Dividend Tracking
+      </label>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="saveDCA('${type}','${ctx||''}')">儲存 Save</button>`;
+  }
+
+  else if (type === 'add-direct' || type === 'edit-direct') {
+    const p = type === 'edit-direct' ? S.data.direct.find(x => x.id === ctx) : null;
+    title = p ? '編輯標的 Edit Ticker' : '新增直接買入 Add Direct Buy';
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 2330"></div>
+        <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-type"><option value="ETF"${p?.type==='ETF'?' selected':''}>ETF</option><option value="Stock"${p?.type==='Stock'?' selected':''}>Stock 股票</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">名稱 Full Name</label><input class="form-input" id="f-name" value="${p?.name||''}" placeholder="e.g. 台積電"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"></div>
+        <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%) <span class="c-muted">(選填)</span></label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
+        <input type="checkbox" id="f-divtrack"${p?.dividendTracking?' checked':''}>
+        開啟股利追蹤 Enable Dividend Tracking
+      </label>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="saveDirect('${type}','${ctx||''}')">儲存 Save</button>`;
+  }
+
+  else if (type === 'confirm-dca') {
+    // ctx = posId|date|amount
+    const [pid, date, amt] = ctx.split('|');
+    title = `確認扣款 Confirm DCA — ${fmtDate(date)}`;
+    body = `
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">預計扣款 Scheduled: <strong>${fmt(parseFloat(amt))}</strong></p>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">實際日期 Actual Date</label><input class="form-input" id="f-date" type="date" value="${date}"></div>
+        <div class="form-group"><label class="form-label">實際金額 Actual Amount (NT$)</label><input class="form-input" id="f-amt" type="number" value="${amt}" oninput="autoShares()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">實際股數 Shares Bought</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$) <span class="c-muted">→ 自動計算股數</span></label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-success" onclick="confirmEntry('${pid}','${date}')">✓ 確認 Confirm</button>`;
+  }
+
+  else if (type === 'add-lump') {
+    title = '加碼 Add Lump Sum — ' + (S.data.dca.find(p => p.id === ctx)?.ticker || '');
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
+        <div class="form-group"><label class="form-label">金額 Amount (NT$) *</label><input class="form-input" id="f-amt" type="number" placeholder="0" oninput="autoShares()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="saveLump('${ctx}')">新增 Add</button>`;
+  }
+
+  else if (type === 'add-txn') {
+    title = '新增買入記錄 Add Transaction — ' + (S.data.direct.find(p => p.id === ctx)?.ticker || '');
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
+        <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0" oninput="autoTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">成本/股 Cost per Share *</label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label">總成本 Total Cost <span class="c-muted">(自動)</span></label><input class="form-input" id="f-total" type="number" placeholder="auto" oninput="autoPriceFromTotal()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="saveTxn('${ctx}')">新增 Add</button>`;
+  }
+
+  else if (type === 'edit-entry') {
+    // ctx = posId|entryId
+    const [posId, entryId] = ctx.split('|');
+    const pos = S.data.dca.find(p => p.id === posId);
+    const e = (pos?.entries || []).find(x => x.id === entryId);
+    if (!e) return;
+    title = `編輯記錄 Edit Entry — ${pos.ticker}`;
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${e.date || ''}"></div>
+        <div class="form-group"><label class="form-label">金額 Amount (NT$)</label><input class="form-input" id="f-amt" type="number" value="${e.amount || ''}" oninput="autoShares()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">股數 Shares</label><input class="form-input" id="f-shares" type="number" value="${e.shares || ''}"></div>
+        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${e.pricePerShare || ''}" oninput="autoShares()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" value="${e.notes || ''}"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="updateEntry('${posId}','${entryId}')">儲存 Save</button>`;
+  }
+
+  else if (type === 'edit-txn') {
+    // ctx = posId|txnId
+    const [posId, txnId] = ctx.split('|');
+    const pos = S.data.direct.find(p => p.id === posId);
+    const t = (pos?.transactions || []).find(x => x.id === txnId);
+    if (!t) return;
+    title = `編輯交易 Edit Transaction — ${pos.ticker}`;
+    body = `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${t.date || ''}"></div>
+        <div class="form-group"><label class="form-label">股數 Shares</label><input class="form-input" id="f-shares" type="number" value="${t.shares || ''}" oninput="autoTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">成本/股 Cost per Share</label><input class="form-input" id="f-price" type="number" step="0.01" value="${t.costPerShare || ''}" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label">總成本 Total Cost</label><input class="form-input" id="f-total" type="number" value="${t.totalCost || ''}" oninput="autoPriceFromTotal()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" value="${t.notes || ''}"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="updateTxn('${posId}','${txnId}')">儲存 Save</button>`;
+  }
+
+  else if (type === 'add-div' || type === 'edit-div') {
+    // ctx = posType|posId  (add)  or  posType|posId|divId  (edit)
+    const parts = ctx.split('|');
+    const [t2, pid, divId] = parts;
+    const pos2 = (t2 === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === pid);
+    const ticker = pos2?.ticker || '';
+    const existing = divId ? (pos2?.dividends || []).find(d => d.id === divId) : null;
+    const curShares = t2 === 'dca' ? dcaCalc(pos2).totalShares : directCalc(pos2).totalShares;
+    title = existing ? `編輯股利 Edit Dividend — ${ticker}` : `新增股利 Add Dividend — ${ticker}`;
+    body = `
+      <div style="background:var(--accent-l);border:1px solid var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--accent)">
+        💡 輸入每股股利後自動計算總額。你也可以直接輸入總金額。<br>
+        Enter dividend per share to auto-calculate total, or type total directly.
+      </div>
+      <div class="form-group"><label class="form-label">發放日期 Date *</label><input class="form-input" id="f-date" type="date" value="${existing?.date || today()}"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">每股股利 Dividend / Share (NT$)</label>
+          <input class="form-input" id="f-pershare" type="number" step="0.0001" placeholder="e.g. 0.66" value="${existing?.perShare || ''}" oninput="autoDivTotal()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">持股數 Shares Held</label>
+          <input class="form-input" id="f-divshares" type="number" value="${existing?.sharesAtPayout || curShares || ''}" placeholder="0" oninput="autoDivTotal()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">實領總金額 Total Received (NT$) * <span class="c-muted">— 可直接修改 or edit directly</span></label>
+        <input class="form-input" id="f-amt" type="number" step="0.01" placeholder="0" value="${existing?.amount || ''}" style="font-size:16px;font-weight:600">
+      </div>
+      <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="e.g. 2025Q4 第一次配息" value="${existing?.notes || ''}"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-success" onclick="saveDiv('${divId || ''}')">` + (existing ? '儲存 Save' : '新增 Add') + `</button>`;
+  }
+
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-body').innerHTML = body;
+  document.getElementById('m-foot').innerHTML = foot;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openConfirm(posId, date, amount) {
+  openModal('confirm-dca', `${posId}|${date}|${amount}`);
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); S.mCtx = null; }
+function closeBg(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function gf(id) { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0; }
+function gc(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+function autoShares() {
+  const amt = gf('f-amt'), price = gf('f-price');
+  if (amt > 0 && price > 0) {
+    const el = document.getElementById('f-shares');
+    if (el && !el.value) el.value = Math.floor(amt / price);
+  }
+}
+function autoTotal() {
+  const sh = gf('f-shares'), pr = gf('f-price');
+  if (sh && pr) { const el = document.getElementById('f-total'); if (el) el.value = Math.round(sh * pr); }
+}
+function autoPriceFromTotal() {
+  const tot = gf('f-total'), sh = gf('f-shares');
+  if (tot && sh) { const el = document.getElementById('f-price'); if (el) el.value = (tot / sh).toFixed(2); }
+}
+function autoDivTotal() {
+  const perShare = gf('f-pershare'), shares = gf('f-divshares');
+  if (perShare > 0 && shares > 0) {
+    const el = document.getElementById('f-amt');
+    if (el) el.value = (perShare * shares).toFixed(2);
+  }
+}
+
+// ── Modal save handlers ────────────────────────────────────────────────────
+function saveDCA(type, ctx) {
+  const ticker = gv('f-ticker').toUpperCase();
+  if (!ticker) { toast('請輸入代碼 Ticker required', 'err'); return; }
+  if (type === 'add-dca') {
+    S.data.dca.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), entries: [], dividends: [] });
+  } else {
+    const p = S.data.dca.find(x => x.id === ctx);
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack') });
+  }
+  S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
+}
+
+function saveDirect(type, ctx) {
+  const ticker = gv('f-ticker').toUpperCase();
+  if (!ticker) { toast('請輸入代碼 Ticker required', 'err'); return; }
+  if (type === 'add-direct') {
+    S.data.direct.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), transactions: [], dividends: [] });
+  } else {
+    const p = S.data.direct.find(x => x.id === ctx);
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack') });
+  }
+  S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
+}
+
+function confirmEntry(posId, scheduledDate) {
+  const pos = S.data.dca.find(p => p.id === posId);
+  if (!pos) return;
+  const shares = gf('f-shares'), amount = gf('f-amt');
+  if (!shares || !amount) { toast('請輸入股數和金額 Enter shares and amount', 'err'); return; }
+  pos.entries = (pos.entries || []).filter(e => !(e.date === scheduledDate && e.type === 'skipped'));
+  pos.entries.push({ id: uuid(), date: gv('f-date') || scheduledDate, amount, shares, pricePerShare: gf('f-price') || (amount / shares), type: 'scheduled', notes: gv('f-notes') });
+  S.dirty = true; closeModal(); renderAll(); toast('已確認 Confirmed', 'ok');
+}
+
+function saveLump(posId) {
+  const pos = S.data.dca.find(p => p.id === posId);
+  if (!pos) return;
+  const shares = gf('f-shares'), amount = gf('f-amt');
+  if (!shares || !amount) { toast('請輸入股數和金額 Enter shares and amount', 'err'); return; }
+  (pos.entries = pos.entries || []).push({ id: uuid(), date: gv('f-date'), amount, shares, pricePerShare: gf('f-price') || (amount / shares), type: 'lumpsum', notes: gv('f-notes') });
+  S.dirty = true; closeModal(); renderAll(); toast('加碼已記錄 Lump sum added', 'ok');
+}
+
+function saveTxn(posId) {
+  const pos = S.data.direct.find(p => p.id === posId);
+  if (!pos) return;
+  const shares = gf('f-shares'), costPerShare = gf('f-price');
+  if (!shares || !costPerShare) { toast('請輸入股數和均價 Enter shares and price', 'err'); return; }
+  const totalCost = gf('f-total') || shares * costPerShare;
+  (pos.transactions = pos.transactions || []).push({ id: uuid(), date: gv('f-date'), shares, costPerShare, totalCost, notes: gv('f-notes') });
+  S.dirty = true; closeModal(); renderAll(); toast('買入已記錄 Transaction added', 'ok');
+}
+
+function saveDiv(editId) {
+  const [type, posId] = (S.mCtx || '').split('|');
+  const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (!pos) return;
+  const amount = gf('f-amt');
+  if (!amount) { toast('請輸入總金額 Enter total amount', 'err'); return; }
+  const perShare = gf('f-pershare'), divShares = gf('f-divshares');
+  pos.dividends = pos.dividends || [];
+  if (editId) {
+    // Edit existing
+    const d = pos.dividends.find(x => x.id === editId);
+    if (d) {
+      d.date = gv('f-date'); d.amount = amount; d.notes = gv('f-notes');
+      if (perShare) d.perShare = perShare; else delete d.perShare;
+      if (divShares) d.sharesAtPayout = divShares; else delete d.sharesAtPayout;
+    }
+    toast('股利已更新 Dividend updated', 'ok');
+  } else {
+    // New entry
+    const entry = { id: uuid(), date: gv('f-date'), amount, notes: gv('f-notes') };
+    if (perShare) entry.perShare = perShare;
+    if (divShares) entry.sharesAtPayout = divShares;
+    pos.dividends.push(entry);
+    toast('股利已記錄 Dividend added', 'ok');
+  }
+  S.dirty = true; closeModal(); renderAll();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderAll();
+loadData();
+</script>
+</body>
+</html>
