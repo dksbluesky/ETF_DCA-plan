@@ -409,12 +409,16 @@ async function testFugle() {
     const r = await fetch('https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/00878', {
       headers: { 'X-API-KEY': key }
     });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
-    el.innerHTML = `✅ 連線成功！00878 最新價: <strong>NT$${d.lastPrice ?? d.closePrice ?? '—'}</strong>`;
+    if (r.status === 401) { el.textContent = '❌ API Key 無效 (401 Unauthorized)'; el.style.color = 'var(--red)'; return; }
+    if (r.status === 403) { el.textContent = '❌ 配額用盡 (403 Forbidden)'; el.style.color = 'var(--red)'; return; }
+    if (!r.ok) { el.textContent = `❌ 失敗 HTTP${r.status}: ${d.message||''}`; el.style.color = 'var(--red)'; return; }
+    const price = d.lastPrice ?? d.closePrice ?? d.referencePrice ?? d.previousClose;
+    const label = d.lastPrice ? '盤中價' : d.closePrice ? '收盤價' : '參考價';
+    el.innerHTML = `✅ 連線成功！00878 ${label}: <strong>NT$${price ?? '—'}</strong>`;
     el.style.color = 'var(--green)';
   } catch (e) {
-    el.textContent = '❌ 失敗 ' + e.message;
+    el.textContent = '❌ 連線失敗 ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
@@ -1192,47 +1196,32 @@ function saveDiv(editId) {
 
 // ── Price Fetch ────────────────────────────────────────────────────────────
 async function fetchLivePrice(ticker) {
-  // 1st: Fugle MarketData API — real-time, best quality (requires API key)
   const fugleKey = getFugleKey();
-  if (fugleKey) {
-    try {
-      const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${ticker}`, {
-        headers: { 'X-API-KEY': fugleKey }
-      });
-      if (r.ok) {
-        const d = await r.json();
-        const price = d.lastPrice ?? d.closePrice ?? d.previousClose;
-        if (price > 0) {
-          const isOpen = d.isTradingDay && d.lastPrice;
-          return { price, state: isOpen ? 'REGULAR' : 'CLOSED', source: 'Fugle即時' };
-        }
-      }
-    } catch {}
+  if (!fugleKey) {
+    throw new Error('⚙️ 請至設定頁面輸入 Fugle API Key / Please enter your Fugle API Key in ⚙️ Settings tab');
   }
-
-  // 2nd: TWSE OpenAPI — listed stocks (上市)
+  let r, d;
   try {
-    const r = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL', { cache: 'no-cache' });
-    if (r.ok) {
-      const data = await r.json();
-      const stock = data.find(s => s.Code === ticker);
-      const price = parseFloat((stock?.ClosingPrice || '').replace(/,/g, ''));
-      if (price > 0) return { price, state: 'CLOSED', source: 'TWSE收盤' };
-    }
-  } catch {}
+    r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${ticker}`, {
+      headers: { 'X-API-KEY': fugleKey }
+    });
+    d = await r.json();
+  } catch(e) {
+    throw new Error(`Fugle 連線失敗 / Connection failed: ${e.message}`);
+  }
+  if (r.status === 401) throw new Error('Fugle API Key 無效，請至 ⚙️ 設定重新輸入 / Invalid API Key — re-enter in ⚙️ Settings');
+  if (r.status === 403) throw new Error('Fugle API 配額用盡 / API quota exceeded (403)');
+  if (r.status === 404) throw new Error(`找不到股票代碼 ${ticker} / Symbol not found`);
+  if (!r.ok) throw new Error(`Fugle HTTP${r.status}: ${d?.message || ''}`);
 
-  // 3rd: TPEx OpenAPI — OTC stocks (上櫃)
-  try {
-    const r = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes', { cache: 'no-cache' });
-    if (r.ok) {
-      const data = await r.json();
-      const stock = data.find(s => s.SecuritiesCompanyCode === ticker);
-      const price = parseFloat((stock?.Close || '').replace(/,/g, ''));
-      if (price > 0) return { price, state: 'CLOSED', source: 'TPEx收盤' };
-    }
-  } catch {}
-
-  throw new Error(`${ticker} 查無報價 — 請確認代碼正確 Check ticker`);
+  // Try intraday last price first, then today's close, then reference (prev close) as fallback
+  const price = d.lastPrice ?? d.closePrice ?? d.referencePrice ?? d.previousClose;
+  if (price > 0) {
+    const isClose = d.isClose || (!d.lastPrice && !!d.closePrice);
+    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle' };
+  }
+  console.log('Fugle response (no price found):', JSON.stringify(d));
+  throw new Error(`${ticker}: 查無報價 / No price data returned`);
 }
 
 async function refreshPrice(type, id) {
