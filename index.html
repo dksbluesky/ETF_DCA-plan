@@ -336,14 +336,23 @@ async function saveData() {
   setSS('saving', '↑ Saving…');
   S.data.lastUpdated = new Date().toISOString();
   try {
+    const h = { Authorization: `token ${getPAT()}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' };
+    const apiUrl = `https://api.github.com/repos/${getRepo()}/contents/${getFile()}`;
+
+    // Always fetch latest SHA before saving to avoid stale SHA conflicts
+    const check = await fetch(apiUrl, { headers: h });
+    if (check.ok) {
+      const existing = await check.json();
+      S.sha = existing.sha;
+    } else if (check.status !== 404) {
+      throw new Error(`HTTP ${check.status}`);
+    }
+
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(S.data, null, 2))));
     const body = { message: `Update portfolio ${new Date().toLocaleDateString('zh-TW')}`, content };
     if (S.sha) body.sha = S.sha;
-    const r = await fetch(`https://api.github.com/repos/${getRepo()}/contents/${getFile()}`, {
-      method: 'PUT',
-      headers: { Authorization: `token ${getPAT()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+
+    const r = await fetch(apiUrl, { method: 'PUT', headers: h, body: JSON.stringify(body) });
     if (!r.ok) { const e = await r.json(); throw new Error(e.message || `HTTP ${r.status}`); }
     S.sha = (await r.json()).content.sha;
     S.dirty = false;
