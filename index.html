@@ -1149,20 +1149,48 @@ function saveDiv(editId) {
 
 // ── Price Fetch ────────────────────────────────────────────────────────────
 async function fetchLivePrice(ticker) {
-  // Try .TW first (TWSE listed), then .TWO (OTC)
-  const suffixes = ['.TW', '.TWO'];
-  for (const sfx of suffixes) {
-    try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}${sfx}?interval=1d&range=1d`;
-      const r = await fetch(url);
-      if (!r.ok) continue;
+  // 1st: TWSE MIS real-time API (listed stocks, works during trading hours)
+  try {
+    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${ticker}.tw&json=1&delay=0`;
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (r.ok) {
       const d = await r.json();
-      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      const state = d?.chart?.result?.[0]?.meta?.marketState; // REGULAR, PRE, POST, CLOSED
-      if (price) return { price, symbol: ticker + sfx, state };
-    } catch {}
-  }
-  throw new Error('查無報價 Price not found for ' + ticker);
+      const info = d?.msgArray?.[0];
+      const price = parseFloat(info?.z || info?.y); // z=current, y=yesterday close
+      if (price && price > 0) {
+        const isCurrent = !!parseFloat(info?.z);
+        return { price, state: isCurrent ? 'REGULAR' : 'CLOSED', source: 'TWSE即時' };
+      }
+    }
+  } catch {}
+
+  // 2nd: OTC (櫃買) MIS real-time API
+  try {
+    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=otc_${ticker}.tw&json=1&delay=0`;
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (r.ok) {
+      const d = await r.json();
+      const info = d?.msgArray?.[0];
+      const price = parseFloat(info?.z || info?.y);
+      if (price && price > 0) {
+        const isCurrent = !!parseFloat(info?.z);
+        return { price, state: isCurrent ? 'REGULAR' : 'CLOSED', source: 'OTC即時' };
+      }
+    }
+  } catch {}
+
+  // 3rd: TWSE OpenAPI (closing price, always available after market close)
+  try {
+    const r = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL', { cache: 'no-cache' });
+    if (r.ok) {
+      const data = await r.json();
+      const stock = data.find(s => s.Code === ticker);
+      const price = parseFloat((stock?.ClosingPrice || '').replace(',', ''));
+      if (price > 0) return { price, state: 'CLOSED', source: 'TWSE收盤' };
+    }
+  } catch {}
+
+  throw new Error(`${ticker} 查無報價 — 請確認代碼正確 Check ticker`);
 }
 
 async function refreshPrice(type, id) {
@@ -1172,13 +1200,13 @@ async function refreshPrice(type, id) {
   const input = document.getElementById(`price-${type}-${id}`);
   if (btn) btn.classList.add('spinning');
   try {
-    const { price, state } = await fetchLivePrice(pos.ticker);
+    const { price, state, source } = await fetchLivePrice(pos.ticker);
     pos.currentPrice = price;
     if (input) input.value = price;
     S.dirty = true;
     renderDashboard();
-    const stateLabel = state === 'REGULAR' ? '盤中' : state === 'CLOSED' ? '收盤' : state;
-    toast(`${pos.ticker} NT$${price} (${stateLabel})`, 'ok');
+    const stateLabel = state === 'REGULAR' ? '盤中🟢' : '收盤價';
+    toast(`${pos.ticker}  NT$${price}  ${stateLabel} (${source})`, 'ok');
   } catch (e) {
     toast(e.message, 'err');
   } finally {
