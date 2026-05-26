@@ -25,8 +25,10 @@
         {
           "id": "da656977-6ab9-43f5-8869-680e2548b678",
           "date": "2026-06-12",
-          "amount": 2243,
-          "notes": "Q1/2026"
+          "amount": 2242.68,
+          "notes": "Q1/2026",
+          "perShare": 0.66,
+          "sharesAtPayout": 3398
         }
       ]
     }
@@ -72,10 +74,11 @@
           "date": "2026-07-16",
           "amount": 8620,
           "notes": "Q1/2026",
-          "sharesAtPayout": 2500
+          "sharesAtPayout": 2500,
+          "perShare": 3.448
         }
       ]
     }
   ],
-  "lastUpdated": "2026-05-26T07:02:56.748Z"
+  "lastUpdated": "2026-05-26T07:30:46.602Z"
 }
