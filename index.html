@@ -912,7 +912,7 @@ function openModal(type, ctx) {
     title = p ? '編輯 DCA 標的' : '新增 DCA 標的 Add DCA Ticker';
     body = `
       <div class="form-row">
-        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 00878"></div>
+        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 00878" onblur="autoFetchOnTicker()"></div>
         <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-type"><option value="ETF"${p?.type==='ETF'?' selected':''}>ETF</option><option value="Stock"${p?.type==='Stock'?' selected':''}>Stock 股票</option></select></div>
       </div>
       <div class="form-group"><label class="form-label">名稱 Full Name</label><input class="form-input" id="f-name" value="${p?.name||''}" placeholder="e.g. 國泰永續高股息"></div>
@@ -921,7 +921,7 @@ function openModal(type, ctx) {
         <div class="form-group"><label class="form-label">月扣金額 Monthly Amount (NT$)</label><input class="form-input" id="f-monthly" type="number" value="${p?.monthlyAmount||''}"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"></div>
+        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal()" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%)</label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
@@ -937,12 +937,12 @@ function openModal(type, ctx) {
     title = p ? '編輯標的 Edit Ticker' : '新增直接買入 Add Direct Buy';
     body = `
       <div class="form-row">
-        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 2330"></div>
+        <div class="form-group"><label class="form-label">代碼 Ticker *</label><input class="form-input" id="f-ticker" value="${p?.ticker||''}" placeholder="e.g. 2330" onblur="autoFetchOnTicker()"></div>
         <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-type"><option value="ETF"${p?.type==='ETF'?' selected':''}>ETF</option><option value="Stock"${p?.type==='Stock'?' selected':''}>Stock 股票</option></select></div>
       </div>
       <div class="form-group"><label class="form-label">名稱 Full Name</label><input class="form-input" id="f-name" value="${p?.name||''}" placeholder="e.g. 台積電"></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"></div>
+        <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal()" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%) <span class="c-muted">(選填)</span></label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
@@ -956,6 +956,8 @@ function openModal(type, ctx) {
   else if (type === 'confirm-dca') {
     // ctx = posId|date|amount
     const [pid, date, amt] = ctx.split('|');
+    const _ticker = S.data.dca.find(p => p.id === pid)?.ticker || '';
+    S._autoFetch = _ticker;
     title = `確認扣款 Confirm DCA — ${fmtDate(date)}`;
     body = `
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px">預計扣款 Scheduled: <strong>${fmt(parseFloat(amt))}</strong></p>
@@ -965,7 +967,7 @@ function openModal(type, ctx) {
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">實際股數 Shares Bought</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$) <span class="c-muted">→ 自動計算股數</span></label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"></div>
+        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$) <span class="c-muted">→ 自動計算股數</span></label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_ticker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -973,7 +975,9 @@ function openModal(type, ctx) {
   }
 
   else if (type === 'add-lump') {
-    title = '加碼 Add Lump Sum — ' + (S.data.dca.find(p => p.id === ctx)?.ticker || '');
+    const _lumpTicker = S.data.dca.find(p => p.id === ctx)?.ticker || '';
+    S._autoFetch = _lumpTicker;
+    title = '加碼 Add Lump Sum — ' + _lumpTicker;
     body = `
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
@@ -981,7 +985,7 @@ function openModal(type, ctx) {
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"></div>
+        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_lumpTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -989,14 +993,16 @@ function openModal(type, ctx) {
   }
 
   else if (type === 'add-txn') {
-    title = '新增買入記錄 Add Transaction — ' + (S.data.direct.find(p => p.id === ctx)?.ticker || '');
+    const _txnTicker = S.data.direct.find(p => p.id === ctx)?.ticker || '';
+    S._autoFetch = _txnTicker;
+    title = '新增買入記錄 Add Transaction — ' + _txnTicker;
     body = `
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
         <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0" oninput="autoTotal()"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">成本/股 Cost per Share *</label><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label">成本/股 Cost per Share *</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoTotal()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_txnTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
         <div class="form-group"><label class="form-label">總成本 Total Cost <span class="c-muted">(自動)</span></label><input class="form-input" id="f-total" type="number" placeholder="auto" oninput="autoPriceFromTotal()"></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
@@ -1084,6 +1090,7 @@ function openModal(type, ctx) {
   document.getElementById('m-body').innerHTML = body;
   document.getElementById('m-foot').innerHTML = foot;
   document.getElementById('overlay').classList.add('open');
+  if (S._autoFetch) { const t = S._autoFetch; S._autoFetch = null; setTimeout(() => fetchPriceIntoModal(t), 300); }
 }
 
 function openConfirm(posId, date, amount) {
@@ -1200,6 +1207,34 @@ function saveDiv(editId) {
     toast('股利已記錄 Dividend added', 'ok');
   }
   S.dirty = true; closeModal(); renderAll();
+}
+
+// ── Modal price fetch helpers ──────────────────────────────────────────────
+function autoFetchOnTicker() {
+  const t = gv('f-ticker').toUpperCase();
+  if (t.length >= 4) fetchPriceIntoModal(t);
+}
+
+async function fetchPriceIntoModal(ticker) {
+  const t = (ticker || gv('f-ticker')).toUpperCase();
+  if (!t) { toast('請先輸入股票代碼 Enter ticker first', 'err'); return; }
+  const btn = document.querySelector('#m-body button[onclick*="fetchPriceIntoModal"]');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const { price } = await fetchLivePrice(t);
+    const el = document.getElementById('f-price');
+    if (el) {
+      el.value = price;
+      // trigger recalculations
+      if (document.getElementById('f-amt') || document.getElementById('f-shares')) autoShares();
+      else if (document.getElementById('f-total')) autoTotal();
+    }
+    toast(`${t}  NT$${price}`, 'ok');
+  } catch(e) {
+    toast(e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 即時'; }
+  }
 }
 
 // ── Price Fetch ────────────────────────────────────────────────────────────
