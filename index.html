@@ -1543,17 +1543,23 @@ async function loadCandleChart(ticker, days) {
   }
   const to = new Date().toISOString().split('T')[0];
   const displayFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-  // Fetch 365 extra calendar days (~260 trading bars) before the window so EMA20 is fully converged
-  const warmupFrom = new Date(Date.now() - (days + 365) * 86400000).toISOString().split('T')[0];
+  // Try fetching with a large warmup window first; fall back to display-only if API rejects the range
+  const warmupDays = [365, 180, 0];  // extra calendar days to prepend for EMA seeding
   try {
-    const r = await fetch(
-      `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${warmupFrom}&to=${to}`,
-      { headers: { 'X-API-KEY': fugleKey } }
-    );
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const d = await r.json();
-    const raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
-    if (!raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
+    let raw = null;
+    for (const extra of warmupDays) {
+      const fetchFrom = new Date(Date.now() - (days + extra) * 86400000).toISOString().split('T')[0];
+      const r = await fetch(
+        `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${fetchFrom}&to=${to}`,
+        { headers: { 'X-API-KEY': fugleKey } }
+      );
+      if (r.status === 400 && extra > 0) continue;  // date range too large → try smaller warmup
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
+      break;
+    }
+    if (!raw || !raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
     // allCandles: full fetch including warm-up period (for EMA + signal seeding)
     const allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close }));
