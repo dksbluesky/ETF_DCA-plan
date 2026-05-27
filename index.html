@@ -67,8 +67,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .ticker-sym{font-size:17px;font-weight:700}
 .ticker-nm{font-size:12px;color:var(--muted);margin-top:1px}
 .ticker-body{padding:16px 18px}
-.mini-chart{flex-shrink:0;opacity:.9;transition:opacity .2s}.mini-chart:hover{opacity:1}
-.mini-chart-empty{width:100px;height:36px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--border)}
+.mini-chart{flex-shrink:0;display:flex;align-items:center}
+.mini-chart-empty{font-size:11px;color:var(--border);padding:0 4px}
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:var(--bg);border-radius:8px;padding:9px 12px}
 .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
@@ -1219,11 +1219,14 @@ async function fetchLivePrice(ticker) {
   if (r.status === 404) throw new Error(`找不到股票代碼 ${ticker} / Symbol not found`);
   if (!r.ok) throw new Error(`Fugle HTTP${r.status}: ${d?.message || ''}`);
 
-  // Try intraday last price first, then today's close, then reference (prev close) as fallback
   const price = d.lastPrice ?? d.closePrice ?? d.referencePrice ?? d.previousClose;
   if (price > 0) {
     const isClose = d.isClose || (!d.lastPrice && !!d.closePrice);
-    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle' };
+    const open  = d.openPrice  ?? price;
+    const high  = d.highPrice  ?? price;
+    const low   = d.lowPrice   ?? price;
+    const prev  = d.referencePrice ?? d.previousClose ?? price;
+    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle', open, high, low, prev };
   }
   console.log('Fugle response (no price found):', JSON.stringify(d));
   throw new Error(`${ticker}: 查無報價 / No price data returned`);
@@ -1236,18 +1239,15 @@ async function refreshPrice(type, id) {
   const input = document.getElementById(`price-${type}-${id}`);
   if (btn) btn.classList.add('spinning');
   try {
-    const [{ price, state, source }, candles] = await Promise.all([
-      fetchLivePrice(pos.ticker),
-      fetchCandles(pos.ticker)
-    ]);
-    pos.currentPrice = price;
-    if (input) input.value = price;
+    const q = await fetchLivePrice(pos.ticker);
+    pos.currentPrice = q.price;
+    if (input) input.value = q.price;
     S.dirty = true;
     renderDashboard();
     const chartEl = document.getElementById(`mchart-${type}-${id}`);
-    if (chartEl) drawMiniChart(chartEl, candles);
-    const stateLabel = state === 'REGULAR' ? '盤中🟢' : '收盤價';
-    toast(`${pos.ticker}  NT$${price}  ${stateLabel} (${source})`, 'ok');
+    if (chartEl) drawCurrentCandle(chartEl, q);
+    const stateLabel = q.state === 'REGULAR' ? '盤中🟢' : '收盤價';
+    toast(`${pos.ticker}  NT$${q.price}  ${stateLabel} (${q.source})`, 'ok');
   } catch (e) {
     toast(e.message, 'err');
   } finally {
@@ -1265,15 +1265,12 @@ async function refreshAllPrices() {
   let ok = 0, fail = 0;
   await Promise.all(all.map(async ({ type, pos }) => {
     try {
-      const [{ price }, candles] = await Promise.all([
-        fetchLivePrice(pos.ticker),
-        fetchCandles(pos.ticker)
-      ]);
-      pos.currentPrice = price;
+      const q = await fetchLivePrice(pos.ticker);
+      pos.currentPrice = q.price;
       const input = document.getElementById(`price-${type}-${pos.id}`);
-      if (input) input.value = price;
+      if (input) input.value = q.price;
       const chartEl = document.getElementById(`mchart-${type}-${pos.id}`);
-      if (chartEl) drawMiniChart(chartEl, candles);
+      if (chartEl) drawCurrentCandle(chartEl, q);
       ok++;
     } catch { fail++; }
   }));
@@ -1283,47 +1280,39 @@ async function refreshAllPrices() {
   toast(`更新完成 Updated ${ok} ticker${ok!==1?'s':''}${fail ? `，${fail} 失敗 failed` : ''}`, fail ? 'err' : 'ok');
 }
 
-// ── Mini Candlestick Chart ──────────────────────────────────────────────────
-async function fetchCandles(ticker) {
-  const fugleKey = getFugleKey();
-  if (!fugleKey) return null;
-  const to = new Date().toISOString().split('T')[0];
-  const from = new Date(Date.now() - 50 * 86400000).toISOString().split('T')[0];
-  try {
-    const r = await fetch(
-      `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${from}&to=${to}`,
-      { headers: { 'X-API-KEY': fugleKey } }
-    );
-    if (!r.ok) return null;
-    const d = await r.json();
-    console.log('Fugle candles response for', ticker, ':', JSON.stringify(d).substring(0, 200));
-    return Array.isArray(d.data) ? d.data : null;
-  } catch { return null; }
-}
+// ── Current Day Candlestick ────────────────────────────────────────────────
+function drawCurrentCandle(el, q) {
+  // q = { price, open, high, low, prev }
+  const { price: close, open, high, low, prev, state } = q;
+  const W = 36, H = 44, cx = 18, bw = 10;
+  const isGreen = close >= open;
+  const col = isGreen ? '#38a169' : '#e53e3e';
 
-function drawMiniChart(el, candles) {
-  if (!candles || candles.length === 0) { el.innerHTML = '<div class="mini-chart-empty">—</div>'; return; }
-  const W = 100, H = 36, pad = 2;
-  const data = candles.slice(-30);
-  const n = data.length;
-  const minP = Math.min(...data.map(c => c.low));
-  const maxP = Math.max(...data.map(c => c.high));
-  const range = maxP - minP || 0.01;
-  const slotW = (W - pad * 2) / n;
-  const bw = Math.max(1, slotW * 0.55);
-  const toY = p => pad + (1 - (p - minP) / range) * (H - pad * 2);
-  let svg = `<svg width="${W}" height="${H}" style="display:block">`;
-  data.forEach((c, i) => {
-    const cx = pad + i * slotW + slotW / 2;
-    const col = c.close >= c.open ? '#38a169' : '#e53e3e';
-    const bodyT = toY(Math.max(c.open, c.close));
-    const bodyB = toY(Math.min(c.open, c.close));
-    const bh = Math.max(1, bodyB - bodyT);
-    svg += `<line x1="${cx.toFixed(1)}" y1="${toY(c.high).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${toY(c.low).toFixed(1)}" stroke="${col}" stroke-width="0.8"/>`;
-    svg += `<rect x="${(cx-bw/2).toFixed(1)}" y="${bodyT.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
-  });
-  svg += '</svg>';
-  el.innerHTML = svg;
+  // Scale: range covers high-low with 20% headroom each side
+  const range = (high - low) || (close * 0.02) || 0.01;
+  const pad = range * 0.3;
+  const minP = low - pad, maxP = high + pad;
+  const toY = p => Math.round(H * (1 - (p - minP) / (maxP - minP)));
+
+  const wickTop  = toY(high);
+  const wickBot  = toY(low);
+  const bodyTop  = toY(Math.max(open, close));
+  const bodyBot  = toY(Math.min(open, close));
+  const bodyH    = Math.max(2, bodyBot - bodyTop);
+
+  // Change vs prev close
+  const chg = prev > 0 ? ((close - prev) / prev * 100).toFixed(2) : null;
+  const chgCol = close >= prev ? '#38a169' : '#e53e3e';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px">
+      <svg width="${W}" height="${H}" style="display:block;overflow:visible">
+        <line x1="${cx}" y1="${wickTop}" x2="${cx}" y2="${wickBot}" stroke="${col}" stroke-width="1.5"/>
+        <rect x="${cx - bw/2}" y="${bodyTop}" width="${bw}" height="${bodyH}" fill="${col}" rx="1"/>
+        ${prev > 0 ? `<line x1="2" y1="${toY(prev)}" x2="${W-2}" y2="${toY(prev)}" stroke="#a0aec0" stroke-width="0.8" stroke-dasharray="2,2"/>` : ''}
+      </svg>
+      ${chg !== null ? `<div style="font-size:10px;color:${chgCol};font-weight:600;line-height:1.2">${close>=prev?'▲':'▼'}${Math.abs(chg)}%<br><span style="color:var(--muted);font-weight:400">${state==='REGULAR'?'盤中':'收盤'}</span></div>` : ''}
+    </div>`;
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
