@@ -67,6 +67,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .ticker-sym{font-size:17px;font-weight:700}
 .ticker-nm{font-size:12px;color:var(--muted);margin-top:1px}
 .ticker-body{padding:16px 18px}
+.mini-chart{flex-shrink:0;opacity:.9;transition:opacity .2s}.mini-chart:hover{opacity:1}
+.mini-chart-empty{width:100px;height:36px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--border)}
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:var(--bg);border-radius:8px;padding:9px 12px}
 .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
@@ -662,6 +664,7 @@ function dcaCard(pos) {
         <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
         <span class="badge b-dca">DCA</span>
       </div>
+      <div class="mini-chart" id="mchart-dca-${pos.id}"><div class="mini-chart-empty">—</div></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
           <input class="price-input" id="price-dca-${pos.id}" type="number" value="${pos.currentPrice || ''}" step="0.01"
@@ -738,6 +741,7 @@ function directCard(pos) {
         <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
         <span class="badge b-direct">Direct</span>
       </div>
+      <div class="mini-chart" id="mchart-direct-${pos.id}"><div class="mini-chart-empty">—</div></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)">現價
           <input class="price-input" id="price-direct-${pos.id}" type="number" value="${pos.currentPrice || ''}" step="0.01"
@@ -1232,11 +1236,16 @@ async function refreshPrice(type, id) {
   const input = document.getElementById(`price-${type}-${id}`);
   if (btn) btn.classList.add('spinning');
   try {
-    const { price, state, source } = await fetchLivePrice(pos.ticker);
+    const [{ price, state, source }, candles] = await Promise.all([
+      fetchLivePrice(pos.ticker),
+      fetchCandles(pos.ticker)
+    ]);
     pos.currentPrice = price;
     if (input) input.value = price;
     S.dirty = true;
     renderDashboard();
+    const chartEl = document.getElementById(`mchart-${type}-${id}`);
+    if (chartEl) drawMiniChart(chartEl, candles);
     const stateLabel = state === 'REGULAR' ? '盤中🟢' : '收盤價';
     toast(`${pos.ticker}  NT$${price}  ${stateLabel} (${source})`, 'ok');
   } catch (e) {
@@ -1256,10 +1265,15 @@ async function refreshAllPrices() {
   let ok = 0, fail = 0;
   await Promise.all(all.map(async ({ type, pos }) => {
     try {
-      const { price } = await fetchLivePrice(pos.ticker);
+      const [{ price }, candles] = await Promise.all([
+        fetchLivePrice(pos.ticker),
+        fetchCandles(pos.ticker)
+      ]);
       pos.currentPrice = price;
       const input = document.getElementById(`price-${type}-${pos.id}`);
       if (input) input.value = price;
+      const chartEl = document.getElementById(`mchart-${type}-${pos.id}`);
+      if (chartEl) drawMiniChart(chartEl, candles);
       ok++;
     } catch { fail++; }
   }));
@@ -1267,6 +1281,48 @@ async function refreshAllPrices() {
   renderDashboard();
   if (btn) { btn.disabled = false; btn.textContent = '🔄 更新所有股價 Refresh All Prices'; }
   toast(`更新完成 Updated ${ok} ticker${ok!==1?'s':''}${fail ? `，${fail} 失敗 failed` : ''}`, fail ? 'err' : 'ok');
+}
+
+// ── Mini Candlestick Chart ──────────────────────────────────────────────────
+async function fetchCandles(ticker) {
+  const fugleKey = getFugleKey();
+  if (!fugleKey) return null;
+  const to = new Date().toISOString().split('T')[0];
+  const from = new Date(Date.now() - 50 * 86400000).toISOString().split('T')[0];
+  try {
+    const r = await fetch(
+      `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles?symbol=${ticker}&timeframe=D&from=${from}&to=${to}`,
+      { headers: { 'X-API-KEY': fugleKey } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return Array.isArray(d.candles) ? d.candles : null;
+  } catch { return null; }
+}
+
+function drawMiniChart(el, candles) {
+  if (!candles || candles.length === 0) { el.innerHTML = '<div class="mini-chart-empty">—</div>'; return; }
+  const W = 100, H = 36, pad = 2;
+  const data = candles.slice(-30);
+  const n = data.length;
+  const minP = Math.min(...data.map(c => c.low));
+  const maxP = Math.max(...data.map(c => c.high));
+  const range = maxP - minP || 0.01;
+  const slotW = (W - pad * 2) / n;
+  const bw = Math.max(1, slotW * 0.55);
+  const toY = p => pad + (1 - (p - minP) / range) * (H - pad * 2);
+  let svg = `<svg width="${W}" height="${H}" style="display:block">`;
+  data.forEach((c, i) => {
+    const cx = pad + i * slotW + slotW / 2;
+    const col = c.close >= c.open ? '#38a169' : '#e53e3e';
+    const bodyT = toY(Math.max(c.open, c.close));
+    const bodyB = toY(Math.min(c.open, c.close));
+    const bh = Math.max(1, bodyB - bodyT);
+    svg += `<line x1="${cx.toFixed(1)}" y1="${toY(c.high).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${toY(c.low).toFixed(1)}" stroke="${col}" stroke-width="0.8"/>`;
+    svg += `<rect x="${(cx-bw/2).toFixed(1)}" y="${bodyT.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
+  });
+  svg += '</svg>';
+  el.innerHTML = svg;
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
