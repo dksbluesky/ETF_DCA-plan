@@ -1288,10 +1288,12 @@ function drawCurrentCandle(el, q) {
   const isGreen = close >= open;
   const col = isGreen ? '#38a169' : '#e53e3e';
 
-  // Scale: range covers high-low with 20% headroom each side
-  const range = (high - low) || (close * 0.02) || 0.01;
-  const pad = range * 0.3;
-  const minP = low - pad, maxP = high + pad;
+  // Include prev in scale so the reference line is always visible
+  const allP = [high, low, open, close, prev].filter(p => p > 0);
+  const rawMin = Math.min(...allP), rawMax = Math.max(...allP);
+  const range = (rawMax - rawMin) || (close * 0.02) || 0.01;
+  const pad = range * 0.25;
+  const minP = rawMin - pad, maxP = rawMax + pad;
   const toY = p => Math.round(H * (1 - (p - minP) / (maxP - minP)));
 
   const wickTop  = toY(high);
