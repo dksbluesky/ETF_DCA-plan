@@ -321,6 +321,14 @@ tr:hover td{background:var(--bg)}
     </div>
     <div class="chart-ohlcv" id="chart-ohlcv">滑鼠移至K線查看詳情 Hover for OHLCV details</div>
     <div class="chart-body"><div id="chart-container" style="height:340px"></div></div>
+    <div style="padding:10px 18px 14px;border-top:1px solid var(--border);background:var(--surface2)">
+      <div style="font-size:10.5px;color:var(--muted);line-height:1.8">
+        <div>🟢 <b>Bull bias</b> (close &gt; EMA20): track pullback legs (lower high + lower low) → <span style="color:#00bcd4">H1</span> on first recovery, <span style="color:#38a169">H2</span> on second</div>
+        <div>🔴 <b>Bear bias</b> (close &lt; EMA20): track rally legs (higher low + higher high) → <span style="color:#ed8936">L1</span> on first resumption, <span style="color:#e53e3e">L2</span> on second</div>
+        <div>🔄 New trend high/low resets the leg count</div>
+        <div>⚡ Signal fires on the recovery/resumption bar, not the pullback bar</div>
+      </div>
+    </div>
   </div>
 </div>
 
