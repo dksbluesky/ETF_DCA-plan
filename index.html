@@ -1297,7 +1297,7 @@ async function fetchCandles(ticker) {
     if (!r.ok) return null;
     const d = await r.json();
     console.log('Fugle candles response for', ticker, ':', JSON.stringify(d).substring(0, 200));
-    return Array.isArray(d.candles) ? d.candles : null;
+    return Array.isArray(d.data) ? d.data : null;
   } catch { return null; }
 }
 
