@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 29.62,
+      "currentPrice": 30.5,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -39,7 +39,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 232.55,
+      "currentPrice": 237.05,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -78,7 +78,27 @@
           "perShare": 3.448
         }
       ]
+    },
+    {
+      "id": "2a9b081b-3e66-4263-a01d-0106a94a66bc",
+      "ticker": "00981A",
+      "name": "主動統一台股增長",
+      "type": "ETF",
+      "currentPrice": 31.93,
+      "annualYield": 2.02,
+      "dividendTracking": true,
+      "transactions": [
+        {
+          "id": "f63df966-e4fd-4c3e-9916-81cb69ef815a",
+          "date": "2026-05-27",
+          "shares": 4000,
+          "costPerShare": 31.8,
+          "totalCost": 127200,
+          "notes": ""
+        }
+      ],
+      "dividends": []
     }
   ],
-  "lastUpdated": "2026-05-26T14:44:49.656Z"
+  "lastUpdated": "2026-05-27T04:48:20.255Z"
 }
