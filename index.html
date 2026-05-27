@@ -644,7 +644,7 @@ function dcaCard(pos) {
         <td>${fmtDate(e.date)}</td>
         <td><span class="badge ${e.type === 'lumpsum' ? 'b-direct' : 'b-dca'}">${e.type === 'lumpsum' ? '加碼 Lump' : '定扣 DCA'}</span></td>
         <td>${fmt(e.amount || 0)}</td><td>${fmtN(e.shares || 0)}</td>
-        <td>${e.pricePerShare ? 'NT$' + (+e.pricePerShare).toFixed(2) : '—'}</td>
+        <td>${e.shares > 0 ? 'NT$' + (e.amount / e.shares).toFixed(2) : '—'}</td>
         <td style="display:flex;gap:4px;justify-content:flex-end">
           <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-entry','${pos.id}|${e.id}')">✎</button>
           <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delEntry('dca','${pos.id}','${e.id}')">✕</button>
