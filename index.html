@@ -397,6 +397,9 @@ async function testConn() {
 function savePAT() {
   const v = document.getElementById('s-pat').value.trim();
   v ? localStorage.setItem('p_pat', v) : localStorage.removeItem('p_pat');
+  // Auto-reload data 1s after PAT is pasted (debounced)
+  clearTimeout(savePAT._t);
+  if (v.length > 20) savePAT._t = setTimeout(() => loadData(), 1000);
 }
 function getFugleKey() { return localStorage.getItem('fugle_key') || ''; }
 function saveFugleKey() {
