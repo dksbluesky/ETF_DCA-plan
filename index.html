@@ -1427,8 +1427,10 @@ function calcEMAArray(data, period) {
   return vals;
 }
 
-// H1/H2/L1/L2 — mirrors Al Brooks PA Pine Script logic exactly
-function calcHLSignals(candles, emaLen = 20) {
+// H1/H2/L1/L2 — exact port of Pine Script logic
+// State after H2/L2 stays locked (legDir remains) until newHi/newLo or bias flip resets it,
+// exactly matching the Pine Script var-persistent state machine.
+function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
   const ema = calcEMAArray(candles, emaLen);
   let hiHigh = null, loLow = null;
   let newHi = false, newLo = false;
@@ -1443,11 +1445,11 @@ function calcHLSignals(candles, emaLen = 20) {
     const bear = c.close < ema[i];
     let h1 = false, h2 = false, l1 = false, l2 = false;
 
-    // Track trend extremes
+    // Track trend extremes (Pine: hiHigh/loLow updated each confirmed bar)
     if (bull) { if (hiHigh === null || c.high > hiHigh) { hiHigh = c.high; newHi = true; } else newHi = false; }
     if (bear) { if (loLow  === null || c.low  < loLow)  { loLow  = c.low;  newLo = true; } else newLo = false; }
 
-    // Bias flip → full reset
+    // Bias flip → full reset (Pine: if (bullBias and not bullBias[1]) or ...)
     if (prevBull !== null && ((bull && !prevBull) || (bear && !prevBear))) {
       legCount = 0; legDir = 0; waitLeg = false; newHi = false; newLo = false;
       hiHigh = bull ? c.high : null;
@@ -1456,32 +1458,47 @@ function calcHLSignals(candles, emaLen = 20) {
 
     // ── Bull: H1 / H2 ──
     if (bull) {
+      // New swing high resets leg count (Pine: if newHi → legCount:=0, legDir:=0, waitLeg:=false)
       if (newHi) { legCount = 0; legDir = 0; waitLeg = false; }
-      // Down leg: lower high + lower low
+      // Down leg: lower high + lower low vs previous bar
       if (c.high < p.high && c.low < p.low && legDir !== -1) {
         legCount = legCount === 0 ? 1 : 2;
         legDir = -1; waitLeg = true;
       }
-      // Recovery: higher high while in pullback
+      // Recovery: higher high while in downward leg
       if (legDir === -1 && c.high > p.high) {
-        if      (legCount === 1) { h1 = waitLeg; legDir = 0; }
-        else if (legCount === 2) { h2 = waitLeg; legDir = 0; legCount = 0; }
+        if (legCount === 1) {
+          h1 = waitLeg;
+          legDir = 0;                   // Pine: legDir := 0 after H1
+        } else if (legCount === 2) {
+          // Pine: h2 := showH2 and waitLeg and (strongOnly ? ... : true)
+          const strong = !strongOnly || (c.close > p.close && c.close > c.open && c.close > c.high - (c.high - c.low) * 0.3);
+          h2 = waitLeg && strong;
+          // Pine does NOT reset legDir here — stays -1 until newHi or bias flip
+        }
         waitLeg = false;
       }
     }
 
     // ── Bear: L1 / L2 ──
     if (bear) {
+      // New swing low resets leg count
       if (newLo) { legCount = 0; legDir = 0; waitLeg = false; }
-      // Up leg: higher low + higher high
+      // Up leg: higher low + higher high vs previous bar
       if (c.low > p.low && c.high > p.high && legDir !== 1) {
         legCount = legCount === 0 ? 1 : 2;
         legDir = 1; waitLeg = true;
       }
-      // Resumption: lower low while in rally
+      // Resumption: lower low while in upward leg
       if (legDir === 1 && c.low < p.low) {
-        if      (legCount === 1) { l1 = waitLeg; legDir = 0; }
-        else if (legCount === 2) { l2 = waitLeg; legDir = 0; legCount = 0; }
+        if (legCount === 1) {
+          l1 = waitLeg;
+          legDir = 0;                   // Pine: legDir := 0 after L1
+        } else if (legCount === 2) {
+          const strong = !strongOnly || (c.close < p.close && c.close < c.open && c.close < c.low + (c.high - c.low) * 0.3);
+          l2 = waitLeg && strong;
+          // Pine does NOT reset legDir here — stays 1 until newLo or bias flip
+        }
         waitLeg = false;
       }
     }
