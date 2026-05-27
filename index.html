@@ -1392,6 +1392,20 @@ function drawCurrentCandle(el, q) {
 // ── Candlestick Popup Chart ────────────────────────────────────────────────
 let _lwChart = null, _lwSeries = null, _chartTicker = null;
 
+function calcEMA(data, period) {
+  if (data.length < period) return [];
+  const k = 2 / (period + 1);
+  let sum = 0;
+  for (let i = 0; i < period; i++) sum += data[i].close;
+  let ema = sum / period;
+  const result = [{ time: data[period - 1].time, value: parseFloat(ema.toFixed(3)) }];
+  for (let i = period; i < data.length; i++) {
+    ema = data[i].close * k + ema * (1 - k);
+    result.push({ time: data[i].time, value: parseFloat(ema.toFixed(3)) });
+  }
+  return result;
+}
+
 function openChartModal(ticker, name) {
   _chartTicker = ticker;
   document.getElementById('chart-hd-title').textContent = `${ticker}  ${name || ''}`;
@@ -1463,6 +1477,12 @@ async function loadCandleChart(ticker, days) {
     });
     volSeries.setData(volumes);
     _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+
+    // EMA 5 & 20
+    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA5' });
+    ema5Series.setData(calcEMA(candles, 5));
+    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA20' });
+    ema20Series.setData(calcEMA(candles, 20));
 
     _lwChart.timeScale().fitContent();
 
