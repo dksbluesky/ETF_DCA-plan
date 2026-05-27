@@ -1543,8 +1543,8 @@ async function loadCandleChart(ticker, days) {
   }
   const to = new Date().toISOString().split('T')[0];
   const displayFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-  // Fetch 120 extra calendar days (~85 trading bars) before the window so EMA20 is fully warmed up
-  const warmupFrom = new Date(Date.now() - (days + 120) * 86400000).toISOString().split('T')[0];
+  // Fetch 365 extra calendar days (~260 trading bars) before the window so EMA20 is fully converged
+  const warmupFrom = new Date(Date.now() - (days + 365) * 86400000).toISOString().split('T')[0];
   try {
     const r = await fetch(
       `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${warmupFrom}&to=${to}`,
