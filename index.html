@@ -335,6 +335,7 @@ async function loadData() {
     renderAll();
     setSS('saved', '✓ Synced');
     toast('已載入 Loaded from GitHub', 'ok');
+    if (getFugleKey()) setTimeout(() => refreshAllPrices(), 800);
   } catch (e) {
     setSS('error', '✗ Error');
     toast('載入失敗 ' + e.message, 'err');
