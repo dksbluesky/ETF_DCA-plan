@@ -1291,11 +1291,12 @@ async function fetchCandles(ticker) {
   const from = new Date(Date.now() - 50 * 86400000).toISOString().split('T')[0];
   try {
     const r = await fetch(
-      `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles?symbol=${ticker}&timeframe=D&from=${from}&to=${to}`,
+      `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${from}&to=${to}`,
       { headers: { 'X-API-KEY': fugleKey } }
     );
     if (!r.ok) return null;
     const d = await r.json();
+    console.log('Fugle candles response for', ticker, ':', JSON.stringify(d).substring(0, 200));
     return Array.isArray(d.candles) ? d.candles : null;
   } catch { return null; }
 }
