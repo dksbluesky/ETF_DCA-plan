@@ -374,11 +374,15 @@ function syncConfirm() {
 async function loadData() {
   setSS('saving', '↺ Loading…');
   try {
-    const h = { Accept: 'application/vnd.github.v3+json' };
-    if (getPAT()) h['Authorization'] = `token ${getPAT()}`;
-    const r = await fetch(`https://api.github.com/repos/${getRepo()}/contents/${getFile()}`, { headers: h });
+    const apiUrl = `https://api.github.com/repos/${getRepo()}/contents/${getFile()}`;
+    const baseH = { Accept: 'application/vnd.github.v3+json' };
+    let r = await fetch(apiUrl, { headers: getPAT() ? { ...baseH, Authorization: `token ${getPAT()}` } : baseH });
+    // PAT invalid → fall back to unauthenticated (works for public repos)
+    if (r.status === 401 && getPAT()) {
+      toast('⚠️ PAT 已失效，以公開模式載入 / PAT invalid — loaded read-only. Re-paste in ⚙️ to save.', 'err');
+      r = await fetch(apiUrl, { headers: baseH });
+    }
     if (r.status === 404) { setSS('', '—'); toast('尚無資料檔 No data file yet — add positions and save.'); return; }
-    if (r.status === 401) throw new Error('PAT_EXPIRED');
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = await r.json();
     S.sha = j.sha;
@@ -390,12 +394,7 @@ async function loadData() {
     if (getFugleKey()) setTimeout(() => refreshAllPrices(), 800);
   } catch (e) {
     setSS('error', '✗ Error');
-    if (e.message === 'PAT_EXPIRED') {
-      toast('GitHub PAT 已失效，請至 ⚙️ 設定重新貼上 / PAT expired — re-paste in ⚙️ Settings', 'err');
-      switchTab('settings');
-    } else {
-      toast('載入失敗 ' + e.message, 'err');
-    }
+    toast('載入失敗 ' + e.message, 'err');
   }
 }
 
