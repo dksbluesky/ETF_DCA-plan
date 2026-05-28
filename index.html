@@ -393,7 +393,14 @@ async function loadData() {
     const j = await r.json();
     S.sha = j.sha;
     S.data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
-    S.dirty = false;
+    // Migration: default trailStop to 10 for any existing position that doesn't have it
+    [...(S.data.dca || []), ...(S.data.direct || [])].forEach(pos => {
+      if (pos.trailStop == null) {
+        pos.trailStop = 10;
+        if (!pos.trailHigh && pos.currentPrice) pos.trailHigh = pos.currentPrice;
+        S.dirty = true;
+      }
+    });
     renderAll();
     setSS('saved', '✓ Synced');
     toast('已載入 Loaded from GitHub', 'ok');
