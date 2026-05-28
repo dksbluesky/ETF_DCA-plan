@@ -1577,7 +1577,7 @@ async function loadCandleChart(ticker, days) {
         `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${fetchFrom}&to=${to}`,
         { headers: { 'X-API-KEY': fugleKey } }
       );
-      if (r.status === 400 && extra > 0) continue;  // date range too large → try smaller warmup
+      if ((r.status === 400 || r.status === 411) && extra > 0) continue;  // date range too large → try smaller warmup
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
@@ -1680,7 +1680,7 @@ window.debugHL = async function(ticker, days = 90) {
   for (const extra of [365, 180, 0]) {
     const from = new Date(Date.now() - (days + extra) * 86400000).toISOString().split('T')[0];
     const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${from}&to=${to}`, { headers: { 'X-API-KEY': fugleKey } });
-    if (r.status === 400 && extra > 0) continue;
+    if ((r.status === 400 || r.status === 411) && extra > 0) continue;
     const d = await r.json();
     raw = (d.data || []).sort((a,b) => a.date.localeCompare(b.date));
     console.log(`Fugle: ${raw.length} bars from ${raw[0]?.date} (extra=${extra}d warmup)`);
