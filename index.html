@@ -259,6 +259,12 @@ tr:hover td{background:var(--bg)}
           <button class="btn btn-outline btn-sm" onclick="syncConfirm()">↺ Load from GitHub</button>
           <button class="btn btn-primary btn-sm" onclick="saveData()">💾 Save to GitHub</button>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <button class="btn btn-outline btn-sm" onclick="exportSettings()">⬇ 匯出設定 Export Settings</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('imp-settings').click()">⬆ 匯入設定 Import Settings</button>
+          <input type="file" id="imp-settings" accept=".json" style="display:none" onchange="importSettings(event)">
+        </div>
+        <p style="font-size:10px;color:var(--muted);margin-top:4px">匯出設定檔存放在本機即可 / Save the exported file locally — import to restore PAT after any browser reset.</p>
         <div id="conn-result" style="margin-top:12px;font-size:12px"></div>
       </div>
       <div class="card">
@@ -485,6 +491,32 @@ async function testFugle() {
 function saveRepoSettings() {
   localStorage.setItem('p_repo', document.getElementById('s-repo').value.trim());
   localStorage.setItem('p_file', document.getElementById('s-file').value.trim());
+}
+function exportSettings() {
+  const s = { pat: getPAT(), fugleKey: getFugleKey(), repo: getRepo(), file: getFile() };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' }));
+  a.download = 'portfolio-settings.json';
+  a.click();
+  toast('設定已匯出，請存放在本機安全位置 / Settings exported — keep file private', 'ok');
+}
+function importSettings(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const s = JSON.parse(ev.target.result);
+      if (s.pat) localStorage.setItem('p_pat', s.pat);
+      if (s.fugleKey) localStorage.setItem('fugle_key', s.fugleKey);
+      if (s.repo) localStorage.setItem('p_repo', s.repo);
+      if (s.file) localStorage.setItem('p_file', s.file);
+      renderSettings();
+      toast('設定已匯入 Settings imported — reloading data…', 'ok');
+      setTimeout(() => loadData(), 600);
+    } catch { toast('匯入失敗 Import failed: invalid file', 'err'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
 }
 function exportJSON() {
   const a = document.createElement('a');
@@ -997,7 +1029,7 @@ function openModal(type, ctx) {
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%)</label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop||''}" placeholder="e.g. 10"></div>
+        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop ?? 10}" placeholder="e.g. 10"></div>
         <div class="form-group"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
@@ -1022,7 +1054,7 @@ function openModal(type, ctx) {
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%) <span class="c-muted">(選填)</span></label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop||''}" placeholder="e.g. 10"></div>
+        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop ?? 10}" placeholder="e.g. 10"></div>
         <div class="form-group"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
