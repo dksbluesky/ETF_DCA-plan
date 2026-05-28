@@ -30,7 +30,9 @@
           "perShare": 0.66,
           "sharesAtPayout": 3398
         }
-      ]
+      ],
+      "trailStop": 10,
+      "trailHigh": 30.72
     }
   ],
   "direct": [
@@ -77,7 +79,9 @@
           "sharesAtPayout": 2500,
           "perShare": 3.448
         }
-      ]
+      ],
+      "trailStop": 10,
+      "trailHigh": 240.3
     },
     {
       "id": "2a9b081b-3e66-4263-a01d-0106a94a66bc",
@@ -97,8 +101,10 @@
           "notes": ""
         }
       ],
-      "dividends": []
+      "dividends": [],
+      "trailStop": 10,
+      "trailHigh": 31.92
     }
   ],
-  "lastUpdated": "2026-05-28T02:04:14.701Z"
+  "lastUpdated": "2026-05-28T11:16:54.376Z"
 }
