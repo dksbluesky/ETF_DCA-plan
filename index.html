@@ -272,6 +272,16 @@ tr:hover td{background:var(--bg)}
         <div id="fugle-result" style="margin-top:10px;font-size:12px"></div>
       </div>
       <div class="card">
+        <div class="card-title">📊 K線歷史補充 Chart History — FinMind <span style="font-weight:400;font-size:10px;color:var(--muted)">(選填 Optional)</span></div>
+        <div class="form-group">
+          <label class="form-label">FinMind Token</label>
+          <input type="password" class="form-input" id="s-finmind" placeholder="貼上 FinMind Token" oninput="saveFinMindToken()">
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">選填。提供 K 線圖更多歷史資料以改善 EMA 準確度，尤其對新 ETF。只存在 localStorage。申請：<a href="https://finmindtrade.com" target="_blank">finmindtrade.com</a></p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="testFinMind()">🔗 測試 FinMind Test</button>
+        <div id="finmind-result" style="margin-top:10px;font-size:12px"></div>
+      </div>
+      <div class="card">
         <div class="card-title">資料管理 Data Management</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <button class="btn btn-outline" onclick="exportJSON()">📥 匯出備份 Export JSON</button>
@@ -445,6 +455,27 @@ function getFugleKey() { return localStorage.getItem('fugle_key') || ''; }
 function saveFugleKey() {
   const v = document.getElementById('s-fugle').value.trim();
   v ? localStorage.setItem('fugle_key', v) : localStorage.removeItem('fugle_key');
+}
+function getFinMindToken() { return localStorage.getItem('finmind_token') || ''; }
+function saveFinMindToken() {
+  const v = document.getElementById('s-finmind').value.trim();
+  v ? localStorage.setItem('finmind_token', v) : localStorage.removeItem('finmind_token');
+}
+async function testFinMind() {
+  const el = document.getElementById('finmind-result');
+  const token = getFinMindToken();
+  if (!token) { el.innerHTML = '⚠️ 請先輸入 FinMind Token'; el.style.color = 'var(--gold)'; return; }
+  el.textContent = '測試中…'; el.style.color = 'var(--muted)';
+  try {
+    const r = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=006208&start_date=2025-01-01&end_date=2025-01-10&token=${token}`);
+    const d = await r.json();
+    if (r.status === 401 || d.status === 401) { el.innerHTML = '✗ Token 無效 / Invalid token'; el.style.color = 'var(--red)'; return; }
+    if (d.data?.length) { el.innerHTML = `✓ 連線成功，取得 ${d.data.length} 筆資料 / Connected`; el.style.color = 'var(--green)'; }
+    else { el.innerHTML = '⚠️ 連線成功但無資料 / Connected but no data'; el.style.color = 'var(--gold)'; }
+  } catch(e) {
+    el.innerHTML = e.message.includes('fetch') ? '✗ CORS 封鎖，無法從瀏覽器使用 / CORS blocked' : '✗ ' + e.message;
+    el.style.color = 'var(--red)';
+  }
 }
 async function testFugle() {
   const el = document.getElementById('fugle-result');
@@ -850,6 +881,7 @@ function renderSettings() {
   document.getElementById('s-file').value = getFile();
   if (getPAT()) document.getElementById('s-pat').placeholder = '●●●●●●●● (已設定 Configured)';
   if (getFugleKey()) document.getElementById('s-fugle').placeholder = '●●●●●●●● (已設定 Configured)';
+  if (getFinMindToken()) document.getElementById('s-finmind').placeholder = '●●●●●●●● (已設定 Configured)';
 }
 
 // ── Render all ─────────────────────────────────────────────────────────────
@@ -1400,6 +1432,25 @@ function drawCurrentCandle(el, q) {
 // ── Candlestick Popup Chart ────────────────────────────────────────────────
 let _lwChart = null, _lwSeries = null, _chartTicker = null;
 
+// Fetch extra warm-up candles from FinMind (silent fallback — returns [] on any error)
+async function fetchFinMindWarmup(ticker, from, to) {
+  const token = getFinMindToken();
+  if (!token) return [];
+  try {
+    const r = await fetch(
+      `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${ticker}&start_date=${from}&end_date=${to}&token=${token}`
+    );
+    if (!r.ok) return [];
+    const d = await r.json();
+    if (!d.data?.length) return [];
+    return d.data
+      .map(c => ({ time: c.date, open: +c.open, high: +c.max, low: +c.min, close: +c.close }))
+      .sort((a, b) => a.time.localeCompare(b.time));
+  } catch(e) {
+    return [];  // CORS blocked or network error — transparent fallback
+  }
+}
+
 function calcEMA(data, period) {
   if (data.length < period) return [];
   const k = 2 / (period + 1);
@@ -1562,7 +1613,23 @@ async function loadCandleChart(ticker, days) {
     if (!raw || !raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
     // allCandles: full fetch including warm-up period (for EMA + signal seeding)
-    const allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close }));
+    let allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close }));
+
+    // If warm-up bars before the display window are thin (<60 trading days), try FinMind for extra history
+    const warmupCount = allCandles.filter(c => c.time < displayFrom).length;
+    if (warmupCount < 60 && getFinMindToken()) {
+      const fugleStart = allCandles[0]?.time;
+      if (fugleStart) {
+        const fmFrom = new Date(Date.now() - (days + 730) * 86400000).toISOString().split('T')[0];
+        const fmData = await fetchFinMindWarmup(ticker, fmFrom, fugleStart);
+        if (fmData.length) {
+          // Prepend FinMind candles that pre-date Fugle's earliest bar (no duplicates)
+          const prepend = fmData.filter(c => c.time < fugleStart);
+          if (prepend.length) allCandles = [...prepend, ...allCandles];
+        }
+      }
+    }
+
     // candles / volumes: only the requested display window
     const candles = allCandles.filter(c => c.time >= displayFrom);
     const volumes = raw.filter(c => c.date >= displayFrom).map(c => ({ time: c.date, value: c.volume, color: c.close >= c.open ? '#38a16955' : '#e53e3e55' }));
