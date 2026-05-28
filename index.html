@@ -1701,6 +1701,72 @@ async function loadCandleChart(ticker, days) {
   }
 }
 
+// ── Debug helper (browser console only) ───────────────────────────────────
+// Usage: debugHL('00981A')   — traces H1/H2 state around the last 60 trading days
+window.debugHL = async function(ticker, days = 90) {
+  const fugleKey = getFugleKey();
+  if (!fugleKey) { console.warn('No Fugle key'); return; }
+  const to = new Date().toISOString().split('T')[0];
+  const displayFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+  const warmupFrom  = new Date(Date.now() - (days + 365) * 86400000).toISOString().split('T')[0];
+  let raw = null;
+  for (const extra of [365, 180, 0]) {
+    const from = new Date(Date.now() - (days + extra) * 86400000).toISOString().split('T')[0];
+    const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${from}&to=${to}`, { headers: { 'X-API-KEY': fugleKey } });
+    if (r.status === 400 && extra > 0) continue;
+    const d = await r.json();
+    raw = (d.data || []).sort((a,b) => a.date.localeCompare(b.date));
+    console.log(`Fugle: ${raw.length} bars from ${raw[0]?.date} (extra=${extra}d warmup)`);
+    break;
+  }
+  if (getFinMindToken() && raw?.length) {
+    const fmFrom = new Date(Date.now() - (days + 730) * 86400000).toISOString().split('T')[0];
+    try {
+      const r2 = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${ticker}&start_date=${fmFrom}&end_date=${raw[0].date}&token=${getFinMindToken()}`);
+      const d2 = await r2.json();
+      const prepend = (d2.data||[]).filter(c => c.date < raw[0].date).map(c => ({ date: c.date, open: +c.open, high: +c.max, low: +c.min, close: +c.close }));
+      if (prepend.length) { raw = [...prepend, ...raw]; console.log(`FinMind: prepended ${prepend.length} bars from ${prepend[0].date}`); }
+    } catch(e) {}
+  }
+  const candles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close }));
+  // Run with trace
+  const ema = calcEMAArray(candles, 20);
+  let hiHigh=null,loLow=null,newHi=false,newLo=false,legCount=0,legDir=0,waitLeg=false,prevBull=null,prevBear=null;
+  console.log('\n=== H1/H2 state trace for', ticker, '(show bars >=', displayFrom, ') ===');
+  console.log('date       | close  | EMA20  | bias | legDir | legCnt | waitLeg | signal');
+  for (let i = 1; i < candles.length; i++) {
+    const c = candles[i], p = candles[i-1];
+    if (ema[i] === null) continue;
+    const bull = c.close > ema[i], bear = c.close < ema[i];
+    if (bull) { if (hiHigh===null||c.high>hiHigh){hiHigh=c.high;newHi=true;}else newHi=false; }
+    if (bear) { if (loLow===null||c.low<loLow){loLow=c.low;newLo=true;}else newLo=false; }
+    if (prevBull!==null&&((bull&&!prevBull)||(bear&&!prevBear))){legCount=0;legDir=0;waitLeg=false;newHi=false;newLo=false;hiHigh=bull?c.high:null;loLow=bear?c.low:null;}
+    let sig = '';
+    if (bull) {
+      if (newHi){legCount=0;legDir=0;waitLeg=false;sig+='[newHi↑reset] ';}
+      if (c.high<p.high&&c.low<p.low&&legDir!==-1){legCount=legCount===0?1:2;legDir=-1;waitLeg=true;sig+=`[dn-leg→cnt${legCount}] `;}
+      if (legDir===-1&&c.high>p.high){
+        if(legCount===1){sig+='✅H1 ';legDir=0;}
+        else if(legCount===2){sig+='✅H2 ';}
+        waitLeg=false;
+      }
+    }
+    if (bear) {
+      if (newLo){legCount=0;legDir=0;waitLeg=false;sig+='[newLo↓reset] ';}
+      if (c.low>p.low&&c.high>p.high&&legDir!==1){legCount=legCount===0?1:2;legDir=1;waitLeg=true;sig+=`[up-leg→cnt${legCount}] `;}
+      if (legDir===1&&c.low<p.low){
+        if(legCount===1){sig+='✅L1 ';legDir=0;}
+        else if(legCount===2){sig+='✅L2 ';}
+        waitLeg=false;
+      }
+    }
+    prevBull=bull;prevBear=bear;
+    if (c.time >= displayFrom || sig)
+      console.log(`${c.time} | ${c.close.toFixed(2).padStart(6)} | ${ema[i].toFixed(2).padStart(6)} | ${bull?'BULL':bear?'BEAR':'----'} |   ${String(legDir).padStart(2)}   |    ${legCount}   |   ${waitLeg?'T':'F'}   | ${sig}`);
+  }
+  console.log('=== end ===');
+};
+
 // ── Init ───────────────────────────────────────────────────────────────────
 renderAll();
 loadData();
