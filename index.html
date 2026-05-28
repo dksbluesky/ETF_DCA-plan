@@ -1577,7 +1577,8 @@ async function loadCandleChart(ticker, days) {
         `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${fetchFrom}&to=${to}`,
         { headers: { 'X-API-KEY': fugleKey } }
       );
-      if ((r.status === 400 || r.status === 411) && extra > 0) continue;  // date range too large → try smaller warmup
+      if (r.status === 401) throw new Error('401');  // bad/expired key — no point retrying
+      if (r.status === 400 && extra > 0) continue;  // date range too large → try smaller warmup
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
@@ -1664,7 +1665,10 @@ async function loadCandleChart(ticker, days) {
     ro.observe(container);
 
   } catch(e) {
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--red);font-size:13px">載入失敗 ${e.message}</div>`;
+    const msg = e.message === '401'
+      ? 'Fugle API Key 已失效，請至 ⚙️ 設定重新輸入 / API key expired — re-enter in ⚙️ Settings'
+      : `載入失敗 ${e.message}`;
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--red);font-size:13px;text-align:center;padding:16px">${msg}</div>`;
   }
 }
 
