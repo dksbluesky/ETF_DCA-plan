@@ -327,6 +327,10 @@ tr:hover td{background:var(--bg)}
         <button class="tf-btn" onclick="switchTF(180,this)">6M</button>
         <button class="tf-btn" onclick="switchTF(365,this)">1Y</button>
       </div>
+      <div class="tf-btns" style="margin-left:2px;border-left:1px solid var(--border);padding-left:8px">
+        <button class="tf-btn bias-btn" onclick="switchBias(20,this)" id="bias-btn-20">B:20</button>
+        <button class="tf-btn bias-btn active" onclick="switchBias(50,this)" id="bias-btn-50">B:50</button>
+      </div>
       <button class="close-btn" onclick="closeChartModal()">✕</button>
     </div>
     <div class="chart-ohlcv" id="chart-ohlcv">滑鼠移至K線查看詳情 Hover for OHLCV details</div>
@@ -1431,6 +1435,7 @@ function drawCurrentCandle(el, q) {
 
 // ── Candlestick Popup Chart ────────────────────────────────────────────────
 let _lwChart = null, _lwSeries = null, _chartTicker = null;
+let _biasEmaLen = 50, _chartDays = 90;
 
 // Fetch extra warm-up candles from FinMind (silent fallback — returns [] on any error)
 async function fetchFinMindWarmup(ticker, from, to) {
@@ -1562,10 +1567,16 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
 
 function openChartModal(ticker, name) {
   _chartTicker = ticker;
+  _biasEmaLen = 50;
+  _chartDays = 90;
   document.getElementById('chart-hd-title').textContent = `${ticker}  ${name || ''}`;
   document.getElementById('chart-ohlcv').textContent = '滑鼠移至K線查看詳情 Hover for OHLCV details';
   document.getElementById('chart-overlay').classList.add('open');
-  document.querySelectorAll('.tf-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  // Reset TF buttons (1M/3M/6M/1Y) — default to 1M
+  document.querySelectorAll('.tf-btn:not(.bias-btn)').forEach((b, i) => b.classList.toggle('active', i === 0));
+  // Reset bias buttons — default to B:50
+  document.getElementById('bias-btn-20').classList.remove('active');
+  document.getElementById('bias-btn-50').classList.add('active');
   loadCandleChart(ticker, 90);
 }
 
@@ -1577,9 +1588,17 @@ function closeChartModal() {
 function closeChartBg(e) { if (e.target.id === 'chart-overlay') closeChartModal(); }
 
 function switchTF(days, btn) {
-  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  _chartDays = days;
+  document.querySelectorAll('.tf-btn:not(.bias-btn)').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   loadCandleChart(_chartTicker, days);
+}
+
+function switchBias(len, btn) {
+  _biasEmaLen = len;
+  document.querySelectorAll('.bias-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadCandleChart(_chartTicker, _chartDays);
 }
 
 async function loadCandleChart(ticker, days) {
@@ -1665,10 +1684,15 @@ async function loadCandleChart(ticker, days) {
     ema5Series.setData(calcEMA(allCandles, 5).filter(p => p.time >= displayFrom));
     const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA20' });
     ema20Series.setData(calcEMA(allCandles, 20).filter(p => p.time >= displayFrom));
+    // EMA50 bias line — shown when bias mode is B:50
+    if (_biasEmaLen === 50) {
+      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA50' });
+      ema50Series.setData(calcEMA(allCandles, 50).filter(p => p.time >= displayFrom));
+    }
 
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
     const hlMarkers = [];
-    for (const s of calcHLSignals(allCandles, 20).filter(s => s.time >= displayFrom)) {
+    for (const s of calcHLSignals(allCandles, _biasEmaLen).filter(s => s.time >= displayFrom)) {
       if (s.h1) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#00bcd4', shape: 'arrowUp',   text: 'H1', size: 1 });
       if (s.h2) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'arrowUp',   text: 'H2', size: 2 });
       if (s.l1) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#ed8936', shape: 'arrowDown', text: 'L1', size: 1 });
