@@ -334,6 +334,11 @@ tr:hover td{background:var(--bg)}
       <button class="close-btn" onclick="closeChartModal()">✕</button>
     </div>
     <div class="chart-ohlcv" id="chart-ohlcv">滑鼠移至K線查看詳情 Hover for OHLCV details</div>
+    <div style="padding:3px 18px;font-size:11px;display:flex;gap:14px;background:var(--surface2);border-bottom:1px solid var(--border)">
+      <span style="color:#d69e2e;font-weight:600">— EMA5</span>
+      <span style="color:#805ad5;font-weight:600">— EMA20</span>
+      <span id="legend-ema50" style="color:#48bb78;font-weight:600;display:none">— EMA50</span>
+    </div>
     <div class="chart-body"><div id="chart-container" style="height:340px"></div></div>
     <div style="padding:10px 18px 14px;border-top:1px solid var(--border);background:var(--surface2)">
       <div style="font-size:10.5px;color:var(--muted);line-height:1.8">
@@ -1680,14 +1685,18 @@ async function loadCandleChart(ticker, days) {
     _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
     // EMA 5 & 20 — computed on full warm-up dataset, then trimmed to display window
-    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA5' });
+    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
     ema5Series.setData(calcEMA(allCandles, 5).filter(p => p.time >= displayFrom));
-    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA20' });
+    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
     ema20Series.setData(calcEMA(allCandles, 20).filter(p => p.time >= displayFrom));
     // EMA50 bias line — shown when bias mode is B:50
+    const ema50LegEl = document.getElementById('legend-ema50');
     if (_biasEmaLen === 50) {
-      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'EMA50' });
+      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
       ema50Series.setData(calcEMA(allCandles, 50).filter(p => p.time >= displayFrom));
+      if (ema50LegEl) ema50LegEl.style.display = '';
+    } else {
+      if (ema50LegEl) ema50LegEl.style.display = 'none';
     }
 
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
