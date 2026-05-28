@@ -379,6 +379,24 @@ function syncConfirm() {
 
 async function loadData() {
   setSS('saving', '↺ Loading…');
+
+  // If local cache is newer than last GitHub save, use it — preserves unsaved changes
+  const localTs  = parseInt(localStorage.getItem('p_local_ts')  || '0');
+  const githubTs = parseInt(localStorage.getItem('p_github_ts') || '0');
+  if (localTs > githubTs) {
+    const cached = localStorage.getItem('p_cache');
+    if (cached) {
+      try {
+        S.data = JSON.parse(cached);
+        S.dirty = true;
+        renderAll();
+        setSS('error', '⚠ 未同步');
+        toast('📝 已載入本機變更 / Local changes loaded — save to GitHub when PAT is ready', 'err');
+        return;
+      } catch(e) {}
+    }
+  }
+
   try {
     const apiUrl = `https://api.github.com/repos/${getRepo()}/contents/${getFile()}`;
     const baseH = { Accept: 'application/vnd.github.v3+json' };
@@ -401,11 +419,24 @@ async function loadData() {
         S.dirty = true;
       }
     });
+    localStorage.setItem('p_github_ts', String(Date.now()));
+    persistLocal();
     renderAll();
     setSS('saved', '✓ Synced');
     toast('已載入 Loaded from GitHub', 'ok');
     if (getFugleKey()) setTimeout(() => refreshAllPrices(), 800);
   } catch (e) {
+    // GitHub failed — fall back to local cache if available
+    const cached = localStorage.getItem('p_cache');
+    if (cached) {
+      try {
+        S.data = JSON.parse(cached);
+        renderAll();
+        setSS('error', '✗ Offline');
+        toast('⚠️ GitHub 無法連線，使用本機快取 / Using local cache', 'err');
+        return;
+      } catch(e2) {}
+    }
     setSS('error', '✗ Error');
     toast('載入失敗 ' + e.message, 'err');
   }
@@ -436,6 +467,8 @@ async function saveData() {
     if (!r.ok) { const e = await r.json(); throw new Error(e.message || `HTTP ${r.status}`); }
     S.sha = (await r.json()).content.sha;
     S.dirty = false;
+    localStorage.setItem('p_github_ts', String(Date.now()));
+    persistLocal();
     setSS('saved', '✓ Saved ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }));
     toast('已儲存至 GitHub Saved', 'ok');
   } catch (e) {
@@ -544,6 +577,15 @@ function clearAll() {
   if (!confirm('清除所有資料？Clear all data? This cannot be undone.')) return;
   S.data = { dca: [], direct: [], lastUpdated: null }; S.dirty = true; renderAll();
   toast('已清除 Cleared');
+}
+
+// ── Local cache (survives browser close without GitHub save) ───────────────
+function persistLocal() {
+  if (!S.data?.dca) return;
+  try {
+    localStorage.setItem('p_cache', JSON.stringify(S.data));
+    localStorage.setItem('p_local_ts', String(Date.now()));
+  } catch(e) {}
 }
 
 // ── Calculations ───────────────────────────────────────────────────────────
@@ -922,6 +964,7 @@ function renderAll() {
   renderDCA();
   renderDirect();
   renderSettings();
+  if (S.dirty) persistLocal();
 }
 
 // ── UI helpers ─────────────────────────────────────────────────────────────
