@@ -537,6 +537,15 @@ function directCalc(pos) {
   return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, totalReturn, totalRetPct, divProj };
 }
 
+function trailStopStat(pos) {
+  if (!pos.trailStop) return '';
+  const high = +(pos.trailHigh || pos.currentPrice || 0);
+  const stopPrice = high * (1 - pos.trailStop / 100);
+  const price = +(pos.currentPrice || 0);
+  const hit = price > 0 && price <= stopPrice;
+  return `<div class="stat"${hit ? ' style="background:var(--red-l);border:1px solid var(--red)"' : ''}><div class="stat-lbl">移動停損 Trail Stop</div><div class="stat-val${hit ? ' c-red' : ''}">${hit ? '⚠️ ' : ''}NT$${stopPrice.toFixed(2)}<br><small style="color:var(--muted)">${pos.trailStop}% ∙ 高 ${high ? high.toFixed(2) : '—'}</small></div></div>`;
+}
+
 function totals() {
   let cost = 0, val = 0, divRcvd = 0, divProj = 0;
   S.data.dca.forEach(p => { const c = dcaCalc(p); cost += c.totalCost; val += c.val; divRcvd += c.divRcvd; divProj += c.divProj; });
@@ -745,6 +754,7 @@ function dcaCard(pos) {
         <div class="stat"><div class="stat-lbl">月扣 Monthly DCA</div><div class="stat-val c-accent">${fmt(pos.monthlyAmount || 0)}</div></div>
         <div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>
         ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
+        ${trailStopStat(pos)}
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">待確認扣款 Upcoming Entries</div>
       <div class="upcoming-list">${uHTML}</div>
@@ -823,6 +833,7 @@ function directCard(pos) {
         <div class="stat"><div class="stat-lbl">總報酬 Total Return</div><div class="stat-val ${pnlCls(c.totalReturn)}">${fmt(c.totalReturn)}<br><small>${pct(c.totalRetPct)}</small></div></div>
         ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
         ${pos.annualYield ? `<div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>` : ''}
+        ${trailStopStat(pos)}
       </div>
       <div class="coll-toggle" onclick="togColl('h-dir-${pos.id}')">
         <span>📋 交易記錄 Transactions (${txns.length})</span>
@@ -908,7 +919,12 @@ function toast(msg, type = '') {
 
 function updPrice(type, id, val) {
   const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === id);
-  if (pos) { pos.currentPrice = parseFloat(val) || 0; S.dirty = true; renderDashboard(); }
+  if (pos) {
+    const price = parseFloat(val) || 0;
+    pos.currentPrice = price;
+    if (pos.trailStop && price > 0 && price > (pos.trailHigh || 0)) pos.trailHigh = price;
+    S.dirty = true; renderDashboard();
+  }
 }
 
 // ── Data mutations ─────────────────────────────────────────────────────────
@@ -981,6 +997,10 @@ function openModal(type, ctx) {
         <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal()" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%)</label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop||''}" placeholder="e.g. 10"></div>
+        <div class="form-group"></div>
+      </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
         <input type="checkbox" id="f-divtrack"${p?.dividendTracking?' checked':''}>
         開啟股利追蹤 Enable Dividend Tracking
@@ -1001,6 +1021,10 @@ function openModal(type, ctx) {
       <div class="form-row">
         <div class="form-group"><label class="form-label">現價 Current Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" value="${p?.currentPrice||''}"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal()" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
         <div class="form-group"><label class="form-label">年殖利率 Annual Yield (%) <span class="c-muted">(選填)</span></label><input class="form-input" id="f-yield" type="number" step="0.01" value="${p?.annualYield||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">移動停損 Trail Stop (%) <span style="font-weight:400;color:var(--muted);font-size:10px">(選填)</span></label><input class="form-input" id="f-trail" type="number" step="0.1" min="0" max="50" value="${p?.trailStop||''}" placeholder="e.g. 10"></div>
+        <div class="form-group"></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:4px">
         <input type="checkbox" id="f-divtrack"${p?.dividendTracking?' checked':''}>
@@ -1188,11 +1212,13 @@ function autoDivTotal() {
 function saveDCA(type, ctx) {
   const ticker = gv('f-ticker').toUpperCase();
   if (!ticker) { toast('請輸入代碼 Ticker required', 'err'); return; }
+  const trailStop = gf('f-trail') || null;
   if (type === 'add-dca') {
-    S.data.dca.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), entries: [], dividends: [] });
+    const currentPrice = gf('f-price');
+    S.data.dca.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice, annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? currentPrice : null, entries: [], dividends: [] });
   } else {
     const p = S.data.dca.find(x => x.id === ctx);
-    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack') });
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? (p.trailHigh || p.currentPrice || gf('f-price')) : null });
   }
   S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
 }
@@ -1200,11 +1226,13 @@ function saveDCA(type, ctx) {
 function saveDirect(type, ctx) {
   const ticker = gv('f-ticker').toUpperCase();
   if (!ticker) { toast('請輸入代碼 Ticker required', 'err'); return; }
+  const trailStop = gf('f-trail') || null;
   if (type === 'add-direct') {
-    S.data.direct.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), transactions: [], dividends: [] });
+    const currentPrice = gf('f-price');
+    S.data.direct.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), currentPrice, annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? currentPrice : null, transactions: [], dividends: [] });
   } else {
     const p = S.data.direct.find(x => x.id === ctx);
-    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack') });
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? (p.trailHigh || p.currentPrice || gf('f-price')) : null });
   }
   S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
 }
@@ -1336,6 +1364,7 @@ async function refreshPrice(type, id) {
   try {
     const q = await fetchLivePrice(pos.ticker);
     pos.currentPrice = q.price;
+    if (pos.trailStop && q.price > (pos.trailHigh || 0)) pos.trailHigh = q.price;
     if (input) input.value = q.price;
     S.dirty = true;
     renderDashboard();
@@ -1362,6 +1391,7 @@ async function refreshAllPrices() {
     try {
       const q = await fetchLivePrice(pos.ticker);
       pos.currentPrice = q.price;
+      if (pos.trailStop && q.price > (pos.trailHigh || 0)) pos.trailHigh = q.price;
       const input = document.getElementById(`price-${type}-${pos.id}`);
       if (input) input.value = q.price;
       const chartEl = document.getElementById(`mchart-${type}-${pos.id}`);
