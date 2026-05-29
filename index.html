@@ -263,8 +263,9 @@ tr:hover td{background:var(--bg)}
           <button class="btn btn-outline btn-sm" onclick="exportSettings()">⬇ 匯出設定 Export Settings</button>
           <button class="btn btn-outline btn-sm" onclick="document.getElementById('imp-settings').click()">⬆ 匯入設定 Import Settings</button>
           <input type="file" id="imp-settings" accept=".json" style="display:none" onchange="importSettings(event)">
+          <button class="btn btn-outline btn-sm" onclick="genBookmarklet()" style="color:var(--accent);border-color:var(--accent)">🔖 產生還原書籤 Restore Bookmarklet</button>
         </div>
-        <p style="font-size:10px;color:var(--muted);margin-top:4px">匯出設定檔存放在本機即可 / Save the exported file locally — import to restore PAT after any browser reset.</p>
+        <p style="font-size:10px;color:var(--muted);margin-top:4px">設定遺失時：點「還原書籤」產生連結 → 拖到書籤列 → 下次一鍵還原 / When settings are lost: generate bookmarklet → drag to bookmarks bar → one click to restore anytime.</p>
         <div id="conn-result" style="margin-top:12px;font-size:12px"></div>
       </div>
       <div class="card">
@@ -531,6 +532,20 @@ async function testFugle() {
 function saveRepoSettings() {
   localStorage.setItem('p_repo', document.getElementById('s-repo').value.trim());
   localStorage.setItem('p_file', document.getElementById('s-file').value.trim());
+}
+function genBookmarklet() {
+  const pat = getPAT(), fugle = getFugleKey();
+  if (!pat && !fugle) { toast('請先輸入 PAT 或 Fugle Key，再產生書籤 / Enter PAT or Fugle key first', 'err'); return; }
+  const sets = [];
+  if (pat)   sets.push(`localStorage.setItem('p_pat','${pat}')`);
+  if (fugle) sets.push(`localStorage.setItem('fugle_key','${fugle}')`);
+  const href = `javascript:(function(){${sets.join(';')};alert('✅ Settings restored!');location.reload();})()`;
+  document.getElementById('conn-result').innerHTML =
+    `<div style="background:var(--accent-l);border:1px solid var(--accent);border-radius:8px;padding:12px">
+      <div style="font-weight:600;color:var(--accent);margin-bottom:6px">🔖 拖曳到書籤列 Drag this to your bookmarks bar:</div>
+      <a href="${href}" style="display:inline-block;padding:6px 14px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;font-size:13px;cursor:grab">⚡ Restore Portfolio Settings</a>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">將上方藍色按鈕拖曳到瀏覽器書籤列。下次設定遺失，點書籤一秒還原。<br>Drag the button to your bookmarks bar. Next time settings are wiped, click it — restored in 1 second.</p>
+    </div>`;
 }
 function exportSettings() {
   const s = { pat: getPAT(), fugleKey: getFugleKey(), repo: getRepo(), file: getFile() };
