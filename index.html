@@ -243,7 +243,10 @@ tr:hover td{background:var(--bg)}
         <div class="card-title">GitHub 連線設定 GitHub Connection</div>
         <div class="form-group">
           <label class="form-label">Personal Access Token (PAT)</label>
-          <input type="password" class="form-input" id="s-pat" placeholder="ghp_xxxxxxxxxxxx" oninput="savePAT()">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="password" class="form-input" id="s-pat" placeholder="ghp_xxxxxxxxxxxx" oninput="savePAT()" style="flex:1">
+            <button class="btn btn-outline btn-sm" onclick="clearPAT()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear PAT">✕ 清除</button>
+          </div>
           <p style="font-size:11px;color:var(--muted);margin-top:5px">只存在瀏覽器 localStorage，不會上傳。Stored locally only, never uploaded.</p>
         </div>
         <div class="form-group">
@@ -269,7 +272,10 @@ tr:hover td{background:var(--bg)}
         <div class="card-title">📈 股價來源 Price Source — Fugle</div>
         <div class="form-group">
           <label class="form-label">Fugle API Key</label>
-          <input type="password" class="form-input" id="s-fugle" placeholder="貼上 Fugle API Key" oninput="saveFugleKey()">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="password" class="form-input" id="s-fugle" placeholder="貼上 Fugle API Key" oninput="saveFugleKey()" style="flex:1">
+            <button class="btn btn-outline btn-sm" onclick="clearFugleKey()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear Fugle Key">✕ 清除</button>
+          </div>
           <p style="font-size:11px;color:var(--muted);margin-top:5px">只存在瀏覽器 localStorage。申請：<a href="https://developer.fugle.tw" target="_blank">developer.fugle.tw</a></p>
         </div>
         <button class="btn btn-outline btn-sm" onclick="testFugle()">🔗 測試 Fugle Test</button>
@@ -501,15 +507,31 @@ async function testConn() {
 
 function savePAT() {
   const v = document.getElementById('s-pat').value.trim();
-  v ? localStorage.setItem('p_pat', v) : localStorage.removeItem('p_pat');
-  // Auto-reload data 1s after PAT is pasted (debounced)
-  clearTimeout(savePAT._t);
-  if (v.length > 20) savePAT._t = setTimeout(() => loadData(), 1000);
+  // Only write/clear when user has typed something meaningful — never wipe on empty field
+  // (empty field = placeholder showing, not user intent to delete)
+  if (v.length > 10) {
+    localStorage.setItem('p_pat', v);
+    clearTimeout(savePAT._t);
+    savePAT._t = setTimeout(() => loadData(), 1000);
+  }
+}
+function clearPAT() {
+  localStorage.removeItem('p_pat');
+  document.getElementById('s-pat').value = '';
+  document.getElementById('s-pat').placeholder = 'ghp_xxxxxxxxxxxx';
+  toast('PAT 已清除 PAT cleared', 'ok');
 }
 function getFugleKey() { return localStorage.getItem('fugle_key') || ''; }
 function saveFugleKey() {
   const v = document.getElementById('s-fugle').value.trim();
-  v ? localStorage.setItem('fugle_key', v) : localStorage.removeItem('fugle_key');
+  // Only write/clear when user has typed something meaningful
+  if (v.length > 10) localStorage.setItem('fugle_key', v);
+}
+function clearFugleKey() {
+  localStorage.removeItem('fugle_key');
+  document.getElementById('s-fugle').value = '';
+  document.getElementById('s-fugle').placeholder = '●●●●●●●●';
+  toast('Fugle Key 已清除 Cleared', 'ok');
 }
 async function testFugle() {
   const el = document.getElementById('fugle-result');
