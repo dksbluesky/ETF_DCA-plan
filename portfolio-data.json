@@ -95,9 +95,9 @@
         {
           "id": "f63df966-e4fd-4c3e-9916-81cb69ef815a",
           "date": "2026-05-27",
-          "shares": 4000,
+          "shares": 2000,
           "costPerShare": 31.8,
-          "totalCost": 127200,
+          "totalCost": 63600,
           "notes": ""
         }
       ],
@@ -106,5 +106,5 @@
       "trailHigh": 31.92
     }
   ],
-  "lastUpdated": "2026-05-28T12:27:30.514Z"
+  "lastUpdated": "2026-05-29T01:22:44.681Z"
 }
