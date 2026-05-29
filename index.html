@@ -260,12 +260,10 @@ tr:hover td{background:var(--bg)}
           <button class="btn btn-primary btn-sm" onclick="saveData()">💾 Save to GitHub</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-          <button class="btn btn-outline btn-sm" onclick="exportSettings()">⬇ 匯出設定 Export Settings</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('imp-settings').click()">⬆ 匯入設定 Import Settings</button>
-          <input type="file" id="imp-settings" accept=".json" style="display:none" onchange="importSettings(event)">
-          <button class="btn btn-outline btn-sm" onclick="genBookmarklet()" style="color:var(--accent);border-color:var(--accent)">🔖 產生還原書籤 Restore Bookmarklet</button>
+          <button class="btn btn-outline btn-sm" onclick="genBookmarklet()" style="color:var(--accent);border-color:var(--accent)">🔖 PC 還原書籤 PC Bookmarklet</button>
+          <button class="btn btn-outline btn-sm" onclick="genMobileUrl()" style="color:var(--teal);border-color:var(--teal)">📱 手機還原連結 Mobile URL</button>
         </div>
-        <p style="font-size:10px;color:var(--muted);margin-top:4px">設定遺失時：點「還原書籤」產生連結 → 拖到書籤列 → 下次一鍵還原 / When settings are lost: generate bookmarklet → drag to bookmarks bar → one click to restore anytime.</p>
+        <p style="font-size:10px;color:var(--muted);margin-top:4px">設定遺失時一鍵還原。PC：拖書籤到書籤列。手機：存為書籤。/ One-click restore. PC: drag to bookmarks bar. Mobile: save as bookmark.</p>
         <div id="conn-result" style="margin-top:12px;font-size:12px"></div>
       </div>
       <div class="card">
@@ -547,31 +545,20 @@ function genBookmarklet() {
       <p style="font-size:11px;color:var(--muted);margin-top:8px">將上方藍色按鈕拖曳到瀏覽器書籤列。下次設定遺失，點書籤一秒還原。<br>Drag the button to your bookmarks bar. Next time settings are wiped, click it — restored in 1 second.</p>
     </div>`;
 }
-function exportSettings() {
-  const s = { pat: getPAT(), fugleKey: getFugleKey(), repo: getRepo(), file: getFile() };
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' }));
-  a.download = 'portfolio-settings.json';
-  a.click();
-  toast('設定已匯出，請存放在本機安全位置 / Settings exported — keep file private', 'ok');
-}
-function importSettings(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const s = JSON.parse(ev.target.result);
-      if (s.pat) localStorage.setItem('p_pat', s.pat);
-      if (s.fugleKey) localStorage.setItem('fugle_key', s.fugleKey);
-      if (s.repo) localStorage.setItem('p_repo', s.repo);
-      if (s.file) localStorage.setItem('p_file', s.file);
-      renderSettings();
-      toast('設定已匯入 Settings imported — reloading data…', 'ok');
-      setTimeout(() => loadData(), 600);
-    } catch { toast('匯入失敗 Import failed: invalid file', 'err'); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
+function genMobileUrl() {
+  const pat = getPAT(), fugle = getFugleKey();
+  if (!pat && !fugle) { toast('請先輸入 PAT 或 Fugle Key / Enter PAT or Fugle key first', 'err'); return; }
+  const encoded = btoa(JSON.stringify({ pat, fugle }));
+  const url = `${location.origin}${location.pathname}#r=${encoded}`;
+  document.getElementById('conn-result').innerHTML =
+    `<div style="background:#e6fffa;border:1px solid var(--teal);border-radius:8px;padding:12px">
+      <div style="font-weight:600;color:var(--teal);margin-bottom:6px">📱 手機存為書籤 Save as bookmark on mobile:</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input id="mobile-url-inp" value="${url}" readonly style="flex:1;min-width:0;font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg)">
+        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('mobile-url-inp').value);toast('已複製 Copied','ok')">複製</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">複製連結 → 手機瀏覽器開啟 → 加入書籤。下次設定遺失，開啟書籤即自動還原。<br>Copy → open on phone → bookmark it. Next time settings are lost, open the bookmark to auto-restore.</p>
+    </div>`;
 }
 function exportJSON() {
   const a = document.createElement('a');
@@ -1862,6 +1849,21 @@ window.debugHL = async function(ticker, days = 90) {
 };
 
 // ── Init ───────────────────────────────────────────────────────────────────
+// Mobile Restore URL: if opened via #r=BASE64 bookmark, restore PAT/Fugle key first
+(function() {
+  const hash = location.hash;
+  if (hash.startsWith('#r=')) {
+    try {
+      const s = JSON.parse(atob(hash.slice(3)));
+      if (s.pat)   localStorage.setItem('p_pat',    s.pat);
+      if (s.fugle) localStorage.setItem('fugle_key', s.fugle);
+      history.replaceState(null, '', location.pathname + location.search); // remove #r= from URL
+      toast('✅ 設定已還原 Settings restored from bookmark!', 'ok');
+    } catch(e) {
+      console.warn('Mobile restore URL decode failed:', e);
+    }
+  }
+})();
 renderAll();
 loadData();
 </script>
