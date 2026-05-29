@@ -390,6 +390,7 @@ async function loadData() {
         renderAll();
         setSS('error', '⚠ 未同步');
         toast('📝 已載入本機變更 / Local changes loaded — save to GitHub when PAT is ready', 'err');
+        if (getFugleKey()) setTimeout(() => refreshAllPrices(), 800);
         return;
       } catch(e) {}
     }
@@ -432,6 +433,7 @@ async function loadData() {
         renderAll();
         setSS('error', '✗ Offline');
         toast('⚠️ GitHub 無法連線，使用本機快取 / Using local cache', 'err');
+        if (getFugleKey()) setTimeout(() => refreshAllPrices(), 800);
         return;
       } catch(e2) {}
     }
@@ -453,6 +455,11 @@ async function saveData() {
     if (check.ok) {
       const existing = await check.json();
       S.sha = existing.sha;
+    } else if (check.status === 401) {
+      setSS('error', '✗ PAT 失效');
+      toast('🔑 PAT 已失效或遺失 — 請在設定中重新貼上 / PAT expired or missing — re-paste in ⚙️ Settings', 'err');
+      switchTab('settings');
+      return;
     } else if (check.status !== 404) {
       throw new Error(`HTTP ${check.status}`);
     }
