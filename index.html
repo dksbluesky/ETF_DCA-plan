@@ -1442,7 +1442,7 @@ async function fetchPriceIntoModal(ticker) {
 async function fetchLivePrice(ticker) {
   const fugleKey = getFugleKey();
   if (!fugleKey) {
-    throw new Error('⚙️ 請至設定頁面輸入 Fugle API Key / Please enter your Fugle API Key in ⚙️ Settings tab');
+    throw new Error('⚙️ 請至設定頁面輸入 Fugle API Key');
   }
   let r, d;
   try {
@@ -1451,11 +1451,11 @@ async function fetchLivePrice(ticker) {
     });
     d = await r.json();
   } catch(e) {
-    throw new Error(`Fugle 連線失敗 / Connection failed: ${e.message}`);
+    throw new Error(`Fugle 連線失敗: ${e.message}`);
   }
-  if (r.status === 401) throw new Error('Fugle API Key 無效，請至 ⚙️ 設定重新輸入 / Invalid API Key — re-enter in ⚙️ Settings');
-  if (r.status === 403) throw new Error('Fugle API 配額用盡 / API quota exceeded (403)');
-  if (r.status === 404) throw new Error(`找不到股票代碼 ${ticker} / Symbol not found`);
+  if (r.status === 401) throw new Error('API Key 無效');
+  if (r.status === 403) throw new Error('API 配額用盡');
+  if (r.status === 404) throw new Error(`找不到股票代碼 ${ticker}`);
   if (!r.ok) throw new Error(`Fugle HTTP${r.status}: ${d?.message || ''}`);
 
   const price = d.lastPrice ?? d.closePrice ?? d.referencePrice ?? d.previousClose;
@@ -1465,10 +1465,20 @@ async function fetchLivePrice(ticker) {
     const high  = d.highPrice  ?? price;
     const low   = d.lowPrice   ?? price;
     const prev  = d.referencePrice ?? d.previousClose ?? price;
-    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle', open, high, low, prev };
+
+    // 從 Quote API 計算精準今日 VWAP (均價)
+    let vwap = null;
+    if (d.avgPrice) {
+      vwap = d.avgPrice;
+    } else if (d.total && d.total.tradeValue && d.total.tradeVolume) {
+      // 總成交金額 (元) / 總成交股數 (股) = 精準均價
+      vwap = d.total.tradeValue / d.total.tradeVolume;
+    }
+
+    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle', open, high, low, prev, vwap };
   }
   console.log('Fugle response (no price found):', JSON.stringify(d));
-  throw new Error(`${ticker}: 查無報價 / No price data returned`);
+  throw new Error(`${ticker}: 查無報價`);
 }
 
 async function refreshPrice(type, id) {
@@ -1523,13 +1533,11 @@ async function refreshAllPrices() {
 
 // ── Current Day Candlestick ────────────────────────────────────────────────
 function drawCurrentCandle(el, q) {
-  // q = { price, open, high, low, prev }
-  const { price: close, open, high, low, prev, state } = q;
+  const { price: close, open, high, low, prev, state, vwap } = q;
   const W = 36, H = 44, cx = 18, bw = 10;
   const isGreen = close >= open;
   const col = isGreen ? '#38a169' : '#e53e3e';
 
-  // Include prev in scale so the reference line is always visible
   const allP = [high, low, open, close, prev].filter(p => p > 0);
   const rawMin = Math.min(...allP), rawMax = Math.max(...allP);
   const range = (rawMax - rawMin) || (close * 0.02) || 0.01;
@@ -1543,9 +1551,11 @@ function drawCurrentCandle(el, q) {
   const bodyBot  = toY(Math.min(open, close));
   const bodyH    = Math.max(2, bodyBot - bodyTop);
 
-  // Change vs prev close
   const chg = prev > 0 ? ((close - prev) / prev * 100).toFixed(2) : null;
   const chgCol = close >= prev ? '#38a169' : '#e53e3e';
+
+  // 今日 VWAP (均價) from Quote API
+  const vwapHtml = vwap ? `<br><span style="color:#d69e2e">均 $${vwap.toFixed(2)}</span>` : '';
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px">
@@ -1554,7 +1564,11 @@ function drawCurrentCandle(el, q) {
         <rect x="${cx - bw/2}" y="${bodyTop}" width="${bw}" height="${bodyH}" fill="${col}" rx="1"/>
         ${prev > 0 ? `<line x1="1" y1="${toY(prev)}" x2="${W-1}" y2="${toY(prev)}" stroke="#a0aec0" stroke-width="1.5" stroke-dasharray="3,2"/>` : ''}
       </svg>
-      ${chg !== null ? `<div style="font-size:10px;color:${chgCol};font-weight:600;line-height:1.2">${close>=prev?'▲':'▼'}${Math.abs(chg)}%<br><span style="color:var(--muted);font-weight:400">${state==='REGULAR'?'盤中':'收盤'}</span></div>` : ''}
+      <div style="font-size:10px;color:${chgCol};font-weight:600;line-height:1.2">
+        ${close>=prev?'▲':'▼'}${Math.abs(chg)}%
+        <br><span style="color:var(--muted);font-weight:400">${state==='REGULAR'?'盤中':'收盤'}</span>
+        ${vwapHtml}
+      </div>
     </div>`;
 }
 
