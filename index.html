@@ -1802,7 +1802,8 @@ async function loadCandleChart(ticker, days) {
         const fmD = await fmR.json();
         if (fmD.msg === 'success' && fmD.data?.length) {
           fmD.data.forEach(d => { finmindVolMap[d.date] = d.Trading_Volume; });
-          console.log(`FinMind volume loaded: ${ticker}, ${fmD.data.length} bars`);
+          const last3 = fmD.data.slice(-3).map(d => `${d.date}: ${d.Trading_Volume}`).join(' | ');
+          console.log(`FinMind volume loaded: ${ticker}, ${fmD.data.length} bars | last3: ${last3}`);
         }
       } catch(e) {
         console.warn('FinMind volume fetch failed, using Fugle volume:', e.message);
