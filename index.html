@@ -338,6 +338,7 @@ tr:hover td{background:var(--bg)}
       <span style="color:#d69e2e;font-weight:600">— EMA5</span>
       <span style="color:#805ad5;font-weight:600">— EMA20</span>
       <span id="legend-ema50" style="color:#48bb78;font-weight:600;display:none">— EMA50</span>
+      <span style="color:#f6ad55;font-weight:600">- - VWAP</span>
     </div>
     <div class="chart-body"><div id="chart-container" style="height:340px"></div></div>
     <div style="padding:10px 18px 14px;border-top:1px solid var(--border);background:var(--surface2)">
@@ -1571,6 +1572,18 @@ function calcEMA(data, period) {
   return result;
 }
 
+// Anchored VWAP — resets at first candle in data array
+// Typical price = (H+L+C)/3 weighted by volume
+function calcVWAP(data) {
+  let cumTPV = 0, cumVol = 0;
+  return data.map(c => {
+    const tp = (c.high + c.low + c.close) / 3;
+    cumTPV += tp * (c.volume || 0);
+    cumVol += (c.volume || 0);
+    return { time: c.time, value: cumVol > 0 ? parseFloat((cumTPV / cumVol).toFixed(3)) : tp };
+  });
+}
+
 // Index-aligned EMA array (null where insufficient data)
 function calcEMAArray(data, period) {
   const k = 2 / (period + 1);
@@ -1734,11 +1747,11 @@ async function loadCandleChart(ticker, days) {
     if (!raw || !raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
     // allCandles: full fetch including warm-up period (for EMA + signal seeding)
-    let allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close }));
+    let allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0 }));
 
     // candles / volumes: only the requested display window
     const candles = allCandles.filter(c => c.time >= displayFrom);
-    const volumes = raw.filter(c => c.date >= displayFrom).map(c => ({ time: c.date, value: c.volume, color: c.close >= c.open ? '#38a16955' : '#e53e3e55' }));
+    const volumes = candles.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#38a16955' : '#e53e3e55' }));
     if (!candles.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
     container.innerHTML = '';
@@ -1780,6 +1793,13 @@ async function loadCandleChart(ticker, days) {
     } else {
       if (ema50LegEl) ema50LegEl.style.display = 'none';
     }
+
+    // Anchored VWAP — calculated from first candle of the display window
+    const vwapSeries = _lwChart.addLineSeries({
+      color: '#f6ad55', lineWidth: 1.5, lineStyle: 2,  // 2 = Dashed
+      priceLineVisible: false, lastValueVisible: false, title: ''
+    });
+    vwapSeries.setData(calcVWAP(candles));
 
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
     const hlMarkers = [];
