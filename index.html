@@ -243,10 +243,12 @@ tr:hover td{background:var(--bg)}
         <div class="card-title">GitHub 連線設定 GitHub Connection</div>
         <div class="form-group">
           <label class="form-label">Personal Access Token (PAT)</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="password" class="form-input" id="s-pat" placeholder="ghp_xxxxxxxxxxxx" oninput="savePAT()" style="flex:1">
-            <button class="btn btn-outline btn-sm" onclick="clearPAT()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear PAT">✕ 清除</button>
-          </div>
+          <form autocomplete="off" onsubmit="return false" style="margin:0">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="password" class="form-input" id="s-pat" placeholder="ghp_xxxxxxxxxxxx" oninput="savePAT()" autocomplete="new-password" style="flex:1">
+              <button type="button" class="btn btn-outline btn-sm" onclick="clearPAT()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear PAT">✕ 清除</button>
+            </div>
+          </form>
           <p style="font-size:11px;color:var(--muted);margin-top:5px">只存在瀏覽器 localStorage，不會上傳。Stored locally only, never uploaded.</p>
         </div>
         <div class="form-group">
@@ -272,10 +274,12 @@ tr:hover td{background:var(--bg)}
         <div class="card-title">📈 股價來源 Price Source — Fugle</div>
         <div class="form-group">
           <label class="form-label">Fugle API Key</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="password" class="form-input" id="s-fugle" placeholder="貼上 Fugle API Key" oninput="saveFugleKey()" style="flex:1">
-            <button class="btn btn-outline btn-sm" onclick="clearFugleKey()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear Fugle Key">✕ 清除</button>
-          </div>
+          <form autocomplete="off" onsubmit="return false" style="margin:0">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="password" class="form-input" id="s-fugle" placeholder="貼上 Fugle API Key" oninput="saveFugleKey()" autocomplete="new-password" style="flex:1">
+              <button type="button" class="btn btn-outline btn-sm" onclick="clearFugleKey()" style="color:var(--red);border-color:var(--red);white-space:nowrap" title="Clear Fugle Key">✕ 清除</button>
+            </div>
+          </form>
           <p style="font-size:11px;color:var(--muted);margin-top:5px">只存在瀏覽器 localStorage。申請：<a href="https://developer.fugle.tw" target="_blank">developer.fugle.tw</a></p>
         </div>
         <button class="btn btn-outline btn-sm" onclick="testFugle()">🔗 測試 Fugle Test</button>
@@ -1727,8 +1731,9 @@ async function loadCandleChart(ticker, days) {
   }
   const to = new Date().toISOString().split('T')[0];
   const displayFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-  // Try fetching with a large warmup window first; fall back to display-only if API rejects the range
-  const warmupDays = [365, 180, 0];  // extra calendar days to prepend for EMA seeding
+  // Try fetching with warmup window first; fall back to smaller range if API rejects
+  // Fugle free plan supports up to ~180 days; try progressively shorter windows
+  const warmupDays = [180, 90, 60, 0];  // extra days to prepend for EMA seeding
   try {
     let raw = null;
     for (const extra of warmupDays) {
@@ -1738,10 +1743,11 @@ async function loadCandleChart(ticker, days) {
         { headers: { 'X-API-KEY': fugleKey } }
       );
       if (r.status === 401) throw new Error('401');  // bad/expired key — no point retrying
-      if (r.status === 400 && extra > 0) continue;  // date range too large → try smaller warmup
+      if (r.status === 400) { console.warn(`Fugle 400: extra=${extra}, from=${fetchFrom} — trying shorter range`); continue; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
+      console.log(`Fugle OK: ${ticker}, extra=${extra}, from=${fetchFrom}, bars=${raw.length}`);
       break;
     }
     if (!raw || !raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
