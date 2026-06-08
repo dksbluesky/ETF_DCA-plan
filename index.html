@@ -338,13 +338,13 @@ tr:hover td{background:var(--bg)}
       <span style="color:#d69e2e;font-weight:600">— EMA5</span>
       <span style="color:#805ad5;font-weight:600">— EMA20</span>
       <span id="legend-ema50" style="color:#48bb78;font-weight:600;display:none">— EMA50</span>
-      <span style="color:#f6ad55;font-weight:600">- - VWAP</span>
+      <span style="color:#f6ad55;font-weight:600">- - aVWAP</span>
     </div>
     <div class="chart-body"><div id="chart-container" style="height:340px"></div></div>
     <div style="padding:10px 18px 14px;border-top:1px solid var(--border);background:var(--surface2)">
       <div style="font-size:10.5px;color:var(--muted);line-height:1.8">
-        <div>🟢 <b>Bull bias</b> (close &gt; EMA20): track pullback legs (lower high + lower low) → <span style="color:#00bcd4">H1</span> on first recovery, <span style="color:#38a169">H2</span> on second</div>
-        <div>🔴 <b>Bear bias</b> (close &lt; EMA20): track rally legs (higher low + higher high) → <span style="color:#ed8936">L1</span> on first resumption, <span style="color:#e53e3e">L2</span> on second</div>
+        <div>🔴 <b>Bull bias</b> (close &gt; EMA20): track pullback legs (lower high + lower low) → <span style="color:#00bcd4">H1</span> on first recovery, <span style="color:#38a169">H2</span> on second</div>
+        <div>🟢 <b>Bear bias</b> (close &lt; EMA20): track rally legs (higher low + higher high) → <span style="color:#ed8936">L1</span> on first resumption, <span style="color:#e53e3e">L2</span> on second</div>
         <div>🔄 New trend high/low resets the leg count</div>
         <div>⚡ Signal fires on the recovery/resumption bar, not the pullback bar</div>
       </div>
@@ -1821,8 +1821,8 @@ async function loadCandleChart(ticker, days) {
       const col = c.close >= c.open ? '#e53e3e' : '#38a169'; // TW: 紅漲綠跌
       const vwapPt = param.seriesData.get(vwapSeries);
       const volPt  = param.seriesData.get(volSeries);
-      const volStr = volPt ? ` &nbsp;量 <b>${(volPt.value/1000).toFixed(0)}K</b>` : '';
-      const vwapStr = vwapPt ? ` &nbsp;VWAP <b style="color:#f6ad55">${vwapPt.value.toFixed(2)}</b>` : '';
+      const volStr = volPt ? ` &nbsp;量 <b>${Math.round(volPt.value).toLocaleString()}張</b>` : '';
+      const vwapStr = vwapPt ? ` &nbsp;aVWAP <b style="color:#f6ad55">${vwapPt.value.toFixed(2)}</b>` : '';
       el.innerHTML = `<span style="color:var(--muted)">${param.time} &nbsp;</span>` +
         `開 <b>${c.open}</b> &nbsp;` +
         `高 <b style="color:#e53e3e">${c.high}</b> &nbsp;` +
