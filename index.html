@@ -1535,8 +1535,8 @@ async function refreshAllPrices() {
 function drawCurrentCandle(el, q) {
   const { price: close, open, high, low, prev, state, vwap } = q;
   const W = 36, H = 44, cx = 18, bw = 10;
-  const isGreen = close >= open;
-  const col = isGreen ? '#38a169' : '#e53e3e';
+  // TW convention: 紅漲綠跌
+  const col = close >= open ? '#e53e3e' : '#38a169';
 
   const allP = [high, low, open, close, prev].filter(p => p > 0);
   const rawMin = Math.min(...allP), rawMax = Math.max(...allP);
@@ -1552,7 +1552,7 @@ function drawCurrentCandle(el, q) {
   const bodyH    = Math.max(2, bodyBot - bodyTop);
 
   const chg = prev > 0 ? ((close - prev) / prev * 100).toFixed(2) : null;
-  const chgCol = close >= prev ? '#38a169' : '#e53e3e';
+  const chgCol = close >= prev ? '#e53e3e' : '#38a169'; // TW: 紅漲綠跌
 
   // 今日 VWAP (均價) from Quote API
   const vwapHtml = vwap ? `<br><span style="color:#d69e2e">均 $${vwap.toFixed(2)}</span>` : '';
