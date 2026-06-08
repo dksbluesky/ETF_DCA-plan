@@ -286,6 +286,19 @@ tr:hover td{background:var(--bg)}
         <div id="fugle-result" style="margin-top:10px;font-size:12px"></div>
       </div>
       <div class="card">
+        <div class="card-title">📊 K線成交量來源 Volume Source — FinMind</div>
+        <div class="form-group">
+          <label class="form-label">FinMind API Token</label>
+          <form autocomplete="off" onsubmit="return false" style="margin:0">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="password" class="form-input" id="s-finmind" placeholder="貼上 FinMind Token" oninput="saveFinMindToken()" autocomplete="new-password" style="flex:1">
+              <button type="button" class="btn btn-outline btn-sm" onclick="clearFinMindToken()" style="color:var(--red);border-color:var(--red);white-space:nowrap">✕ 清除</button>
+            </div>
+          </form>
+          <p style="font-size:11px;color:var(--muted);margin-top:5px">提供精準整股成交量（剔除鉅額＋盤後）。只存在瀏覽器。申請：<a href="https://finmindtrade.com" target="_blank">finmindtrade.com</a></p>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title">資料管理 Data Management</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <button class="btn btn-outline" onclick="exportJSON()">📥 匯出備份 Export JSON</button>
@@ -538,6 +551,16 @@ function clearFugleKey() {
   document.getElementById('s-fugle').placeholder = '●●●●●●●●';
   toast('Fugle Key 已清除 Cleared', 'ok');
 }
+function getFinMindToken() { return localStorage.getItem('finmind_token') || ''; }
+function saveFinMindToken() {
+  const v = document.getElementById('s-finmind').value.trim();
+  if (v.length > 10) localStorage.setItem('finmind_token', v);
+}
+function clearFinMindToken() {
+  localStorage.removeItem('finmind_token');
+  document.getElementById('s-finmind').value = '';
+  toast('FinMind Token 已清除 Cleared', 'ok');
+}
 async function testFugle() {
   const el = document.getElementById('fugle-result');
   const key = getFugleKey();
@@ -565,11 +588,12 @@ function saveRepoSettings() {
   localStorage.setItem('p_file', document.getElementById('s-file').value.trim());
 }
 function genBookmarklet() {
-  const pat = getPAT(), fugle = getFugleKey();
+  const pat = getPAT(), fugle = getFugleKey(), finmind = getFinMindToken();
   if (!pat && !fugle) { toast('請先輸入 PAT 或 Fugle Key，再產生書籤 / Enter PAT or Fugle key first', 'err'); return; }
   const sets = [];
-  if (pat)   sets.push(`localStorage.setItem('p_pat','${pat}')`);
-  if (fugle) sets.push(`localStorage.setItem('fugle_key','${fugle}')`);
+  if (pat)     sets.push(`localStorage.setItem('p_pat','${pat}')`);
+  if (fugle)   sets.push(`localStorage.setItem('fugle_key','${fugle}')`);
+  if (finmind) sets.push(`localStorage.setItem('finmind_token','${finmind}')`);
   const href = `javascript:(function(){${sets.join(';')};alert('✅ Settings restored!');location.reload();})()`;
   document.getElementById('conn-result').innerHTML =
     `<div style="background:var(--accent-l);border:1px solid var(--accent);border-radius:8px;padding:12px">
@@ -579,9 +603,9 @@ function genBookmarklet() {
     </div>`;
 }
 function genMobileUrl() {
-  const pat = getPAT(), fugle = getFugleKey();
+  const pat = getPAT(), fugle = getFugleKey(), finmind = getFinMindToken();
   if (!pat && !fugle) { toast('請先輸入 PAT 或 Fugle Key / Enter PAT or Fugle key first', 'err'); return; }
-  const encoded = btoa(JSON.stringify({ pat, fugle }));
+  const encoded = btoa(JSON.stringify({ pat, fugle, finmind }));
   const url = `${location.origin}${location.pathname}#r=${encoded}`;
   document.getElementById('conn-result').innerHTML =
     `<div style="background:#e6fffa;border:1px solid var(--teal);border-radius:8px;padding:12px">
@@ -991,6 +1015,7 @@ function renderSettings() {
   document.getElementById('s-file').value = getFile();
   if (getPAT()) document.getElementById('s-pat').placeholder = '●●●●●●●● (已設定 Configured)';
   if (getFugleKey()) document.getElementById('s-fugle').placeholder = '●●●●●●●● (已設定 Configured)';
+  if (getFinMindToken()) document.getElementById('s-finmind').placeholder = '●●●●●●●● (已設定 Configured)';
 }
 
 // ── Render all ─────────────────────────────────────────────────────────────
@@ -1766,8 +1791,30 @@ async function loadCandleChart(ticker, days) {
     }
     if (!raw || !raw.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
+    // FinMind: fetch accurate 整股 volume to override Fugle's inflated figure
+    let finmindVolMap = {};
+    const fmToken = getFinMindToken();
+    if (fmToken) {
+      try {
+        const fmFrom = raw[0]?.date || displayFrom;
+        const fmUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${ticker}&start_date=${fmFrom}&token=${fmToken}`;
+        const fmR = await fetch(fmUrl);
+        const fmD = await fmR.json();
+        if (fmD.msg === 'success' && fmD.data?.length) {
+          fmD.data.forEach(d => { finmindVolMap[d.date] = d.Trading_Volume; });
+          console.log(`FinMind volume loaded: ${ticker}, ${fmD.data.length} bars`);
+        }
+      } catch(e) {
+        console.warn('FinMind volume fetch failed, using Fugle volume:', e.message);
+      }
+    }
+
     // allCandles: full fetch including warm-up period (for EMA + signal seeding)
-    let allCandles = raw.map(c => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0 }));
+    // Use FinMind volume when available (純整股), fall back to Fugle
+    let allCandles = raw.map(c => ({
+      time: c.date, open: c.open, high: c.high, low: c.low, close: c.close,
+      volume: finmindVolMap[c.date] ?? c.volume ?? 0
+    }));
 
     // candles / volumes: only the requested display window
     const candles = allCandles.filter(c => c.time >= displayFrom);
@@ -1927,8 +1974,9 @@ window.debugHL = async function(ticker, days = 90) {
   if (hash.startsWith('#r=')) {
     try {
       const s = JSON.parse(atob(hash.slice(3)));
-      if (s.pat)   localStorage.setItem('p_pat',    s.pat);
-      if (s.fugle) localStorage.setItem('fugle_key', s.fugle);
+      if (s.pat)     localStorage.setItem('p_pat',         s.pat);
+      if (s.fugle)   localStorage.setItem('fugle_key',     s.fugle);
+      if (s.finmind) localStorage.setItem('finmind_token', s.finmind);
       history.replaceState(null, '', location.pathname + location.search); // remove #r= from URL
       toast('✅ 設定已還原 Settings restored from bookmark!', 'ok');
     } catch(e) {
