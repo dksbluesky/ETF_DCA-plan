@@ -1751,7 +1751,7 @@ async function loadCandleChart(ticker, days) {
 
     // candles / volumes: only the requested display window
     const candles = allCandles.filter(c => c.time >= displayFrom);
-    const volumes = candles.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#38a16955' : '#e53e3e55' }));
+    const volumes = candles.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#e53e3e55' : '#38a16955' })); // TW: 紅漲綠跌
     if (!candles.length) { container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">查無資料 No data available</div>'; return; }
 
     container.innerHTML = '';
@@ -1766,9 +1766,9 @@ async function loadCandleChart(ticker, days) {
     });
 
     _lwSeries = _lwChart.addCandlestickSeries({
-      upColor: '#38a169', downColor: '#e53e3e',
-      borderUpColor: '#38a169', borderDownColor: '#e53e3e',
-      wickUpColor: '#38a169', wickDownColor: '#e53e3e'
+      upColor: '#e53e3e', downColor: '#38a169',            // TW convention: 紅漲綠跌
+      borderUpColor: '#e53e3e', borderDownColor: '#38a169',
+      wickUpColor: '#e53e3e', wickDownColor: '#38a169'
     });
     _lwSeries.setData(candles);
 
