@@ -1797,16 +1797,26 @@ async function loadCandleChart(ticker, days) {
       volume: c.volume ?? 0
     }));
 
-    // Patch today's bar volume with quote.total.tradeVolume (整股 only, in 張 — matches broker)
-    // Fugle historical candles include 零股/block/after-hours; the live quote does not
+    // Always sync today's bar from live quote (整股 volume = exact broker match)
+    // If historical API hasn't published today yet → build candle from quote
+    // If it has → just patch the inflated volume
     const todayStr = new Date().toISOString().split('T')[0];
-    const lastBar = allCandles[allCandles.length - 1];
-    if (lastBar && lastBar.time === todayStr && getFugleKey()) {
+    const lastBar  = allCandles[allCandles.length - 1];
+    if (getFugleKey()) {
       try {
-        const q = await fetchLivePrice(ticker);
-        if (q.tradeVol) lastBar.volume = q.tradeVol * 1000; // 張 → shares (chart divides by 1000 to display)
+        const q   = await fetchLivePrice(ticker);
+        const vol = (q.tradeVol ?? 0) * 1000; // 張 → shares (chart divides /1000 to display)
+        if (lastBar && lastBar.time === todayStr) {
+          if (q.tradeVol) lastBar.volume = vol;           // patch volume only
+        } else {
+          allCandles.push({                               // append missing today candle
+            time: todayStr, open: q.open || q.price,
+            high: q.high || q.price, low: q.low || q.price,
+            close: q.price, volume: vol
+          });
+        }
       } catch(e) {
-        console.warn('Today volume patch failed, using Fugle candle volume:', e.message);
+        console.warn('Today candle sync failed:', e.message);
       }
     }
 
