@@ -1521,6 +1521,8 @@ async function refreshPrice(type, id) {
     if (input) input.value = q.price;
     S.dirty = true;
     renderDashboard();
+    renderDCA();
+    renderDirect();
     const chartEl = document.getElementById(`mchart-${type}-${id}`);
     if (chartEl) drawCurrentCandle(chartEl, q);
     const stateLabel = q.state === 'REGULAR' ? '盤中🟢' : '收盤價';
@@ -1554,6 +1556,8 @@ async function refreshAllPrices() {
   }));
   S.dirty = true;
   renderDashboard();
+  renderDCA();
+  renderDirect();
   if (btn) { btn.disabled = false; btn.textContent = '🔄 更新所有股價 Refresh All Prices'; }
   toast(`更新完成 Updated ${ok} ticker${ok!==1?'s':''}${fail ? `，${fail} 失敗 failed` : ''}`, fail ? 'err' : 'ok');
 }
