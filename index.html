@@ -814,7 +814,9 @@ function renderDashboard() {
     <div class="kpi ${t.pnl >= 0 ? 'c-green' : 'c-red'}"><div class="kpi-label">未實現損益 Unrealized P&amp;L</div><div class="kpi-value ${pC}">${fmt(t.pnl)}</div><div class="kpi-sub">${pct(t.pnlPct)}</div></div>
     <div class="kpi c-gold"><div class="kpi-label">預計年股利 Projected Ann. Div.</div><div class="kpi-value c-gold">${fmt(t.divProj)}</div><div class="kpi-sub">≈ ${fmt(t.divProj / 12)}/月 mo.</div></div>
     <div class="kpi"><div class="kpi-label">已收股利 Dividends Rcvd</div><div class="kpi-value c-gold">${fmt(t.divRcvd)}</div></div>`;
-  renderCharts();
+  // Only render charts when dashboard tab is visible — Chart.js misbehaves on hidden canvases
+  if (S.activeTab === 'dashboard') renderCharts();
+  else S._chartsDirty = true;
 }
 
 // ── DCA render ─────────────────────────────────────────────────────────────
@@ -1035,7 +1037,7 @@ function switchTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
   const idx = { dashboard: 0, dca: 1, direct: 2, settings: 3 };
   document.querySelectorAll('.tab-btn')[idx[id]].classList.add('active');
-  if (id === 'dashboard') setTimeout(renderCharts, 50);
+  if (id === 'dashboard') setTimeout(() => { renderCharts(); S._chartsDirty = false; }, 50);
 }
 
 function togColl(id) {
