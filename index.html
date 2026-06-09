@@ -493,7 +493,22 @@ async function saveData() {
     if (S.sha) body.sha = S.sha;
 
     const r = await fetch(apiUrl, { method: 'PUT', headers: h, body: JSON.stringify(body) });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.message || `HTTP ${r.status}`); }
+    if (!r.ok) {
+      const e = await r.json();
+      if (r.status === 404) {
+        setSS('error', '✗ 404 無寫入權限');
+        toast(`🔑 GitHub 寫入失敗 (404) — PAT 可能屬於不同帳號，或缺少 repo 寫入權限。請確認 PAT 是由 ${getRepo().split('/')[0]} 帳號產生，並勾選 repo 或 Contents: Read & write 權限`, 'err');
+        switchTab('settings');
+        return;
+      }
+      if (r.status === 403) {
+        setSS('error', '✗ 403 權限不足');
+        toast('🔑 GitHub 403 — PAT 缺少寫入權限，請重新產生並勾選 repo 或 Contents: Read & write', 'err');
+        switchTab('settings');
+        return;
+      }
+      throw new Error(`HTTP ${r.status}: ${e.message || 'Unknown'}`);
+    }
     S.sha = (await r.json()).content.sha;
     S.dirty = false;
     localStorage.setItem('p_github_ts', String(Date.now()));
