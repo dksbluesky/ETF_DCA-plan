@@ -480,8 +480,8 @@ async function saveData() {
       const existing = await check.json();
       S.sha = existing.sha;
     } else if (check.status === 401) {
-      setSS('error', '✗ PAT 失效');
-      toast('🔑 PAT 已失效或遺失 — 請在設定中重新貼上 / PAT expired or missing — re-paste in ⚙️ Settings', 'err');
+      setSS('error', '✗ PAT 401');
+      toast('🔑 GitHub 回傳 401 — PAT 可能已失效或權限不足。請至 GitHub → Settings → Developer settings → Personal access tokens 重新產生，需勾選 repo（或 Contents: Read & write）', 'err');
       switchTab('settings');
       return;
     } else if (check.status !== 404) {
@@ -539,7 +539,7 @@ function clearPAT() {
   document.getElementById('s-pat').placeholder = 'ghp_xxxxxxxxxxxx';
   toast('PAT 已清除 PAT cleared', 'ok');
 }
-function getFugleKey() { return localStorage.getItem('fugle_key') || 'NDliZTZhODMtNmNjZi00ZDM5LWE0ZTUtMWVmNGY4OTkyMGViIGVmMmNkNDNhLWJiMWQtNDZkOS1iODgwLThlZDBhM2VhODk3Ng=='; }
+function getFugleKey() { return localStorage.getItem('fugle_key') || ''; }
 function saveFugleKey() {
   const v = document.getElementById('s-fugle').value.trim();
   // Only write/clear when user has typed something meaningful
@@ -551,7 +551,7 @@ function clearFugleKey() {
   document.getElementById('s-fugle').placeholder = '●●●●●●●●';
   toast('Fugle Key 已清除 Cleared', 'ok');
 }
-function getFinMindToken() { return localStorage.getItem('finmind_token') || 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZGtzYmx1ZXNreSIsImVtYWlsIjoiZGtzYmx1ZXNreUBnbWFpbC5jb20iLCJ0b2tlbl92ZXJzaW9uIjowfQ.3zM5R9jwRgJGpkKUoVhcH_mmf5GnD-8qCok7TWzn_M4'; }
+function getFinMindToken() { return localStorage.getItem('finmind_token') || ''; }
 function saveFinMindToken() {
   const v = document.getElementById('s-finmind').value.trim();
   if (v.length > 10) localStorage.setItem('finmind_token', v);
@@ -1015,9 +1015,13 @@ function divTable(divs, type, posId) {
 function renderSettings() {
   document.getElementById('s-repo').value = getRepo();
   document.getElementById('s-file').value = getFile();
-  if (getPAT()) document.getElementById('s-pat').placeholder = '●●●●●●●● (已設定 Configured)';
+  const pat = getPAT();
+  if (pat) document.getElementById('s-pat').placeholder = `●●●●●●●● (${pat.slice(0,8)}… 已設定)`;
+  else     document.getElementById('s-pat').placeholder = 'ghp_xxxxxxxxxxxx';
   if (getFugleKey()) document.getElementById('s-fugle').placeholder = '●●●●●●●● (已設定 Configured)';
+  else               document.getElementById('s-fugle').placeholder = '●●●●●●●●';
   if (getFinMindToken()) document.getElementById('s-finmind').placeholder = '●●●●●●●● (已設定 Configured)';
+  else                   document.getElementById('s-finmind').placeholder = '貼上 FinMind Token';
 }
 
 // ── Render all ─────────────────────────────────────────────────────────────
