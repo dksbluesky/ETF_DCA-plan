@@ -388,7 +388,7 @@ const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => 
 });
 
 // ── GitHub API ─────────────────────────────────────────────────────────────
-const getPAT  = () => localStorage.getItem('p_pat') || '';
+const getPAT  = () => localStorage.getItem('p_pat') || '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' ;
 const getRepo = () => localStorage.getItem('p_repo') || 'dksbluesky/ETF_DCA-plan';
 const getFile = () => localStorage.getItem('p_file') || 'portfolio-data.json';
 
@@ -539,7 +539,7 @@ function clearPAT() {
   document.getElementById('s-pat').placeholder = 'ghp_xxxxxxxxxxxx';
   toast('PAT 已清除 PAT cleared', 'ok');
 }
-function getFugleKey() { return localStorage.getItem('fugle_key') || ''; }
+function getFugleKey() { return localStorage.getItem('fugle_key') || 'NDliZTZhODMtNmNjZi00ZDM5LWE0ZTUtMWVmNGY4OTkyMGViIGVmMmNkNDNhLWJiMWQtNDZkOS1iODgwLThlZDBhM2VhODk3Ng=='; }
 function saveFugleKey() {
   const v = document.getElementById('s-fugle').value.trim();
   // Only write/clear when user has typed something meaningful
@@ -551,7 +551,7 @@ function clearFugleKey() {
   document.getElementById('s-fugle').placeholder = '●●●●●●●●';
   toast('Fugle Key 已清除 Cleared', 'ok');
 }
-function getFinMindToken() { return localStorage.getItem('finmind_token') || ''; }
+function getFinMindToken() { return localStorage.getItem('finmind_token') || 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiZGtzYmx1ZXNreSIsImVtYWlsIjoiZGtzYmx1ZXNreUBnbWFpbC5jb20iLCJ0b2tlbl92ZXJzaW9uIjowfQ.3zM5R9jwRgJGpkKUoVhcH_mmf5GnD-8qCok7TWzn_M4'; }
 function saveFinMindToken() {
   const v = document.getElementById('s-finmind').value.trim();
   if (v.length > 10) localStorage.setItem('finmind_token', v);
