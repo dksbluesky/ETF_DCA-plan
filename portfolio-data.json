@@ -82,7 +82,20 @@
       ],
       "trailStop": 5,
       "trailHigh": 249.6
+    },
+    {
+      "id": "078531ea-fa9f-475c-b4cb-0a427dc23e83",
+      "ticker": "2330",
+      "name": "TSMC",
+      "type": "Stock",
+      "currentPrice": 2255,
+      "annualYield": 1.5,
+      "dividendTracking": true,
+      "trailStop": 5,
+      "trailHigh": 2265,
+      "transactions": [],
+      "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-10T06:01:17.240Z"
+  "lastUpdated": "2026-06-10T06:02:18.765Z"
 }
