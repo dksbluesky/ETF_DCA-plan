@@ -1019,6 +1019,7 @@ function renderAll() {
   renderDCA();
   renderDirect();
   renderSettings();
+  redrawMiniCandles();
   if (S.dirty) persistLocal();
 }
 
@@ -1502,6 +1503,17 @@ async function fetchLivePrice(ticker) {
   throw new Error(`${ticker}: 查無報價`);
 }
 
+// Quote cache: keep last quote per ticker so mini candles survive re-renders
+S.quoteCache = {};
+function redrawMiniCandles() {
+  [...S.data.dca.map(p => ({ type: 'dca', pos: p })),
+   ...S.data.direct.map(p => ({ type: 'direct', pos: p }))].forEach(({ type, pos }) => {
+    const q = S.quoteCache[pos.ticker];
+    const el = document.getElementById(`mchart-${type}-${pos.id}`);
+    if (q && el) drawCurrentCandle(el, q);
+  });
+}
+
 async function refreshPrice(type, id) {
   const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === id);
   if (!pos) return;
@@ -1511,14 +1523,14 @@ async function refreshPrice(type, id) {
   try {
     const q = await fetchLivePrice(pos.ticker);
     pos.currentPrice = q.price;
+    S.quoteCache[pos.ticker] = q;
     if (pos.trailStop && q.price > (pos.trailHigh || 0)) pos.trailHigh = q.price;
     if (input) input.value = q.price;
     S.dirty = true;
     renderDashboard();
     renderDCA();
     renderDirect();
-    const chartEl = document.getElementById(`mchart-${type}-${id}`);
-    if (chartEl) drawCurrentCandle(chartEl, q);
+    redrawMiniCandles();
     const stateLabel = q.state === 'REGULAR' ? '盤中🟢' : '收盤價';
     toast(`${pos.ticker}  NT$${q.price}  ${stateLabel} (${q.source})`, 'ok');
   } catch (e) {
@@ -1540,11 +1552,10 @@ async function refreshAllPrices() {
     try {
       const q = await fetchLivePrice(pos.ticker);
       pos.currentPrice = q.price;
+      S.quoteCache[pos.ticker] = q;
       if (pos.trailStop && q.price > (pos.trailHigh || 0)) pos.trailHigh = q.price;
       const input = document.getElementById(`price-${type}-${pos.id}`);
       if (input) input.value = q.price;
-      const chartEl = document.getElementById(`mchart-${type}-${pos.id}`);
-      if (chartEl) drawCurrentCandle(chartEl, q);
       ok++;
     } catch { fail++; }
   }));
@@ -1552,6 +1563,7 @@ async function refreshAllPrices() {
   renderDashboard();
   renderDCA();
   renderDirect();
+  redrawMiniCandles();
   if (btn) { btn.disabled = false; btn.textContent = '🔄 更新所有股價 Refresh All Prices'; }
   toast(`更新完成 Updated ${ok} ticker${ok!==1?'s':''}${fail ? `，${fail} 失敗 failed` : ''}`, fail ? 'err' : 'ok');
 }
