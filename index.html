@@ -1316,7 +1316,9 @@ function openModal(type, ctx) {
       <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-lumptype" onchange="onLumpTypeChange()">
         <option value="${e.type === 'scheduled' ? 'scheduled' : 'lumpsum'}"${!isSell ? ' selected' : ''}>${e.type === 'scheduled' ? '定扣 DCA' : '加碼 Lump Sum Buy'}</option>
         <option value="sell"${isSell ? ' selected' : ''}>賣出 Sell</option>
-      </select></div>
+      </select>
+      <p style="font-size:11px;color:var(--gold);margin-top:4px">⚠️ 這會修改此筆現有記錄。若要新增一筆賣出記錄，請取消後改用「＋ 交易」。<br>Changing type here edits this existing record in place. To record a new sale, Cancel and use "＋ Add Txn" instead.</p>
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${e.date || ''}"></div>
         <div class="form-group"><label class="form-label" id="lbl-lamt">${isSell ? '總收入 Total Proceeds (NT$)' : '金額 Amount (NT$)'}</label><input class="form-input" id="f-amt" type="number" value="${e.amount || ''}" oninput="autoShares()"></div>
@@ -1342,7 +1344,9 @@ function openModal(type, ctx) {
       <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-txntype" onchange="onTxnTypeChange()">
         <option value="buy"${!isSell ? ' selected' : ''}>買入 Buy</option>
         <option value="sell"${isSell ? ' selected' : ''}>賣出 Sell</option>
-      </select></div>
+      </select>
+      <p style="font-size:11px;color:var(--gold);margin-top:4px">⚠️ 這會修改此筆現有記錄。若要新增一筆賣出記錄，請取消後改用「＋ 交易」。<br>Changing type here edits this existing record in place. To record a new sale, Cancel and use "＋ Add Txn" instead.</p>
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${t.date || ''}"></div>
         <div class="form-group"><label class="form-label" id="lbl-shares">${isSell ? '賣出股數 Shares Sold' : '股數 Shares'}</label><input class="form-input" id="f-shares" type="number" value="${t.shares || ''}" oninput="autoTotal()"></div>
