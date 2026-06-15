@@ -901,10 +901,10 @@ function dcaCard(pos) {
         <td>${fmt(e.amount || 0)}</td><td>${fmtN(e.shares || 0)}</td>
         <td>${e.shares > 0 ? 'NT$' + (e.amount / e.shares).toFixed(2) : '—'}</td>
         <td class="${realized != null ? pnlCls(realized) : 'c-muted'}">${realized != null ? fmt(realized) : '—'}</td>
-        <td style="display:flex;gap:4px;justify-content:flex-end">
+        <td><div style="display:flex;gap:4px;justify-content:flex-end">
           <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-entry','${pos.id}|${e.id}')">✎</button>
           <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delEntry('dca','${pos.id}','${e.id}')">✕</button>
-        </td>
+        </div></td>
       </tr>`;
       }).join('')}
       </tbody></table>`;
@@ -989,10 +989,10 @@ function directCard(pos) {
         <td>${fmt(t.totalCost || t.shares * t.costPerShare)}</td>
         <td class="${realized != null ? pnlCls(realized) : 'c-muted'}">${realized != null ? fmt(realized) : '—'}</td>
         <td class="c-muted">${t.notes || ''}</td>
-        <td style="display:flex;gap:4px;justify-content:flex-end">
+        <td><div style="display:flex;gap:4px;justify-content:flex-end">
           <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-txn','${pos.id}|${t.id}')">✎</button>
           <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delTxn('${pos.id}','${t.id}')">✕</button>
-        </td>
+        </div></td>
       </tr>`;
       }).join('')}
       </tbody></table>`;
@@ -1059,10 +1059,10 @@ function divTable(divs, type, posId) {
       <td class="c-muted">${d.sharesAtPayout ? fmtN(d.sharesAtPayout) : '—'}</td>
       <td class="c-gold">${fmt(d.amount || 0)}</td>
       <td class="c-muted">${d.notes || ''}</td>
-      <td style="display:flex;gap:4px;justify-content:flex-end">
+      <td><div style="display:flex;gap:4px;justify-content:flex-end">
         <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-div','${type}|${posId}|${d.id}')">✎</button>
         <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delDiv('${type}','${posId}','${d.id}')">✕</button>
-      </td>
+      </div></td>
     </tr>`).join('')}
   </tbody></table>
   <div style="text-align:right;margin-top:8px;font-size:13px">累計 Total: <strong class="c-gold">${fmt(total)}</strong></div>`;
