@@ -1525,8 +1525,8 @@ function saveDiv(editId) {
   const [type, posId] = (S.mCtx || '').split('|');
   const pos = (type === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   if (!pos) return;
+  if (gv('f-amt') === '') { toast('請輸入總金額 Enter total amount', 'err'); return; }
   const amount = gf('f-amt');
-  if (!amount) { toast('請輸入總金額 Enter total amount', 'err'); return; }
   const perShare = gf('f-pershare'), divShares = gf('f-divshares');
   pos.dividends = pos.dividends || [];
   if (editId) {
