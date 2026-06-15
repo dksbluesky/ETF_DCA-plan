@@ -79,6 +79,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
 .b-etf{background:#ebf8ff;color:#2b6cb0}.b-stock{background:var(--purple-l);color:#553c9a}
 .b-dca{background:var(--green-l);color:#276749}.b-direct{background:var(--gold-l);color:#975a16}
+.b-buy{background:var(--green-l);color:#276749}.b-sell{background:var(--red-l);color:#c53030}
 
 /* Tables */
 table{width:100%;border-collapse:collapse;font-size:12px}
@@ -640,31 +641,81 @@ function persistLocal() {
 
 // ── Calculations ───────────────────────────────────────────────────────────
 function dcaCalc(pos) {
-  const entries = (pos.entries || []).filter(e => e.type !== 'skipped');
-  const totalShares = entries.reduce((s, e) => s + (+e.shares || 0), 0);
-  const totalCost   = entries.reduce((s, e) => s + (+e.amount || 0), 0);
+  // FIFO lot accounting: buys/lump sums push lots, sells consume the oldest lots first
+  const entries = [...(pos.entries || [])].filter(e => e.type !== 'skipped').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const lots = [];
+  let realizedPnl = 0, totalBought = 0;
+  const realizedByEntry = {};
+  entries.forEach(e => {
+    const shares = +e.shares || 0;
+    const costPerShare = shares ? (+e.amount || 0) / shares : 0;
+    if (e.type === 'sell') {
+      let remaining = shares, gain = 0;
+      while (remaining > 0 && lots.length) {
+        const lot = lots[0];
+        const take = Math.min(lot.shares, remaining);
+        gain += (costPerShare - lot.costPerShare) * take;
+        lot.shares -= take;
+        remaining -= take;
+        if (lot.shares <= 1e-9) lots.shift();
+      }
+      realizedPnl += gain;
+      realizedByEntry[e.id] = gain;
+    } else {
+      lots.push({ shares, costPerShare });
+      totalBought += (+e.amount || 0);
+    }
+  });
+  const totalShares = lots.reduce((s, l) => s + l.shares, 0);
+  const totalCost   = lots.reduce((s, l) => s + l.shares * l.costPerShare, 0);
   const avgCost     = totalShares > 0 ? totalCost / totalShares : 0;
   const val         = totalShares * (+pos.currentPrice || 0);
   const pnl         = val - totalCost;
   const pnlPct      = totalCost > 0 ? pnl / totalCost * 100 : 0;
   const divRcvd     = (pos.dividends || []).reduce((s, d) => s + (+d.amount || 0), 0);
+  const totalReturn = pnl + divRcvd + realizedPnl;
+  const totalRetPct = totalBought > 0 ? totalReturn / totalBought * 100 : 0;
   const divProj     = val * (+pos.annualYield || 0) / 100;
-  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, divProj };
+  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, realizedPnl, realizedByEntry, totalReturn, totalRetPct, divProj, totalBought };
 }
 
 function directCalc(pos) {
-  const txns       = pos.transactions || [];
-  const totalShares = txns.reduce((s, t) => s + (+t.shares || 0), 0);
-  const totalCost   = txns.reduce((s, t) => s + (+t.totalCost || +t.shares * +t.costPerShare || 0), 0);
+  // FIFO lot accounting: buys push lots, sells consume the oldest lots first
+  const txns = [...(pos.transactions || [])].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const lots = [];
+  let realizedPnl = 0, totalBought = 0;
+  const realizedByTxn = {};
+  txns.forEach(t => {
+    const shares = +t.shares || 0;
+    const costPerShare = +t.costPerShare || (shares ? (+t.totalCost || 0) / shares : 0);
+    if (t.type === 'sell') {
+      let remaining = shares, gain = 0;
+      while (remaining > 0 && lots.length) {
+        const lot = lots[0];
+        const take = Math.min(lot.shares, remaining);
+        gain += (costPerShare - lot.costPerShare) * take;
+        lot.shares -= take;
+        remaining -= take;
+        if (lot.shares <= 1e-9) lots.shift();
+      }
+      realizedPnl += gain;
+      realizedByTxn[t.id] = gain;
+    } else {
+      lots.push({ shares, costPerShare });
+      totalBought += (+t.totalCost || shares * costPerShare);
+    }
+  });
+  const totalShares = lots.reduce((s, l) => s + l.shares, 0);
+  const totalCost   = lots.reduce((s, l) => s + l.shares * l.costPerShare, 0);
   const avgCost     = totalShares > 0 ? totalCost / totalShares : 0;
   const val         = totalShares * (+pos.currentPrice || 0);
   const pnl         = val - totalCost;
   const pnlPct      = totalCost > 0 ? pnl / totalCost * 100 : 0;
   const divRcvd     = (pos.dividends || []).reduce((s, d) => s + (+d.amount || 0), 0);
-  const totalReturn = pnl + divRcvd;
-  const totalRetPct = totalCost > 0 ? totalReturn / totalCost * 100 : 0;
+  const totalReturn = pnl + divRcvd + realizedPnl;
+  const totalRetPct = totalBought > 0 ? totalReturn / totalBought * 100 : 0;
   const divProj     = val * (+pos.annualYield || 0) / 100;
-  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, totalReturn, totalRetPct, divProj };
+  return { totalShares, totalCost, avgCost, val, pnl, pnlPct, divRcvd, realizedPnl, realizedByTxn, totalReturn, totalRetPct, divProj, totalBought };
 }
 
 function trailStopStat(pos) {
@@ -840,17 +891,22 @@ function dcaCard(pos) {
   const confirmed = (pos.entries || []).filter(e => e.type !== 'skipped').sort((a, b) => b.date.localeCompare(a.date));
   const hHTML = !confirmed.length
     ? `<p class="c-muted" style="font-size:12px">尚無確認記錄 No confirmed entries</p>`
-    : `<table><thead><tr><th>日期 Date</th><th>類型 Type</th><th>金額 Amount</th><th>股數 Shares</th><th>均價 Price</th><th></th></tr></thead><tbody>
-      ${confirmed.map(e => `<tr>
+    : `<table><thead><tr><th>日期 Date</th><th>類型 Type</th><th>金額 Amount</th><th>股數 Shares</th><th>均價 Price</th><th>已實現 Realized</th><th></th></tr></thead><tbody>
+      ${confirmed.map(e => {
+        const isSell = e.type === 'sell';
+        const realized = c.realizedByEntry[e.id];
+        return `<tr>
         <td>${fmtDate(e.date)}</td>
-        <td><span class="badge ${e.type === 'lumpsum' ? 'b-direct' : 'b-dca'}">${e.type === 'lumpsum' ? '加碼 Lump' : '定扣 DCA'}</span></td>
+        <td><span class="badge ${isSell ? 'b-sell' : e.type === 'lumpsum' ? 'b-direct' : 'b-dca'}">${isSell ? '賣出 Sell' : e.type === 'lumpsum' ? '加碼 Lump' : '定扣 DCA'}</span></td>
         <td>${fmt(e.amount || 0)}</td><td>${fmtN(e.shares || 0)}</td>
         <td>${e.shares > 0 ? 'NT$' + (e.amount / e.shares).toFixed(2) : '—'}</td>
+        <td class="${realized != null ? pnlCls(realized) : 'c-muted'}">${realized != null ? fmt(realized) : '—'}</td>
         <td style="display:flex;gap:4px;justify-content:flex-end">
           <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-entry','${pos.id}|${e.id}')">✎</button>
           <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delEntry('dca','${pos.id}','${e.id}')">✕</button>
         </td>
-      </tr>`).join('')}
+      </tr>`;
+      }).join('')}
       </tbody></table>`;
 
   const dvHTML = pos.dividendTracking ? divTable(pos.dividends || [], 'dca', pos.id) : '';
@@ -871,7 +927,7 @@ function dcaCard(pos) {
             onchange="updPrice('dca','${pos.id}',this.value)">
           <button class="refresh-btn" id="rbtn-dca-${pos.id}" onclick="refreshPrice('dca','${pos.id}')" title="Fetch live price">🔄</button>
         </label>
-        <button class="btn btn-outline btn-sm" onclick="openModal('add-lump','${pos.id}')">＋ 加碼 Lump Sum</button>
+        <button class="btn btn-outline btn-sm" onclick="openModal('add-lump','${pos.id}')">＋ 交易 Add Txn</button>
         <button class="btn btn-ghost btn-sm" onclick="openModal('edit-dca','${pos.id}')">✎</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="delTicker('dca','${pos.id}')">✕</button>
       </div>
@@ -882,7 +938,9 @@ function dcaCard(pos) {
         <div class="stat"><div class="stat-lbl">均價 Avg Cost</div><div class="stat-val">${c.avgCost > 0 ? 'NT$' + c.avgCost.toFixed(2) : '—'}</div></div>
         <div class="stat"><div class="stat-lbl">總成本 Cost</div><div class="stat-val">${fmt(c.totalCost)}</div></div>
         <div class="stat"><div class="stat-lbl">市值 Value</div><div class="stat-val c-accent">${fmt(c.val)}</div></div>
-        <div class="stat"><div class="stat-lbl">損益 P&amp;L</div><div class="stat-val ${pnlCls(c.pnl)}">${fmt(c.pnl)}<br><small>${pct(c.pnlPct)}</small></div></div>
+        <div class="stat"><div class="stat-lbl">未實現損益 P&amp;L</div><div class="stat-val ${pnlCls(c.pnl)}">${fmt(c.pnl)}<br><small>${pct(c.pnlPct)}</small></div></div>
+        ${c.realizedPnl ? `<div class="stat"><div class="stat-lbl">已實現損益 Realized P&amp;L</div><div class="stat-val ${pnlCls(c.realizedPnl)}">${fmt(c.realizedPnl)}</div></div>` : ''}
+        <div class="stat"><div class="stat-lbl">總報酬 Total Return</div><div class="stat-val ${pnlCls(c.totalReturn)}">${fmt(c.totalReturn)}<br><small>${pct(c.totalRetPct)}</small></div></div>
         <div class="stat"><div class="stat-lbl">月扣 Monthly DCA</div><div class="stat-val c-accent">${fmt(pos.monthlyAmount || 0)}</div></div>
         <div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>
         ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
@@ -919,17 +977,24 @@ function directCard(pos) {
   const txns = [...(pos.transactions || [])].sort((a, b) => b.date.localeCompare(a.date));
   const tHTML = !txns.length
     ? `<p class="c-muted" style="font-size:12px">尚無交易記錄 No transactions</p>`
-    : `<table><thead><tr><th>日期 Date</th><th>股數 Shares</th><th>成本/股 Cost/Sh</th><th>總成本 Total</th><th>備註 Notes</th><th></th></tr></thead><tbody>
-      ${txns.map(t => `<tr>
-        <td>${fmtDate(t.date)}</td><td>${fmtN(t.shares)}</td>
+    : `<table><thead><tr><th>日期 Date</th><th>類型 Type</th><th>股數 Shares</th><th>價格/股 Price/Sh</th><th>金額 Amount</th><th>已實現 Realized</th><th>備註 Notes</th><th></th></tr></thead><tbody>
+      ${txns.map(t => {
+        const isSell = t.type === 'sell';
+        const realized = c.realizedByTxn[t.id];
+        return `<tr>
+        <td>${fmtDate(t.date)}</td>
+        <td><span class="badge ${isSell ? 'b-sell' : 'b-buy'}">${isSell ? '賣出 Sell' : '買入 Buy'}</span></td>
+        <td>${fmtN(t.shares)}</td>
         <td>NT$${(+t.costPerShare).toFixed(2)}</td>
         <td>${fmt(t.totalCost || t.shares * t.costPerShare)}</td>
+        <td class="${realized != null ? pnlCls(realized) : 'c-muted'}">${realized != null ? fmt(realized) : '—'}</td>
         <td class="c-muted">${t.notes || ''}</td>
         <td style="display:flex;gap:4px;justify-content:flex-end">
           <button style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="openModal('edit-txn','${pos.id}|${t.id}')">✎</button>
           <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" onclick="delTxn('${pos.id}','${t.id}')">✕</button>
         </td>
-      </tr>`).join('')}
+      </tr>`;
+      }).join('')}
       </tbody></table>`;
 
   const dvHTML = pos.dividendTracking ? divTable(pos.dividends || [], 'direct', pos.id) : '';
@@ -950,7 +1015,7 @@ function directCard(pos) {
             onchange="updPrice('direct','${pos.id}',this.value)">
           <button class="refresh-btn" id="rbtn-direct-${pos.id}" onclick="refreshPrice('direct','${pos.id}')" title="Fetch live price">🔄</button>
         </label>
-        <button class="btn btn-primary btn-sm" onclick="openModal('add-txn','${pos.id}')">＋ 買入 Add Buy</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('add-txn','${pos.id}')">＋ 交易 Add Txn</button>
         <button class="btn btn-ghost btn-sm" onclick="openModal('edit-direct','${pos.id}')">✎</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="delTicker('direct','${pos.id}')">✕</button>
       </div>
@@ -962,6 +1027,7 @@ function directCard(pos) {
         <div class="stat"><div class="stat-lbl">總成本 Cost</div><div class="stat-val">${fmt(c.totalCost)}</div></div>
         <div class="stat"><div class="stat-lbl">市值 Value</div><div class="stat-val c-accent">${fmt(c.val)}</div></div>
         <div class="stat"><div class="stat-lbl">未實現損益 P&amp;L</div><div class="stat-val ${pnlCls(c.pnl)}">${fmt(c.pnl)}<br><small>${pct(c.pnlPct)}</small></div></div>
+        ${c.realizedPnl ? `<div class="stat"><div class="stat-lbl">已實現損益 Realized P&amp;L</div><div class="stat-val ${pnlCls(c.realizedPnl)}">${fmt(c.realizedPnl)}</div></div>` : ''}
         <div class="stat"><div class="stat-lbl">總報酬 Total Return</div><div class="stat-val ${pnlCls(c.totalReturn)}">${fmt(c.totalReturn)}<br><small>${pct(c.totalRetPct)}</small></div></div>
         ${pos.dividendTracking ? `<div class="stat"><div class="stat-lbl">已收股利 Div. Rcvd</div><div class="stat-val c-gold">${fmt(c.divRcvd)}</div></div>` : ''}
         ${pos.annualYield ? `<div class="stat"><div class="stat-lbl">預計年股利 Proj. Div.</div><div class="stat-val c-gold">${fmt(c.divProj)}</div></div>` : ''}
@@ -1085,6 +1151,7 @@ function updateEntry(posId, entryId) {
   if (!e) return;
   const shares = gf('f-shares'), amount = gf('f-amt');
   if (!shares || !amount) { toast('請輸入股數和金額 Enter shares and amount', 'err'); return; }
+  e.type = gv('f-lumptype') || e.type;
   e.date = gv('f-date'); e.amount = amount; e.shares = shares;
   e.pricePerShare = gf('f-price') || (amount / shares);
   e.notes = gv('f-notes');
@@ -1095,7 +1162,8 @@ function updateTxn(posId, txnId) {
   const t = (pos?.transactions || []).find(x => x.id === txnId);
   if (!t) return;
   const shares = gf('f-shares'), costPerShare = gf('f-price');
-  if (!shares || !costPerShare) { toast('請輸入股數和均價 Enter shares and price', 'err'); return; }
+  if (!shares || !costPerShare) { toast('請輸入股數和價格 Enter shares and price', 'err'); return; }
+  t.type = gv('f-txntype') || 'buy';
   t.date = gv('f-date'); t.shares = shares; t.costPerShare = costPerShare;
   t.totalCost = gf('f-total') || shares * costPerShare;
   t.notes = gv('f-notes');
@@ -1195,15 +1263,19 @@ function openModal(type, ctx) {
   else if (type === 'add-lump') {
     const _lumpTicker = S.data.dca.find(p => p.id === ctx)?.ticker || '';
     S._autoFetch = _lumpTicker;
-    title = '加碼 Add Lump Sum — ' + _lumpTicker;
+    title = '新增交易記錄 Add Transaction — ' + _lumpTicker;
     body = `
+      <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-lumptype" onchange="onLumpTypeChange()">
+        <option value="lumpsum">加碼 Lump Sum Buy</option>
+        <option value="sell">賣出 Sell</option>
+      </select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
-        <div class="form-group"><label class="form-label">金額 Amount (NT$) *</label><input class="form-input" id="f-amt" type="number" placeholder="0" oninput="autoShares()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-lamt">金額 Amount (NT$) *</label><input class="form-input" id="f-amt" type="number" placeholder="0" oninput="autoShares()"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_lumpTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
+        <div class="form-group"><label class="form-label" id="lbl-lshares">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0"></div>
+        <div class="form-group"><label class="form-label" id="lbl-lprice">成交均價 Avg Price (NT$)</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoShares()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_lumpTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -1213,15 +1285,19 @@ function openModal(type, ctx) {
   else if (type === 'add-txn') {
     const _txnTicker = S.data.direct.find(p => p.id === ctx)?.ticker || '';
     S._autoFetch = _txnTicker;
-    title = '新增買入記錄 Add Transaction — ' + _txnTicker;
+    title = '新增交易記錄 Add Transaction — ' + _txnTicker;
     body = `
+      <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-txntype" onchange="onTxnTypeChange()">
+        <option value="buy">買入 Buy</option>
+        <option value="sell">賣出 Sell</option>
+      </select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date *</label><input class="form-input" id="f-date" type="date" value="${today()}"></div>
-        <div class="form-group"><label class="form-label">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-shares">股數 Shares *</label><input class="form-input" id="f-shares" type="number" placeholder="0" oninput="autoTotal()"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">成本/股 Cost per Share *</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoTotal()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_txnTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
-        <div class="form-group"><label class="form-label">總成本 Total Cost <span class="c-muted">(自動)</span></label><input class="form-input" id="f-total" type="number" placeholder="auto" oninput="autoPriceFromTotal()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-price">成本/股 Cost per Share *</label><div style="display:flex;gap:6px"><input class="form-input" id="f-price" type="number" step="0.01" placeholder="0.00" oninput="autoTotal()"><button class="btn btn-outline btn-sm" onclick="fetchPriceIntoModal('${_txnTicker}')" style="white-space:nowrap;flex-shrink:0">🔄 即時</button></div></div>
+        <div class="form-group"><label class="form-label" id="lbl-total">總成本 Total Cost <span class="c-muted">(自動)</span></label><input class="form-input" id="f-total" type="number" placeholder="auto" oninput="autoPriceFromTotal()"></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" placeholder="選填 optional"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -1234,15 +1310,20 @@ function openModal(type, ctx) {
     const pos = S.data.dca.find(p => p.id === posId);
     const e = (pos?.entries || []).find(x => x.id === entryId);
     if (!e) return;
+    const isSell = e.type === 'sell';
     title = `編輯記錄 Edit Entry — ${pos.ticker}`;
     body = `
+      <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-lumptype" onchange="onLumpTypeChange()">
+        <option value="${e.type === 'scheduled' ? 'scheduled' : 'lumpsum'}"${!isSell ? ' selected' : ''}>${e.type === 'scheduled' ? '定扣 DCA' : '加碼 Lump Sum Buy'}</option>
+        <option value="sell"${isSell ? ' selected' : ''}>賣出 Sell</option>
+      </select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${e.date || ''}"></div>
-        <div class="form-group"><label class="form-label">金額 Amount (NT$)</label><input class="form-input" id="f-amt" type="number" value="${e.amount || ''}" oninput="autoShares()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-lamt">${isSell ? '總收入 Total Proceeds (NT$)' : '金額 Amount (NT$)'}</label><input class="form-input" id="f-amt" type="number" value="${e.amount || ''}" oninput="autoShares()"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">股數 Shares</label><input class="form-input" id="f-shares" type="number" value="${e.shares || ''}"></div>
-        <div class="form-group"><label class="form-label">成交均價 Avg Price (NT$)</label><input class="form-input" id="f-price" type="number" step="0.01" value="${e.pricePerShare || ''}" oninput="autoShares()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-lshares">${isSell ? '賣出股數 Shares Sold' : '股數 Shares'}</label><input class="form-input" id="f-shares" type="number" value="${e.shares || ''}"></div>
+        <div class="form-group"><label class="form-label" id="lbl-lprice">${isSell ? '賣出價/股 Sale Price (NT$)' : '成交均價 Avg Price (NT$)'}</label><input class="form-input" id="f-price" type="number" step="0.01" value="${e.pricePerShare || ''}" oninput="autoShares()"></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" value="${e.notes || ''}"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -1255,15 +1336,20 @@ function openModal(type, ctx) {
     const pos = S.data.direct.find(p => p.id === posId);
     const t = (pos?.transactions || []).find(x => x.id === txnId);
     if (!t) return;
+    const isSell = t.type === 'sell';
     title = `編輯交易 Edit Transaction — ${pos.ticker}`;
     body = `
+      <div class="form-group"><label class="form-label">類型 Type</label><select class="form-input form-select" id="f-txntype" onchange="onTxnTypeChange()">
+        <option value="buy"${!isSell ? ' selected' : ''}>買入 Buy</option>
+        <option value="sell"${isSell ? ' selected' : ''}>賣出 Sell</option>
+      </select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">日期 Date</label><input class="form-input" id="f-date" type="date" value="${t.date || ''}"></div>
-        <div class="form-group"><label class="form-label">股數 Shares</label><input class="form-input" id="f-shares" type="number" value="${t.shares || ''}" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-shares">${isSell ? '賣出股數 Shares Sold' : '股數 Shares'}</label><input class="form-input" id="f-shares" type="number" value="${t.shares || ''}" oninput="autoTotal()"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">成本/股 Cost per Share</label><input class="form-input" id="f-price" type="number" step="0.01" value="${t.costPerShare || ''}" oninput="autoTotal()"></div>
-        <div class="form-group"><label class="form-label">總成本 Total Cost</label><input class="form-input" id="f-total" type="number" value="${t.totalCost || ''}" oninput="autoPriceFromTotal()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-price">${isSell ? '賣出價/股 Sale Price' : '成本/股 Cost per Share'}</label><input class="form-input" id="f-price" type="number" step="0.01" value="${t.costPerShare || ''}" oninput="autoTotal()"></div>
+        <div class="form-group"><label class="form-label" id="lbl-total">${isSell ? '總收入 Total Proceeds' : '總成本 Total Cost'}</label><input class="form-input" id="f-total" type="number" value="${t.totalCost || ''}" oninput="autoPriceFromTotal()"></div>
       </div>
       <div class="form-group"><label class="form-label">備註 Notes</label><input class="form-input" id="f-notes" value="${t.notes || ''}"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -1321,6 +1407,26 @@ function closeBg(e) { if (e.target === document.getElementById('overlay')) close
 function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function gf(id) { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0; }
 function gc(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+function onLumpTypeChange() {
+  const isSell = gv('f-lumptype') === 'sell';
+  const lblAmt    = document.getElementById('lbl-lamt');
+  const lblShares = document.getElementById('lbl-lshares');
+  const lblPrice  = document.getElementById('lbl-lprice');
+  if (lblAmt)    lblAmt.textContent    = isSell ? '總收入 Total Proceeds (NT$) *' : '金額 Amount (NT$) *';
+  if (lblShares) lblShares.textContent = isSell ? '賣出股數 Shares Sold *' : '股數 Shares *';
+  if (lblPrice)  lblPrice.textContent  = isSell ? '賣出價/股 Sale Price (NT$)' : '成交均價 Avg Price (NT$)';
+}
+
+function onTxnTypeChange() {
+  const isSell = gv('f-txntype') === 'sell';
+  const lblShares = document.getElementById('lbl-shares');
+  const lblPrice  = document.getElementById('lbl-price');
+  const lblTotal  = document.getElementById('lbl-total');
+  if (lblShares) lblShares.textContent = isSell ? '賣出股數 Shares Sold *' : '股數 Shares *';
+  if (lblPrice)  lblPrice.textContent  = isSell ? '賣出價/股 Sale Price *'  : '成本/股 Cost per Share *';
+  if (lblTotal)  lblTotal.innerHTML    = isSell ? '總收入 Total Proceeds <span class="c-muted">(自動)</span>' : '總成本 Total Cost <span class="c-muted">(自動)</span>';
+}
 
 function autoShares() {
   const amt = gf('f-amt'), price = gf('f-price');
@@ -1387,20 +1493,28 @@ function confirmEntry(posId, scheduledDate) {
 function saveLump(posId) {
   const pos = S.data.dca.find(p => p.id === posId);
   if (!pos) return;
+  const entryType = gv('f-lumptype') || 'lumpsum';
   const shares = gf('f-shares'), amount = gf('f-amt');
   if (!shares || !amount) { toast('請輸入股數和金額 Enter shares and amount', 'err'); return; }
-  (pos.entries = pos.entries || []).push({ id: uuid(), date: gv('f-date'), amount, shares, pricePerShare: gf('f-price') || (amount / shares), type: 'lumpsum', notes: gv('f-notes') });
-  S.dirty = true; closeModal(); renderAll(); toast('加碼已記錄 Lump sum added', 'ok');
+  if (entryType === 'sell' && shares > dcaCalc(pos).totalShares + 1e-9) {
+    toast('賣出股數超過持股 Cannot sell more than you hold', 'err'); return;
+  }
+  (pos.entries = pos.entries || []).push({ id: uuid(), date: gv('f-date'), amount, shares, pricePerShare: gf('f-price') || (amount / shares), type: entryType, notes: gv('f-notes') });
+  S.dirty = true; closeModal(); renderAll(); toast(entryType === 'sell' ? '賣出已記錄 Sale recorded' : '加碼已記錄 Lump sum added', 'ok');
 }
 
 function saveTxn(posId) {
   const pos = S.data.direct.find(p => p.id === posId);
   if (!pos) return;
+  const txnType = gv('f-txntype') || 'buy';
   const shares = gf('f-shares'), costPerShare = gf('f-price');
-  if (!shares || !costPerShare) { toast('請輸入股數和均價 Enter shares and price', 'err'); return; }
+  if (!shares || !costPerShare) { toast('請輸入股數和價格 Enter shares and price', 'err'); return; }
+  if (txnType === 'sell' && shares > directCalc(pos).totalShares + 1e-9) {
+    toast('賣出股數超過持股 Cannot sell more than you hold', 'err'); return;
+  }
   const totalCost = gf('f-total') || shares * costPerShare;
-  (pos.transactions = pos.transactions || []).push({ id: uuid(), date: gv('f-date'), shares, costPerShare, totalCost, notes: gv('f-notes') });
-  S.dirty = true; closeModal(); renderAll(); toast('買入已記錄 Transaction added', 'ok');
+  (pos.transactions = pos.transactions || []).push({ id: uuid(), type: txnType, date: gv('f-date'), shares, costPerShare, totalCost, notes: gv('f-notes') });
+  S.dirty = true; closeModal(); renderAll(); toast(txnType === 'sell' ? '賣出已記錄 Sale recorded' : '買入已記錄 Transaction added', 'ok');
 }
 
 function saveDiv(editId) {
