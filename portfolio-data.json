@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 31.31,
+      "currentPrice": 32.73,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -41,18 +41,10 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 228.85,
+      "currentPrice": 243.3,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
-        {
-          "id": "c3efad54-df32-4129-aaa0-23f6a359bae2",
-          "date": "2026-03-25",
-          "shares": 1000,
-          "costPerShare": 176.9,
-          "totalCost": 176900,
-          "notes": ""
-        },
         {
           "id": "0eb779ec-eb22-44c8-9a1c-56cc0c67cdfd",
           "date": "2026-05-13",
@@ -76,16 +68,33 @@
           "costPerShare": 228.65,
           "totalCost": 114325,
           "notes": ""
+        },
+        {
+          "id": "5f6c032f-7ff6-4acd-9892-efc9b7658339",
+          "type": "buy",
+          "date": "2026-03-25",
+          "shares": 1000,
+          "costPerShare": 176.9,
+          "totalCost": 176900,
+          "notes": ""
+        },
+        {
+          "id": "58326eec-5016-4241-b0bf-cab5819df77b",
+          "type": "sell",
+          "date": "2026-06-15",
+          "shares": 1000,
+          "costPerShare": 244,
+          "totalCost": 244000,
+          "notes": ""
         }
       ],
       "dividends": [
         {
-          "id": "112065a4-044b-4a94-b480-971d133548ef",
+          "id": "a227a730-3849-4516-809f-7c4f97c68748",
           "date": "2026-07-16",
-          "amount": 8620,
+          "amount": 0,
           "notes": "Q1/2026",
-          "sharesAtPayout": 2500,
-          "perShare": 3.448
+          "sharesAtPayout": 2000
         }
       ],
       "trailStop": 5,
@@ -96,14 +105,14 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2230,
+      "currentPrice": 2355,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 2265,
+      "trailHigh": 2360,
       "transactions": [],
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-11T02:58:25.394Z"
+  "lastUpdated": "2026-06-15T02:38:16.278Z"
 }
