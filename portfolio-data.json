@@ -76,18 +76,27 @@
           "costPerShare": 228.65,
           "totalCost": 114325,
           "notes": ""
-        }
-      ],
-      "dividends": [
+        },
         {
-          "id": "112065a4-044b-4a94-b480-971d133548ef",
-          "date": "2026-07-16",
-          "amount": 8620,
-          "notes": "Q1/2026",
-          "sharesAtPayout": 2500,
-          "perShare": 3.448
+          "id": "8f5a59a7-a96c-41e1-af73-62b69d945c1b",
+          "type": "sell",
+          "date": "2026-06-15",
+          "shares": 1000,
+          "costPerShare": 244,
+          "totalCost": 244000,
+          "notes": ""
+        },
+        {
+          "id": "b76229b8-88a9-4947-ad08-a016ba3d1eed",
+          "type": "sell",
+          "date": "2026-06-16",
+          "shares": 1000,
+          "costPerShare": 245.55,
+          "totalCost": 245550,
+          "notes": ""
         }
       ],
+      "dividends": [],
       "trailStop": 5,
       "trailHigh": 249.6
     },
@@ -105,5 +114,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-17T05:31:38.168Z"
+  "lastUpdated": "2026-06-17T05:35:39.782Z"
 }
