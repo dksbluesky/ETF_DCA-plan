@@ -49,8 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
-.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
-@media(max-width:1100px){.grid-6{grid-template-columns:1fr 1fr 1fr}}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px}
 @media(max-width:900px){.grid-5{grid-template-columns:1fr 1fr 1fr}.grid-2,.grid-3{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.grid-5,.grid-6,.grid-2,.grid-3{grid-template-columns:1fr}}
 
@@ -210,7 +209,7 @@ tr:hover td{background:var(--bg)}
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-outline btn-sm" id="refresh-all-btn" onclick="refreshAllPrices()">🔄 更新所有股價 Refresh All Prices</button>
     </div>
-    <div class="grid-6" id="kpi-row"></div>
+    <div class="kpi-row" id="kpi-row"></div>
     <div class="grid-2" style="margin-bottom:16px">
       <div class="card"><div class="card-title">持股配置 Portfolio Allocation</div><div class="chart-wrap"><canvas id="chart-alloc"></canvas></div></div>
       <div class="card"><div class="card-title">各股盈虧 P&amp;L by Ticker</div><div class="chart-wrap"><canvas id="chart-pnl"></canvas></div></div>
@@ -734,9 +733,11 @@ function totals() {
   S.data.dca.forEach(p => { const c = dcaCalc(p); cost += c.totalCost; val += c.val; divRcvd += c.divRcvd; divProj += c.divProj; realizedPnl += c.realizedPnl; totalBought += c.totalBought; });
   S.data.direct.forEach(p => { const c = directCalc(p); cost += c.totalCost; val += c.val; divRcvd += c.divRcvd; divProj += c.divProj; realizedPnl += c.realizedPnl; totalBought += c.totalBought; });
   const pnl = val - cost, pnlPct = cost > 0 ? pnl / cost * 100 : 0;
+  const totalPnl = pnl + realizedPnl;
+  const totalPnlPct = totalBought > 0 ? totalPnl / totalBought * 100 : 0;
   const totalReturn = pnl + divRcvd + realizedPnl;
   const totalRetPct = totalBought > 0 ? totalReturn / totalBought * 100 : 0;
-  return { cost, val, pnl, pnlPct, divRcvd, divProj, realizedPnl, totalReturn, totalRetPct };
+  return { cost, val, pnl, pnlPct, divRcvd, divProj, realizedPnl, totalPnl, totalPnlPct, totalReturn, totalRetPct };
 }
 
 function upcoming(pos) {
@@ -856,11 +857,13 @@ function renderDashboard() {
   const pC = t.pnl >= 0 ? 'c-green' : 'c-red';
   const rC = t.realizedPnl >= 0 ? 'c-green' : 'c-red';
   const tRC = t.totalReturn >= 0 ? 'c-green' : 'c-red';
+  const tPC = t.totalPnl >= 0 ? 'c-green' : 'c-red';
   document.getElementById('kpi-row').innerHTML = `
-    <div class="kpi c-accent"><div class="kpi-label">總市值 Total Value</div><div class="kpi-value c-accent">${fmt(t.val)}</div></div>
-    <div class="kpi"><div class="kpi-label">總成本 Total Cost</div><div class="kpi-value">${fmt(t.cost)}</div></div>
+    <div class="kpi c-accent"><div class="kpi-label">庫存總市值 Holdings Value</div><div class="kpi-value c-accent">${fmt(t.val)}</div></div>
+    <div class="kpi"><div class="kpi-label">庫存總成本 Holdings Cost</div><div class="kpi-value">${fmt(t.cost)}</div></div>
     <div class="kpi ${t.pnl >= 0 ? 'c-green' : 'c-red'}"><div class="kpi-label">未實現損益 Unrealized P&amp;L</div><div class="kpi-value ${pC}">${fmt(t.pnl)}</div><div class="kpi-sub">${pct(t.pnlPct)}</div></div>
     ${t.realizedPnl ? `<div class="kpi ${t.realizedPnl >= 0 ? 'c-green' : 'c-red'}"><div class="kpi-label">已實現損益 Realized P&amp;L</div><div class="kpi-value ${rC}">${fmt(t.realizedPnl)}</div></div>` : ''}
+    <div class="kpi ${t.totalPnl >= 0 ? 'c-green' : 'c-red'}"><div class="kpi-label">合計損益 Total P&amp;L</div><div class="kpi-value ${tPC}">${fmt(t.totalPnl)}</div><div class="kpi-sub">${pct(t.totalPnlPct)}</div></div>
     <div class="kpi c-gold"><div class="kpi-label">預計年股利 Projected Ann. Div.</div><div class="kpi-value c-gold">${fmt(t.divProj)}</div><div class="kpi-sub">≈ ${fmt(t.divProj / 12)}/月 mo.</div></div>
     <div class="kpi"><div class="kpi-label">已收股利 Dividends Rcvd</div><div class="kpi-value c-gold">${fmt(t.divRcvd)}</div></div>`;
   // Only render charts when dashboard tab is visible — Chart.js misbehaves on hidden canvases
