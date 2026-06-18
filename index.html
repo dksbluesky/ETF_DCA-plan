@@ -49,7 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
 @media(max-width:900px){.grid-5{grid-template-columns:1fr 1fr 1fr}.grid-2,.grid-3{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.kpi-row{grid-template-columns:1fr 1fr}.grid-5,.grid-6,.grid-2,.grid-3{grid-template-columns:1fr}}
 
