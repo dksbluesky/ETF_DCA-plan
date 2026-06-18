@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.6,
+      "currentPrice": 33.61,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -123,5 +123,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-18T01:16:46.125Z"
+  "lastUpdated": "2026-06-18T01:16:51.300Z"
 }
