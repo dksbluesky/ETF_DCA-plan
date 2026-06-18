@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.27,
+      "currentPrice": 33.6,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -32,7 +32,7 @@
         }
       ],
       "trailStop": 10,
-      "trailHigh": 33.3
+      "trailHigh": 33.64
     }
   ],
   "direct": [
@@ -41,7 +41,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 246.3,
+      "currentPrice": 248.15,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -94,6 +94,15 @@
           "costPerShare": 245.55,
           "totalCost": 245550,
           "notes": ""
+        },
+        {
+          "id": "0f88839d-e5dd-454b-a86a-17d7da8e84d6",
+          "type": "sell",
+          "date": "2026-06-18",
+          "shares": 1000,
+          "costPerShare": 248.65,
+          "totalCost": 248650,
+          "notes": ""
         }
       ],
       "dividends": [],
@@ -105,14 +114,14 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2385,
+      "currentPrice": 2405,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 2385,
+      "trailHigh": 2405,
       "transactions": [],
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-17T05:35:39.782Z"
+  "lastUpdated": "2026-06-18T01:16:46.125Z"
 }
