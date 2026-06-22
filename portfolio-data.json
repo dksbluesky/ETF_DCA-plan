@@ -41,7 +41,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 258.2,
+      "currentPrice": 257.45,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -107,7 +107,7 @@
       ],
       "dividends": [],
       "trailStop": 2.5,
-      "trailHigh": 257.45
+      "trailHigh": 259
     },
     {
       "id": "078531ea-fa9f-475c-b4cb-0a427dc23e83",
@@ -123,5 +123,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-22T07:15:15.638Z"
+  "lastUpdated": "2026-06-22T07:38:04.560Z"
 }
