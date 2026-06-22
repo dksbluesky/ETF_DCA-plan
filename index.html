@@ -1702,28 +1702,25 @@ async function fetchDailyCandlesLite(ticker, days) {
   return candles;
 }
 
-// Heuristic default: the "breakout day" (爆量突破日) must be a new high vs the rolling
-// 10-day window before it, a bullish candle (close > open), AND a real volume spike vs
-// its own trailing 5-day average — NOT just whichever day had the single largest volume
-// (that could be a crash day, an ex-dividend spike, or other noise unrelated to a bullish
-// breakout). A rolling (not all-time-since-window-start) high means an old outlier day
-// ages out instead of permanently blocking detection of a more recent breakout. Among
-// qualifying days, the most recent one wins. Zone low = top of the range it broke out
-// from (prior day's high/close); zone high = +1% buffer above that. Volume threshold =
-// half the breakout day's volume.
+// Heuristic default: among days with a clear local volume spike (volume >= 1.5x their
+// own trailing 5-day average), pick the one with the HIGHEST CLOSING PRICE. This directly
+// targets "the actual ATH-on-volume day" without relying on candle-color (close vs open) —
+// that check turned out fragile: today's open price, when merged from a live quote because
+// the historical API hasn't published today's row yet, can be missing and fall back to the
+// live price itself, which falsely makes a real up-day look non-bullish and reject the
+// correct day. Picking by highest-close-among-volume-spike-days avoids that entirely, and
+// also naturally avoids a high-volume crash day (its close is low, not a new high).
+// Zone low = top of the range it broke out from (prior day's high/close); zone high = +1%
+// buffer above that. Volume threshold = half the breakout day's volume.
 function detectWatchDefaults(candles) {
   if (!candles || candles.length < 6) return null;
-  let biIdx = -1;
+  let biIdx = -1, bestClose = -Infinity;
   for (let i = 1; i < candles.length; i++) {
     const c = candles[i];
-    const highLookback = candles.slice(Math.max(0, i - 10), i);
-    const recentHigh = Math.max(...highLookback.map(x => x.high));
-    const isNewHigh = c.high > recentHigh;
-    const isBullish = c.close > c.open;
     const volLookback = candles.slice(Math.max(0, i - 5), i);
     const avgVol = volLookback.length ? volLookback.reduce((s, x) => s + x.volume, 0) / volLookback.length : 0;
     const volSpike = avgVol > 0 && c.volume >= avgVol * 1.5;
-    if (isNewHigh && isBullish && volSpike) biIdx = i; // keep overwriting — most recent qualifying day wins
+    if (volSpike && c.close > bestClose) { bestClose = c.close; biIdx = i; }
   }
   if (biIdx < 1) return null;
   const breakout = candles[biIdx], prev = candles[biIdx - 1];
