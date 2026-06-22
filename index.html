@@ -1710,8 +1710,10 @@ async function fetchDailyCandlesLite(ticker, days) {
 // live price itself, which falsely makes a real up-day look non-bullish and reject the
 // correct day. Picking by highest-close-among-volume-spike-days avoids that entirely, and
 // also naturally avoids a high-volume crash day (its close is low, not a new high).
-// Zone low = top of the range it broke out from (prior day's high/close); zone high = +1%
-// buffer above that. Volume threshold = half the breakout day's volume.
+// Zone = current 5MA (the level price/MA are converging toward) up to the breakout day's
+// high (the recent ATH ceiling) — anchored to two real, objective numbers rather than an
+// arbitrary buffer, so the suggestion is always in the right ballpark, not just "a guess".
+// Volume threshold = half the breakout day's volume.
 function detectWatchDefaults(candles) {
   if (!candles || candles.length < 6) return null;
   let biIdx = -1, bestClose = -Infinity;
@@ -1724,8 +1726,11 @@ function detectWatchDefaults(candles) {
   }
   if (biIdx < 1) return null;
   const breakout = candles[biIdx], prev = candles[biIdx - 1];
-  const zoneLow = +(Math.max(prev.high, prev.close)).toFixed(2);
-  const zoneHigh = +(zoneLow * 1.01).toFixed(2);
+  const last5 = candles.slice(-5);
+  const ma5 = last5.length === 5 ? last5.reduce((s, c) => s + c.close, 0) / 5 : null;
+  const fallbackLow = Math.max(prev.high, prev.close);
+  const zoneHigh = +breakout.high.toFixed(2);
+  const zoneLow = +Math.min(ma5 ?? fallbackLow, zoneHigh - 0.01).toFixed(2);
   const volThreshold = Math.round(breakout.volume / 1000 / 2);
   return { zoneLow, zoneHigh, volThreshold, breakoutDate: breakout.date, breakoutHigh: breakout.high, breakoutVolLots: Math.round(breakout.volume / 1000) };
 }
