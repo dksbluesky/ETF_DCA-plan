@@ -1136,7 +1136,9 @@ function updPrice(type, id, val) {
     const price = parseFloat(val) || 0;
     pos.currentPrice = price;
     if (pos.trailStop && price > 0 && price > (pos.trailHigh || 0)) pos.trailHigh = price;
-    S.dirty = true; renderDashboard();
+    S.dirty = true;
+    if (type === 'dca') renderDCA(); else renderDirect();
+    renderDashboard();
   }
 }
 
