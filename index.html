@@ -1702,29 +1702,21 @@ async function fetchDailyCandlesLite(ticker, days) {
   return candles;
 }
 
-// Heuristic default: among days with a clear local volume spike (volume >= 1.5x their
-// own trailing 5-day average), pick the one with the HIGHEST CLOSING PRICE. This directly
-// targets "the actual ATH-on-volume day" without relying on candle-color (close vs open) —
-// that check turned out fragile: today's open price, when merged from a live quote because
-// the historical API hasn't published today's row yet, can be missing and fall back to the
-// live price itself, which falsely makes a real up-day look non-bullish and reject the
-// correct day. Picking by highest-close-among-volume-spike-days avoids that entirely, and
-// also naturally avoids a high-volume crash day (its close is low, not a new high).
+// Heuristic default: the breakout day is simply the day with the HIGHEST CLOSING PRICE
+// in the lookback window — no relative-volume-spike gate. A prior version required volume
+// to be >=1.5x the trailing 5-day average, but that rejects real breakout days whose volume
+// is only modestly above an already-elevated recent average (e.g. a multi-week uptrend with
+// generally high volume) — exactly the kind of day this is meant to catch. We don't need a
+// volume filter to avoid picking a crash day either: a crash day's close is low, not a new
+// high, so "highest close" already excludes it naturally.
 // Zone = current 5MA (the level price/MA are converging toward) up to the breakout day's
 // high (the recent ATH ceiling) — anchored to two real, objective numbers rather than an
 // arbitrary buffer, so the suggestion is always in the right ballpark, not just "a guess".
 // Volume threshold = half the breakout day's volume.
 function detectWatchDefaults(candles) {
-  if (!candles || candles.length < 6) return null;
-  let biIdx = -1, bestClose = -Infinity;
-  for (let i = 1; i < candles.length; i++) {
-    const c = candles[i];
-    const volLookback = candles.slice(Math.max(0, i - 5), i);
-    const avgVol = volLookback.length ? volLookback.reduce((s, x) => s + x.volume, 0) / volLookback.length : 0;
-    const volSpike = avgVol > 0 && c.volume >= avgVol * 1.5;
-    if (volSpike && c.close > bestClose) { bestClose = c.close; biIdx = i; }
-  }
-  if (biIdx < 1) return null;
+  if (!candles || candles.length < 2) return null;
+  let biIdx = 1;
+  for (let i = 1; i < candles.length; i++) if (candles[i].close > candles[biIdx].close) biIdx = i;
   const breakout = candles[biIdx], prev = candles[biIdx - 1];
   const last5 = candles.slice(-5);
   const ma5 = last5.length === 5 ? last5.reduce((s, c) => s + c.close, 0) / 5 : null;
