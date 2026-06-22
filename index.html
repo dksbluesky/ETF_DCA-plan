@@ -1740,7 +1740,7 @@ async function loadWatchStatus(listType, posId) {
   const refEl = document.getElementById('wc-ref');
   if (!pos) return;
   try {
-    const candles = await fetchDailyCandlesLite(pos.ticker, 60);
+    const candles = await fetchDailyCandlesLite(pos.ticker, 30);
     _watchCandles = candles; _watchPos = pos;
     const def = detectWatchDefaults(candles);
     const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
