@@ -1475,7 +1475,7 @@ function saveDCA(type, ctx) {
     S.data.dca.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice, annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? currentPrice : null, entries: [], dividends: [] });
   } else {
     const p = S.data.dca.find(x => x.id === ctx);
-    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? (p.trailHigh || p.currentPrice || gf('f-price')) : null });
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), deductionDay: parseInt(gv('f-day')) || 15, monthlyAmount: gf('f-monthly'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? Math.max(p.trailHigh || 0, gf('f-price')) : null });
   }
   S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
 }
@@ -1489,7 +1489,7 @@ function saveDirect(type, ctx) {
     S.data.direct.push({ id: uuid(), ticker, name: gv('f-name'), type: gv('f-type'), currentPrice, annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? currentPrice : null, transactions: [], dividends: [] });
   } else {
     const p = S.data.direct.find(x => x.id === ctx);
-    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? (p.trailHigh || p.currentPrice || gf('f-price')) : null });
+    if (p) Object.assign(p, { ticker, name: gv('f-name'), type: gv('f-type'), currentPrice: gf('f-price'), annualYield: gf('f-yield'), dividendTracking: gc('f-divtrack'), trailStop, trailHigh: trailStop ? Math.max(p.trailHigh || 0, gf('f-price')) : null });
   }
   S.dirty = true; closeModal(); renderAll(); toast('已儲存 Saved', 'ok');
 }
