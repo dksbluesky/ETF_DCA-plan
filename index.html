@@ -1702,13 +1702,30 @@ async function fetchDailyCandlesLite(ticker, days) {
   return candles;
 }
 
-// Heuristic default: the highest-volume day in the lookback window is treated as the
-// "breakout day" (爆量日). Zone low = top of the range it gapped from (prev day's high/close);
-// zone high = +1% buffer above that. Volume threshold = half the breakout day's volume.
+// Heuristic default: the "breakout day" (爆量突破日) must be a new high vs the rolling
+// 10-day window before it, a bullish candle (close > open), AND a real volume spike vs
+// its own trailing 5-day average — NOT just whichever day had the single largest volume
+// (that could be a crash day, an ex-dividend spike, or other noise unrelated to a bullish
+// breakout). A rolling (not all-time-since-window-start) high means an old outlier day
+// ages out instead of permanently blocking detection of a more recent breakout. Among
+// qualifying days, the most recent one wins. Zone low = top of the range it broke out
+// from (prior day's high/close); zone high = +1% buffer above that. Volume threshold =
+// half the breakout day's volume.
 function detectWatchDefaults(candles) {
   if (!candles || candles.length < 6) return null;
-  let biIdx = 1;
-  for (let i = 1; i < candles.length; i++) if (candles[i].volume > candles[biIdx].volume) biIdx = i;
+  let biIdx = -1;
+  for (let i = 1; i < candles.length; i++) {
+    const c = candles[i];
+    const highLookback = candles.slice(Math.max(0, i - 10), i);
+    const recentHigh = Math.max(...highLookback.map(x => x.high));
+    const isNewHigh = c.high > recentHigh;
+    const isBullish = c.close > c.open;
+    const volLookback = candles.slice(Math.max(0, i - 5), i);
+    const avgVol = volLookback.length ? volLookback.reduce((s, x) => s + x.volume, 0) / volLookback.length : 0;
+    const volSpike = avgVol > 0 && c.volume >= avgVol * 1.5;
+    if (isNewHigh && isBullish && volSpike) biIdx = i; // keep overwriting — most recent qualifying day wins
+  }
+  if (biIdx < 1) return null;
   const breakout = candles[biIdx], prev = candles[biIdx - 1];
   const zoneLow = +(Math.max(prev.high, prev.close)).toFixed(2);
   const zoneHigh = +(zoneLow * 1.01).toFixed(2);
@@ -1731,8 +1748,8 @@ async function loadWatchStatus(listType, posId) {
       if (vtEl && !vtEl.value) vtEl.value = def.volThreshold;
     }
     if (refEl) refEl.innerHTML = def
-      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b> 爆量日 (volume-spike day)，最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
-      : '⚠️ 資料不足，無法自動偵測參考日 Not enough history to auto-detect a reference day.';
+      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b> 帶量創高日 (new-high + volume-spike day)，最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
+      : '⚠️ 近期無符合的帶量創高突破日，請手動輸入區間與警戒值 No qualifying new-high + volume-spike day found in recent history — please enter the zone/threshold manually.';
     recomputeWatchStatus();
   } catch (e) {
     if (refEl) refEl.innerHTML = `⚠️ ${e.message}`;
