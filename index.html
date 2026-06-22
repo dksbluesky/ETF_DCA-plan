@@ -76,6 +76,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
 .stat-val{font-size:14px;font-weight:600}
 
+/* Watch Criteria */
+.wc-row{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)}
+.wc-row:last-child{border-bottom:none}
+.wc-icon{font-size:16px;line-height:1.5;flex-shrink:0}
+.wc-label{font-weight:600;font-size:13px}
+.wc-detail{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5}
+.wc-ref{font-size:11px;color:var(--muted);background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:12px}
+
 /* Badges */
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
 .b-etf{background:#ebf8ff;color:#2b6cb0}.b-stock{background:var(--purple-l);color:#553c9a}
@@ -929,6 +937,7 @@ function dcaCard(pos) {
         <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
         <span class="badge b-dca">DCA</span>
         <button onclick="openChartModal('${pos.ticker}','${pos.name||''}')" title="K線圖 Chart" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;color:var(--muted)">📊</button>
+        <button onclick="openModal('watch','dca|${pos.id}')" title="進場條件監控 Entry Watch" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;color:var(--muted)">🎯</button>
       </div>
       <div class="mini-chart" id="mchart-dca-${pos.id}"><div class="mini-chart-empty">—</div></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1017,6 +1026,7 @@ function directCard(pos) {
         <span class="badge ${pos.type === 'ETF' ? 'b-etf' : 'b-stock'}">${pos.type}</span>
         <span class="badge b-direct">Direct</span>
         <button onclick="openChartModal('${pos.ticker}','${pos.name||''}')" title="K線圖 Chart" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;color:var(--muted)">📊</button>
+        <button onclick="openModal('watch','direct|${pos.id}')" title="進場條件監控 Entry Watch" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;color:var(--muted)">🎯</button>
       </div>
       <div class="mini-chart" id="mchart-direct-${pos.id}"><div class="mini-chart-empty">—</div></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1406,6 +1416,34 @@ function openModal(type, ctx) {
             <button class="btn btn-success" onclick="saveDiv('${divId || ''}')">` + (existing ? '儲存 Save' : '新增 Add') + `</button>`;
   }
 
+  else if (type === 'watch') {
+    const [listType, posId] = ctx.split('|');
+    const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+    if (!pos) return;
+    const wc = pos.watchCriteria || {};
+    _watchCandles = null; _watchPos = null;
+    title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
+    body = `
+      <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="recomputeWatchStatus()"></div>
+        <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="recomputeWatchStatus()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="recomputeWatchStatus()"></div>
+      <div class="form-group">
+        <label class="form-label">停損價 Stop Loss</label>
+        <select class="form-input form-select" id="wc-stopmode" onchange="onWatchStopModeChange()">
+          <option value="trail"${(!wc.stopLossMode || wc.stopLossMode === 'trail') ? ' selected' : ''}>移動停損價 Use Trail Stop${pos.trailStop ? '' : ' (未設定 not set)'}</option>
+          <option value="manual"${wc.stopLossMode === 'manual' ? ' selected' : ''}>手動輸入 Manual</option>
+        </select>
+        <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="recomputeWatchStatus()">
+      </div>
+      <div id="wc-status" style="margin-top:14px"></div>`;
+    foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
+            <button class="btn btn-primary" onclick="saveWatchCriteria('${listType}','${posId}')">儲存設定 Save</button>`;
+    setTimeout(() => loadWatchStatus(listType, posId), 50);
+  }
+
   document.getElementById('m-title').textContent = title;
   document.getElementById('m-body').innerHTML = body;
   document.getElementById('m-foot').innerHTML = foot;
@@ -1631,6 +1669,156 @@ async function fetchLivePrice(ticker) {
   }
   console.log('Fugle response (no price found):', JSON.stringify(d));
   throw new Error(`${ticker}: 查無報價`);
+}
+
+// ── Entry Watch Criteria ────────────────────────────────────────────────────
+let _watchCandles = null, _watchPos = null;
+
+async function fetchDailyCandlesLite(ticker, days) {
+  const fugleKey = getFugleKey();
+  if (!fugleKey) throw new Error('請先至設定頁面輸入 Fugle API Key');
+  const to = new Date().toISOString().split('T')[0];
+  const from = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+  const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${from}&to=${to}`, { headers: { 'X-API-KEY': fugleKey } });
+  if (!r.ok) throw new Error(`Fugle HTTP ${r.status}`);
+  const d = await r.json();
+  const candles = (d.data || []).sort((a, b) => a.date.localeCompare(b.date))
+    .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
+  if (!candles.length) throw new Error('查無歷史資料 No historical data');
+  try {
+    const q = await fetchLivePrice(ticker);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const last = candles[candles.length - 1];
+    const vol = (q.tradeVol ?? 0) * 1000; // 張 → shares, matches historical candle units
+    if (last.date === todayStr) {
+      if (q.tradeVol) last.volume = vol;
+      last.close = q.price;
+      if (q.high) last.high = Math.max(last.high, q.high);
+      if (q.low) last.low = Math.min(last.low, q.low);
+    } else {
+      candles.push({ date: todayStr, open: q.open || q.price, high: q.high || q.price, low: q.low || q.price, close: q.price, volume: vol });
+    }
+  } catch (e) { console.warn('Watch: live quote merge failed:', e.message); }
+  return candles;
+}
+
+// Heuristic default: the highest-volume day in the lookback window is treated as the
+// "breakout day" (爆量日). Zone low = top of the range it gapped from (prev day's high/close);
+// zone high = +1% buffer above that. Volume threshold = half the breakout day's volume.
+function detectWatchDefaults(candles) {
+  if (!candles || candles.length < 6) return null;
+  let biIdx = 1;
+  for (let i = 1; i < candles.length; i++) if (candles[i].volume > candles[biIdx].volume) biIdx = i;
+  const breakout = candles[biIdx], prev = candles[biIdx - 1];
+  const zoneLow = +(Math.max(prev.high, prev.close)).toFixed(2);
+  const zoneHigh = +(zoneLow * 1.01).toFixed(2);
+  const volThreshold = Math.round(breakout.volume / 1000 / 2);
+  return { zoneLow, zoneHigh, volThreshold, breakoutDate: breakout.date, breakoutHigh: breakout.high, breakoutVolLots: Math.round(breakout.volume / 1000) };
+}
+
+async function loadWatchStatus(listType, posId) {
+  const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  const refEl = document.getElementById('wc-ref');
+  if (!pos) return;
+  try {
+    const candles = await fetchDailyCandlesLite(pos.ticker, 60);
+    _watchCandles = candles; _watchPos = pos;
+    const def = detectWatchDefaults(candles);
+    const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
+    if (def) {
+      if (zlEl && !zlEl.value) zlEl.value = def.zoneLow;
+      if (zhEl && !zhEl.value) zhEl.value = def.zoneHigh;
+      if (vtEl && !vtEl.value) vtEl.value = def.volThreshold;
+    }
+    if (refEl) refEl.innerHTML = def
+      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b> 爆量日 (volume-spike day)，最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
+      : '⚠️ 資料不足，無法自動偵測參考日 Not enough history to auto-detect a reference day.';
+    recomputeWatchStatus();
+  } catch (e) {
+    if (refEl) refEl.innerHTML = `⚠️ ${e.message}`;
+  }
+}
+
+function onWatchStopModeChange() {
+  const manualInput = document.getElementById('wc-stopmanual');
+  if (manualInput) manualInput.style.display = gv('wc-stopmode') === 'manual' ? '' : 'none';
+  recomputeWatchStatus();
+}
+
+function recomputeWatchStatus() {
+  const statusEl = document.getElementById('wc-status');
+  if (!statusEl || !_watchCandles || !_watchPos) return;
+  const candles = _watchCandles, pos = _watchPos;
+  const zoneLow = gf('wc-zonelow'), zoneHigh = gf('wc-zonehigh'), volThreshold = gf('wc-volth');
+  const stopMode = gv('wc-stopmode');
+  const today = candles[candles.length - 1];
+  const price = today.close;
+  const last5 = candles.slice(-5);
+  const ma5 = last5.length === 5 ? last5.reduce((s, c) => s + c.close, 0) / 5 : null;
+  const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
+  // Consolidation window = days strictly after the breakout day, last up to 3, excluding today.
+  // (Today is excluded so the volume-quiet check (c2) and volume-spike check (c3) reference
+  // different days — otherwise they'd be mutually exclusive and never both fire on ignition day.)
+  const def = detectWatchDefaults(candles);
+  const breakoutIdx = def ? candles.findIndex(c => c.date === def.breakoutDate) : -1;
+  const windowStart = Math.max(breakoutIdx + 1, candles.length - 4);
+  const priorWindow = candles.slice(windowStart, -1);
+  const consolHigh = priorWindow.length ? Math.max(...priorWindow.map(c => c.high)) : null;
+  const avgVolPrior = priorWindow.length ? priorWindow.reduce((s, c) => s + c.volume, 0) / priorWindow.length : null;
+  const avgVolPriorLots = avgVolPrior !== null ? Math.round(avgVolPrior / 1000) : null;
+
+  let c1ok = false, c1text;
+  if (!zoneLow || !zoneHigh) { c1text = '尚未設定支撐區 Zone not set'; }
+  else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在支撐區 (${zoneLow}–${zoneHigh}) 之上，尚未回測 — 不要進場 Price still above zone, no pullback yet`; }
+  else if (price < zoneLow) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已跌破支撐區下緣 ${zoneLow}，缺口支撐可能失效 Price broke below zone low — support may be failing`; }
+  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測至支撐區 (${zoneLow}–${zoneHigh}) 內 Price has pulled back into the zone`; }
+
+  let c2ok = false, c2text;
+  if (ma5 === null || avgVolPriorLots === null) { c2text = '資料不足 Not enough data'; }
+  else {
+    const maClose = biasPct !== null && biasPct <= 1.2;
+    const volQuiet = volThreshold > 0 ? avgVolPriorLots <= volThreshold : null;
+    c2ok = maClose && volQuiet !== false;
+    c2text = `5MA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
+  }
+
+  let c3ok = false, c3text;
+  const isRed = today.close > today.open;
+  if (consolHigh === null) { c3text = '資料不足 Not enough data'; }
+  else {
+    const brokeHigh = today.close > consolHigh;
+    const volSpike = avgVolPrior ? today.volume > avgVolPrior * 1.5 : false;
+    c3ok = isRed && brokeHigh && volSpike;
+    c3text = `${isRed ? '✓紅K' : '✗非紅K'}｜${brokeHigh ? `✓突破近期高點 NT$${consolHigh.toFixed(2)}` : `✗未突破近期高點 NT$${consolHigh.toFixed(2)}`}｜${volSpike ? '✓帶量' : '✗量未放大'}`;
+  }
+
+  let stopPrice = null;
+  if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
+  else if (pos.trailStop && pos.trailHigh) stopPrice = pos.trailHigh * (1 - pos.trailStop / 100);
+
+  const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
+
+  statusEl.innerHTML = `
+    <div style="font-weight:700;font-size:13px;margin-bottom:4px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
+    ${row(c1ok, '條件一・空間回測 Space Retest', c1text)}
+    ${row(c2ok, '條件二・籌碼沉澱 Time + Volume', c2text)}
+    ${row(c3ok, '條件三・右側點火 Ignition Breakout', c3text)}
+    <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
+    ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
+  `;
+}
+
+function saveWatchCriteria(listType, posId) {
+  const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (!pos) return;
+  pos.watchCriteria = {
+    zoneLow: gf('wc-zonelow') || null,
+    zoneHigh: gf('wc-zonehigh') || null,
+    volThreshold: gf('wc-volth') || null,
+    stopLossMode: gv('wc-stopmode') || 'trail',
+    stopLossManual: gf('wc-stopmanual') || null
+  };
+  S.dirty = true; closeModal(); toast('觀察條件已儲存 Watch criteria saved', 'ok');
 }
 
 // Quote cache: keep last quote per ticker so mini candles survive re-renders
