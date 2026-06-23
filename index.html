@@ -1779,6 +1779,8 @@ function persistWatchCriteria(listType, posId) {
     stopLossManual: gf('wc-stopmanual') || null
   };
   S.dirty = true;
+  persistLocal(); // write through immediately — this path never calls renderAll(),
+                   // which is the only other place persistLocal() normally fires
 }
 
 function recomputeWatchStatus() {
