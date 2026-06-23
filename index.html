@@ -1425,6 +1425,9 @@ function openModal(type, ctx) {
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
+      <div style="text-align:right;margin:-6px 0 12px">
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults()">↺ 重設為建議值 Reset to Suggested</button>
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="recomputeWatchStatus()"></div>
         <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="recomputeWatchStatus()"></div>
@@ -1836,6 +1839,18 @@ function recomputeWatchStatus() {
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
   `;
+}
+
+function resetWatchDefaults() {
+  if (!_watchCandles) { toast('股價資料尚未載入完成 Price data still loading', 'err'); return; }
+  const def = detectWatchDefaults(_watchCandles);
+  if (!def) { toast('無法計算建議值 Could not compute suggested defaults', 'err'); return; }
+  const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
+  if (zlEl) zlEl.value = def.zoneLow;
+  if (zhEl) zhEl.value = def.zoneHigh;
+  if (vtEl) vtEl.value = def.volThreshold;
+  recomputeWatchStatus();
+  toast('已重設為系統建議值 Reset to suggested defaults', 'ok');
 }
 
 function saveWatchCriteria(listType, posId) {
