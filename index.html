@@ -1782,11 +1782,18 @@ function recomputeWatchStatus() {
   const avgVolPrior = priorWindow.length ? priorWindow.reduce((s, c) => s + c.volume, 0) / priorWindow.length : null;
   const avgVolPriorLots = avgVolPrior !== null ? Math.round(avgVolPrior / 1000) : null;
 
+  // "In the zone" alone isn't enough — the zone's NT$ bounds are a frozen snapshot, while
+  // the 5MA keeps moving daily. Require price to have actually met/crossed the LIVE 5MA
+  // (allowing a small 2% tolerance above it) so this stays accurate even if the zone fields
+  // go stale between refreshes.
   let c1ok = false, c1text;
+  const crossedMA = ma5 !== null && price <= ma5 * 1.02;
   if (!zoneLow || !zoneHigh) { c1text = '尚未設定支撐區 Zone not set'; }
   else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在支撐區 (${zoneLow}–${zoneHigh}) 之上，尚未回測 — 不要進場 Price still above zone, no pullback yet`; }
   else if (price < zoneLow) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已跌破支撐區下緣 ${zoneLow}，缺口支撐可能失效 Price broke below zone low — support may be failing`; }
-  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測至支撐區 (${zoneLow}–${zoneHigh}) 內 Price has pulled back into the zone`; }
+  else if (ma5 === null) { c1text = `價格 NT$${price.toFixed(2)} 已在支撐區 (${zoneLow}–${zoneHigh}) 內，但資料不足無法確認是否觸及 5MA In zone, but not enough data to confirm 5MA contact`; }
+  else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 雖在支撐區內，但仍高於 5MA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 In the zone, but still above the 5MA — hasn't actually met the average yet`; }
+  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測至支撐區並觸及/跌破 5MA NT$${ma5.toFixed(2)} Price has pulled back into the zone and met the 5MA`; }
 
   let c2ok = false, c2text;
   if (ma5 === null || avgVolPriorLots === null) { c2text = '資料不足 Not enough data'; }
