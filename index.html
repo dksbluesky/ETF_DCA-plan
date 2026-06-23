@@ -1807,6 +1807,24 @@ function recomputeWatchStatus() {
   if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
   else if (pos.trailStop && pos.trailHigh) stopPrice = pos.trailHigh * (1 - pos.trailStop / 100);
 
+  // BIAS (乖離率) — signed deviation of price from the 5MA. Positive = price has run ahead
+  // of its average cost (the larger, the more "stretched" and prone to a profit-taking
+  // pullback / mean reversion). Negative = price is below average cost, i.e. recent buyers
+  // are underwater (the more negative, the more likely an oversold panic rebound).
+  const biasSigned = ma5 ? (price - ma5) / ma5 * 100 : null;
+  let biasIcon, biasText;
+  if (biasSigned === null) { biasIcon = '⬜'; biasText = '資料不足，無法計算 5MA Not enough data for 5MA'; }
+  else if (biasSigned > 0) {
+    biasIcon = '🔺';
+    biasText = `正乖離 +${biasSigned.toFixed(2)}%（5MA NT$${ma5.toFixed(2)}）｜價格超前均線，籌碼浮動獲利，乖離越大、獲利了結回吐風險越高 Price has run ahead of its average cost — the larger, the more stretched and prone to a profit-taking pullback`;
+  } else if (biasSigned < 0) {
+    biasIcon = '🔻';
+    biasText = `負乖離 ${biasSigned.toFixed(2)}%（5MA NT$${ma5.toFixed(2)}）｜價格跌破均線，近期買盤套牢，乖離越負、報復性反彈機率越高 Price is below its average cost — the more negative, the more likely a panic-driven rebound`;
+  } else {
+    biasIcon = '⚖️';
+    biasText = `乖離率 0%｜價格與 5MA 重合 Price exactly at the 5MA`;
+  }
+
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
   statusEl.innerHTML = `
@@ -1814,6 +1832,7 @@ function recomputeWatchStatus() {
     ${row(c1ok, '條件一・空間回測 Space Retest', c1text)}
     ${row(c2ok, '條件二・籌碼沉澱 Time + Volume', c2text)}
     ${row(c3ok, '條件三・右側點火 Ignition Breakout', c3text)}
+    <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5MA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
   `;
