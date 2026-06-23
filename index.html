@@ -1787,7 +1787,7 @@ function recomputeWatchStatus() {
   // (allowing a small 2% tolerance above it) so this stays accurate even if the zone fields
   // go stale between refreshes.
   let c1ok = false, c1text;
-  const crossedMA = ma5 !== null && price <= ma5 * 1.02;
+  const crossedMA = ma5 !== null && price <= ma5; // strict — a 1.53%-style "near miss" above the MA does NOT count as crossed
   if (!zoneLow || !zoneHigh) { c1text = '尚未設定支撐區 Zone not set'; }
   else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在支撐區 (${zoneLow}–${zoneHigh}) 之上，尚未回測 — 不要進場 Price still above zone, no pullback yet`; }
   else if (price < zoneLow) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已跌破支撐區下緣 ${zoneLow}，缺口支撐可能失效 Price broke below zone low — support may be failing`; }
