@@ -1426,6 +1426,7 @@ function openModal(type, ctx) {
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
       <div style="text-align:right;margin:-6px 0 12px">
+        <button type="button" class="btn btn-outline btn-sm" onclick="refreshWatchData('${listType}','${posId}')">🔄 重新整理 Refresh</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults()">↺ 重設為建議值 Reset to Suggested</button>
       </div>
       <div class="form-row">
@@ -1839,6 +1840,12 @@ function recomputeWatchStatus() {
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
   `;
+}
+
+function refreshWatchData(listType, posId) {
+  const refEl = document.getElementById('wc-ref');
+  if (refEl) refEl.innerHTML = '⏳ 重新整理中… Refreshing…';
+  loadWatchStatus(listType, posId);
 }
 
 function resetWatchDefaults() {
