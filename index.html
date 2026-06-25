@@ -1819,12 +1819,15 @@ function recomputeWatchStatus() {
   else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測至支撐區並觸及/跌破 5MA NT$${ma5.toFixed(2)} Price has pulled back into the zone and met the 5MA`; }
 
   let c2ok = false, c2text;
+  const todayVolLots = Math.round(today.volume / 1000);
   if (ma5 === null || avgVolPriorLots === null) { c2text = '資料不足 Not enough data'; }
   else {
     const maClose = biasPct !== null && biasPct <= 1.2;
-    const volQuiet = volThreshold > 0 ? avgVolPriorLots <= volThreshold : null;
+    // Benchmark is today's live volume (refreshed alongside price), not the prior window's
+    // average — the average is shown for context only and rarely dips below its own threshold.
+    const volQuiet = volThreshold > 0 ? todayVolLots <= volThreshold : null;
     c2ok = maClose && volQuiet !== false;
-    c2text = `5MA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
+    c2text = `5MA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
   let c3ok = false, c3text;
