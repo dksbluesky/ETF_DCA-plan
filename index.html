@@ -1706,6 +1706,19 @@ async function fetchDailyCandlesLite(ticker, days) {
   return candles;
 }
 
+// 5-period EMA (matches the "雙重 EMA (5 & 20)" indicator on the user's TradingView chart —
+// NOT a simple average). EMA weights recent closes much more heavily, so during a sharp
+// directional move it diverges noticeably from a plain 5-day average. Seeded with the SMA
+// of the first 5 candles in the window, then rolled forward day by day; with ~20-30 days of
+// history available this converges closely to a continuously-running EMA by "today".
+function calcWatchEMA5(candles) {
+  if (!candles || candles.length < 5) return null;
+  const period = 5, k = 2 / (period + 1);
+  let ema = candles.slice(0, period).reduce((s, c) => s + c.close, 0) / period;
+  for (let i = period; i < candles.length; i++) ema = candles[i].close * k + ema * (1 - k);
+  return ema;
+}
+
 // Heuristic default: the breakout day is simply the day with the HIGHEST CLOSING PRICE
 // in the lookback window — no relative-volume-spike gate. A prior version required volume
 // to be >=1.5x the trailing 5-day average, but that rejects real breakout days whose volume
@@ -1713,7 +1726,7 @@ async function fetchDailyCandlesLite(ticker, days) {
 // generally high volume) — exactly the kind of day this is meant to catch. We don't need a
 // volume filter to avoid picking a crash day either: a crash day's close is low, not a new
 // high, so "highest close" already excludes it naturally.
-// Zone = current 5MA (the level price/MA are converging toward) up to the breakout day's
+// Zone = current 5EMA (the level price/MA are converging toward) up to the breakout day's
 // high (the recent ATH ceiling) — anchored to two real, objective numbers rather than an
 // arbitrary buffer, so the suggestion is always in the right ballpark, not just "a guess".
 // Volume threshold = half the breakout day's volume.
@@ -1722,8 +1735,7 @@ function detectWatchDefaults(candles) {
   let biIdx = 1;
   for (let i = 1; i < candles.length; i++) if (candles[i].close > candles[biIdx].close) biIdx = i;
   const breakout = candles[biIdx], prev = candles[biIdx - 1];
-  const last5 = candles.slice(-5);
-  const ma5 = last5.length === 5 ? last5.reduce((s, c) => s + c.close, 0) / 5 : null;
+  const ma5 = calcWatchEMA5(candles);
   const fallbackLow = Math.max(prev.high, prev.close);
   const zoneHigh = +breakout.high.toFixed(2);
   const zoneLow = +Math.min(ma5 ?? fallbackLow, zoneHigh - 0.01).toFixed(2);
@@ -1791,8 +1803,7 @@ function recomputeWatchStatus() {
   const stopMode = gv('wc-stopmode');
   const today = candles[candles.length - 1];
   const price = today.close;
-  const last5 = candles.slice(-5);
-  const ma5 = last5.length === 5 ? last5.reduce((s, c) => s + c.close, 0) / 5 : null;
+  const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
   // Consolidation window = days strictly after the breakout day, last up to 3, excluding today.
   // (Today is excluded so the volume-quiet check (c2) and volume-spike check (c3) reference
@@ -1805,23 +1816,23 @@ function recomputeWatchStatus() {
   const avgVolPrior = priorWindow.length ? priorWindow.reduce((s, c) => s + c.volume, 0) / priorWindow.length : null;
   const avgVolPriorLots = avgVolPrior !== null ? Math.round(avgVolPrior / 1000) : null;
 
-  // Zone Low used to gate this condition, but it's a frozen snapshot of the 5MA from
-  // whenever it was last computed/saved — the live 5MA keeps moving daily. During a sharp
+  // Zone Low used to gate this condition, but it's a frozen snapshot of the 5EMA from
+  // whenever it was last computed/saved — the live 5EMA keeps moving daily. During a sharp
   // pullback, price can blow straight through that stale number on its way down, making
   // this falsely report "broken support" even though price has legitimately met the
-  // CURRENT 5MA. So the floor test now uses the live 5MA directly (recalculated fresh every
+  // CURRENT 5EMA. So the floor test now uses the live 5EMA directly (recalculated fresh every
   // time, same as the BIAS row) instead of the static field. Zone High stays static since
   // it's a fixed historical high that doesn't need to move. Zone Low is still shown/saved
   // as a reference, just no longer used to gate pass/fail here.
   let c1ok = false, c1text;
   const crossedMA = ma5 !== null && price <= ma5; // strict — a near-miss above the MA does NOT count as crossed
-  const farBelowMA = ma5 !== null && (ma5 - price) / ma5 * 100 > 3; // >3% below the live 5MA — support may be failing
+  const farBelowMA = ma5 !== null && (ma5 - price) / ma5 * 100 > 3; // >3% below the live 5EMA — support may be failing
   if (!zoneHigh) { c1text = '尚未設定支撐區上緣 Zone High not set'; }
   else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在 NT$${zoneHigh} 之上，尚未回測 — 不要進場 Price still above the ceiling, no pullback yet`; }
-  else if (ma5 === null) { c1text = `價格已回落，但資料不足無法確認是否觸及 5MA Price has pulled back, but not enough data to confirm 5MA contact`; }
-  else if (farBelowMA) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已明顯跌破 5MA NT$${ma5.toFixed(2)}（${((ma5 - price) / ma5 * 100).toFixed(2)}%），支撐可能已失效 Price has fallen well below the 5MA — support may be failing`; }
-  else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 已低於上緣，但仍高於 5MA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 Below the ceiling, but still above the 5MA — hasn't actually met the average yet`; }
-  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測並觸及/跌破 5MA NT$${ma5.toFixed(2)} Price has pulled back and met the 5MA`; }
+  else if (ma5 === null) { c1text = `價格已回落，但資料不足無法確認是否觸及 5EMA Price has pulled back, but not enough data to confirm 5EMA contact`; }
+  else if (farBelowMA) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已明顯跌破 5EMA NT$${ma5.toFixed(2)}（${((ma5 - price) / ma5 * 100).toFixed(2)}%），支撐可能已失效 Price has fallen well below the 5EMA — support may be failing`; }
+  else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 已低於上緣，但仍高於 5EMA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 Below the ceiling, but still above the 5EMA — hasn't actually met the average yet`; }
+  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測並觸及/跌破 5EMA NT$${ma5.toFixed(2)} Price has pulled back and met the 5EMA`; }
 
   let c2ok = false, c2text;
   const todayVolLots = Math.round(today.volume / 1000);
@@ -1832,7 +1843,7 @@ function recomputeWatchStatus() {
     // average — the average is shown for context only and rarely dips below its own threshold.
     const volQuiet = volThreshold > 0 ? todayVolLots <= volThreshold : null;
     c2ok = maClose && volQuiet !== false;
-    c2text = `5MA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
+    c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
   let c3ok = false, c3text;
@@ -1849,22 +1860,22 @@ function recomputeWatchStatus() {
   if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
   else if (pos.trailStop && pos.trailHigh) stopPrice = pos.trailHigh * (1 - pos.trailStop / 100);
 
-  // BIAS (乖離率) — signed deviation of price from the 5MA. Positive = price has run ahead
+  // BIAS (乖離率) — signed deviation of price from the 5EMA. Positive = price has run ahead
   // of its average cost (the larger, the more "stretched" and prone to a profit-taking
   // pullback / mean reversion). Negative = price is below average cost, i.e. recent buyers
   // are underwater (the more negative, the more likely an oversold panic rebound).
   const biasSigned = ma5 ? (price - ma5) / ma5 * 100 : null;
   let biasIcon, biasText;
-  if (biasSigned === null) { biasIcon = '⬜'; biasText = '資料不足，無法計算 5MA Not enough data for 5MA'; }
+  if (biasSigned === null) { biasIcon = '⬜'; biasText = '資料不足，無法計算 5EMA Not enough data for 5EMA'; }
   else if (biasSigned > 0) {
     biasIcon = '🔺';
-    biasText = `正乖離 +${biasSigned.toFixed(2)}%（5MA NT$${ma5.toFixed(2)}）｜價格超前均線，籌碼浮動獲利，乖離越大、獲利了結回吐風險越高 Price has run ahead of its average cost — the larger, the more stretched and prone to a profit-taking pullback`;
+    biasText = `正乖離 +${biasSigned.toFixed(2)}%（5EMA NT$${ma5.toFixed(2)}）｜價格超前均線，籌碼浮動獲利，乖離越大、獲利了結回吐風險越高 Price has run ahead of its average cost — the larger, the more stretched and prone to a profit-taking pullback`;
   } else if (biasSigned < 0) {
     biasIcon = '🔻';
-    biasText = `負乖離 ${biasSigned.toFixed(2)}%（5MA NT$${ma5.toFixed(2)}）｜價格跌破均線，近期買盤套牢，乖離越負、報復性反彈機率越高 Price is below its average cost — the more negative, the more likely a panic-driven rebound`;
+    biasText = `負乖離 ${biasSigned.toFixed(2)}%（5EMA NT$${ma5.toFixed(2)}）｜價格跌破均線，近期買盤套牢，乖離越負、報復性反彈機率越高 Price is below its average cost — the more negative, the more likely a panic-driven rebound`;
   } else {
     biasIcon = '⚖️';
-    biasText = `乖離率 0%｜價格與 5MA 重合 Price exactly at the 5MA`;
+    biasText = `乖離率 0%｜價格與 5EMA 重合 Price exactly at the 5EMA`;
   }
 
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
@@ -1874,7 +1885,7 @@ function recomputeWatchStatus() {
     ${row(c1ok, '條件一・空間回測 Space Retest', c1text)}
     ${row(c2ok, '條件二・籌碼沉澱 Time + Volume', c2text)}
     ${row(c3ok, '條件三・右側點火 Ignition Breakout', c3text)}
-    <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5MA)</div><div class="wc-detail">${biasText}</div></div></div>
+    <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
   `;
