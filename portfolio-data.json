@@ -109,11 +109,11 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 232,
-        "zoneHigh": 238.1,
-        "volThreshold": 2333,
+        "zoneLow": 246.37,
+        "zoneHigh": 258.2,
+        "volThreshold": 2564,
         "stopLossMode": "manual",
-        "stopLossManual": 229
+        "stopLossManual": null
       }
     },
     {
@@ -130,5 +130,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-06-29T07:28:20.207Z"
+  "lastUpdated": "2026-06-29T07:56:29.520Z"
 }
