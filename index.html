@@ -1746,8 +1746,8 @@ async function loadWatchStatus(listType, posId) {
       if (vtEl && !vtEl.value) vtEl.value = def.volThreshold;
     }
     if (refEl) refEl.innerHTML = def
-      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b> 帶量創高日 (new-high + volume-spike day)，最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
-      : '⚠️ 近期無符合的帶量創高突破日，請手動輸入區間與警戒值 No qualifying new-high + volume-spike day found in recent history — please enter the zone/threshold manually.';
+      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b>（近30日收盤最高日 highest-closing day in the last 30 days），最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
+      : '⚠️ 資料不足，無法自動偵測參考日，請手動輸入區間與警戒值 Not enough history to auto-detect a reference day — please enter the zone/threshold manually.';
     recomputeWatchStatus();
   } catch (e) {
     if (refEl) refEl.innerHTML = `⚠️ ${e.message}`;
