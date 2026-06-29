@@ -1805,18 +1805,23 @@ function recomputeWatchStatus() {
   const avgVolPrior = priorWindow.length ? priorWindow.reduce((s, c) => s + c.volume, 0) / priorWindow.length : null;
   const avgVolPriorLots = avgVolPrior !== null ? Math.round(avgVolPrior / 1000) : null;
 
-  // "In the zone" alone isn't enough — the zone's NT$ bounds are a frozen snapshot, while
-  // the 5MA keeps moving daily. Require price to have actually met/crossed the LIVE 5MA
-  // (allowing a small 2% tolerance above it) so this stays accurate even if the zone fields
-  // go stale between refreshes.
+  // Zone Low used to gate this condition, but it's a frozen snapshot of the 5MA from
+  // whenever it was last computed/saved — the live 5MA keeps moving daily. During a sharp
+  // pullback, price can blow straight through that stale number on its way down, making
+  // this falsely report "broken support" even though price has legitimately met the
+  // CURRENT 5MA. So the floor test now uses the live 5MA directly (recalculated fresh every
+  // time, same as the BIAS row) instead of the static field. Zone High stays static since
+  // it's a fixed historical high that doesn't need to move. Zone Low is still shown/saved
+  // as a reference, just no longer used to gate pass/fail here.
   let c1ok = false, c1text;
-  const crossedMA = ma5 !== null && price <= ma5; // strict — a 1.53%-style "near miss" above the MA does NOT count as crossed
-  if (!zoneLow || !zoneHigh) { c1text = '尚未設定支撐區 Zone not set'; }
-  else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在支撐區 (${zoneLow}–${zoneHigh}) 之上，尚未回測 — 不要進場 Price still above zone, no pullback yet`; }
-  else if (price < zoneLow) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已跌破支撐區下緣 ${zoneLow}，缺口支撐可能失效 Price broke below zone low — support may be failing`; }
-  else if (ma5 === null) { c1text = `價格 NT$${price.toFixed(2)} 已在支撐區 (${zoneLow}–${zoneHigh}) 內，但資料不足無法確認是否觸及 5MA In zone, but not enough data to confirm 5MA contact`; }
-  else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 雖在支撐區內，但仍高於 5MA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 In the zone, but still above the 5MA — hasn't actually met the average yet`; }
-  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測至支撐區並觸及/跌破 5MA NT$${ma5.toFixed(2)} Price has pulled back into the zone and met the 5MA`; }
+  const crossedMA = ma5 !== null && price <= ma5; // strict — a near-miss above the MA does NOT count as crossed
+  const farBelowMA = ma5 !== null && (ma5 - price) / ma5 * 100 > 3; // >3% below the live 5MA — support may be failing
+  if (!zoneHigh) { c1text = '尚未設定支撐區上緣 Zone High not set'; }
+  else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在 NT$${zoneHigh} 之上，尚未回測 — 不要進場 Price still above the ceiling, no pullback yet`; }
+  else if (ma5 === null) { c1text = `價格已回落，但資料不足無法確認是否觸及 5MA Price has pulled back, but not enough data to confirm 5MA contact`; }
+  else if (farBelowMA) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已明顯跌破 5MA NT$${ma5.toFixed(2)}（${((ma5 - price) / ma5 * 100).toFixed(2)}%），支撐可能已失效 Price has fallen well below the 5MA — support may be failing`; }
+  else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 已低於上緣，但仍高於 5MA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 Below the ceiling, but still above the 5MA — hasn't actually met the average yet`; }
+  else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測並觸及/跌破 5MA NT$${ma5.toFixed(2)} Price has pulled back and met the 5MA`; }
 
   let c2ok = false, c2text;
   const todayVolLots = Math.round(today.volume / 1000);
