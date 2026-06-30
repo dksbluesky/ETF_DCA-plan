@@ -1421,7 +1421,7 @@ function openModal(type, ctx) {
     const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
     if (!pos) return;
     const wc = pos.watchCriteria || {};
-    _watchCandles = null; _watchPos = null;
+    _watchCandles = null; _watchPos = null; _watchBiasLen = 50;
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
@@ -1442,7 +1442,12 @@ function openModal(type, ctx) {
         </select>
         <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
       </div>
-      <div id="wc-status" style="margin-top:14px"></div>`;
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <span style="font-size:12px;color:var(--muted)">⚡ 快速訊號偏移基準 Fast signal bias:</span>
+        <button type="button" id="wc-bias-20" class="btn btn-outline btn-sm" onclick="switchWatchBias(20)">EMA20</button>
+        <button type="button" id="wc-bias-50" class="btn btn-primary btn-sm" onclick="switchWatchBias(50)">EMA50</button>
+      </div>
+      <div id="wc-status" style="margin-top:10px"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
             <button class="btn btn-primary" onclick="saveWatchCriteria('${listType}','${posId}')">儲存設定 Save</button>`;
     setTimeout(() => loadWatchStatus(listType, posId), 50);
@@ -1676,7 +1681,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchPos = null;
+let _watchCandles = null, _watchPos = null, _watchBiasLen = 50;
 
 async function fetchDailyCandlesLite(ticker, days) {
   const fugleKey = getFugleKey();
@@ -1726,25 +1731,39 @@ function calcWatchEMA5(candles) {
 // different moment than C1-C3 converge. Volume ratio = today's volume vs the trailing 10-bar
 // average (excluding today) — low ratio means the recovery happened on light volume, i.e.
 // sellers were already exhausted before the bounce (clean, not a panic short-covering spike).
-function checkEarlySignal(candles) {
-  if (!candles || candles.length < 55) return null;
-  // EMA50 bias — matches the chart popup's default B:50 toggle (what the user actually
-  // looks at), not EMA20. Different bias length = a different bull/bear regime, so this
-  // mismatch alone could miss signals visible on the reference chart.
-  const signals = calcHLSignals(candles, 50);
+function volRatioAt(candles, idx) {
+  const lookback = candles.slice(Math.max(0, idx - 10), idx);
+  if (!lookback.length) return null;
+  const avgVol = lookback.reduce((s, c) => s + c.volume, 0) / lookback.length;
+  return avgVol > 0 ? candles[idx].volume / avgVol : null;
+}
+
+function describeSig(candles, sig, lastIdx) {
+  const ratio = volRatioAt(candles, sig.index);
+  return { type: sig.h1 ? 'H1' : 'H2', ratio, lowVolume: ratio !== null && ratio < 0.8, daysAgo: lastIdx - sig.index, date: candles[sig.index].date };
+}
+
+// biasLen: 20 or 50 — user-toggleable in the Entry Watch modal (matches the chart popup's
+// own B:20/B:50 toggle). Different bias length = a different bull/bear regime, so the two
+// can disagree on whether/when a leg recovered.
+function checkEarlySignal(candles, biasLen = 50) {
+  if (!candles || candles.length < biasLen + 15) return null;
+  const signals = calcHLSignals(candles, biasLen);
   const lastIdx = candles.length - 1;
   // Scan the last 5 trading days, not just today — a recent H1/H2 is still actionable
   // context even if it didn't fire on the literal most-recent bar.
   const recent = signals.filter(s => s.index >= lastIdx - 4 && (s.h1 || s.h2)).sort((a, b) => b.index - a.index);
   const sig = recent[0];
   if (!sig) return null;
-  const lookback = candles.slice(Math.max(0, sig.index - 10), sig.index);
-  if (!lookback.length) return null;
-  const avgVol = lookback.reduce((s, c) => s + c.volume, 0) / lookback.length;
-  const sigVol = candles[sig.index].volume;
-  const ratio = avgVol > 0 ? sigVol / avgVol : null;
-  const daysAgo = lastIdx - sig.index;
-  return { type: sig.h1 ? 'H1' : 'H2', ratio, lowVolume: ratio !== null && ratio < 0.8, daysAgo, date: candles[sig.index].date };
+  const result = describeSig(candles, sig, lastIdx);
+  // H2 presupposes an H1 already happened earlier in the same leg sequence — that H1 may
+  // have come and gone outside the 5-day display window, so it's easy to miss. Look back
+  // further (uncapped within the fetched data) for the most recent H1 before this H2.
+  if (sig.h2) {
+    const priorH1 = signals.filter(s => s.h1 && s.index < sig.index).sort((a, b) => b.index - a.index)[0];
+    if (priorH1) result.precedingH1 = describeSig(candles, priorH1, lastIdx);
+  }
+  return result;
 }
 
 // Heuristic default: the breakout day is simply the day with the HIGHEST CLOSING PRICE
@@ -1824,6 +1843,13 @@ function persistWatchCriteria(listType, posId) {
   S.dirty = true;
   persistLocal(); // write through immediately — this path never calls renderAll(),
                    // which is the only other place persistLocal() normally fires
+}
+
+function switchWatchBias(len) {
+  _watchBiasLen = len;
+  document.getElementById('wc-bias-20').className = `btn btn-${len === 20 ? 'primary' : 'outline'} btn-sm`;
+  document.getElementById('wc-bias-50').className = `btn btn-${len === 50 ? 'primary' : 'outline'} btn-sm`;
+  recomputeWatchStatus();
 }
 
 function recomputeWatchStatus() {
@@ -1911,11 +1937,13 @@ function recomputeWatchStatus() {
 
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
-  const early = checkEarlySignal(candles);
+  const early = checkEarlySignal(candles, _watchBiasLen);
+  const sigLine = s => `⚡ ${s.type} ${s.daysAgo === 0 ? '今天' : s.daysAgo + ' 天前 (' + s.date + ')'} 觸發${s.ratio !== null ? `（量 ${s.ratio.toFixed(1)}x 均量）` : ''}${s.lowVolume ? ' — 量縮回升 low-volume recovery' : ' — 量未縮，訊號較弱 volume not light yet'}`;
   const earlyBlock = early ? `
     <div style="margin-bottom:12px;padding:10px;background:${early.lowVolume ? '#e6f7ff' : '#fff7e6'};border:1px solid ${early.lowVolume ? '#1890ff' : '#faad14'};border-radius:8px">
-      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">⚡ ${early.type} ${early.daysAgo === 0 ? '今天' : early.daysAgo + ' 天前 (' + early.date + ')'} 觸發${early.ratio !== null ? `（量 ${early.ratio.toFixed(1)}x 均量）` : ''}${early.lowVolume ? ' — 量縮回升，可能啟動新一波上漲 Low-volume recovery — a new leg up may be starting' : ' — 量未縮，訊號較弱 Volume not light yet — weaker signal'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">獨立快速訊號，與下方三項條件並行觀察，不互相取代 Independent fast signal — watch alongside the 3 conditions below, doesn't replace them</div>
+      ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">${sigLine(early.precedingH1)}（前一腳 preceding leg）</div>` : ''}
+      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">${sigLine(early)}${early.lowVolume ? ' — 可能啟動新一波上漲 a new leg up may be starting' : ''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">基準 Bias: EMA${_watchBiasLen}｜獨立快速訊號，與下方三項條件並行觀察，不互相取代 Independent fast signal — watch alongside the 3 conditions below, doesn't replace them</div>
     </div>` : '';
 
   statusEl.innerHTML = `
