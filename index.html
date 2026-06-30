@@ -1727,17 +1727,24 @@ function calcWatchEMA5(candles) {
 // average (excluding today) — low ratio means the recovery happened on light volume, i.e.
 // sellers were already exhausted before the bounce (clean, not a panic short-covering spike).
 function checkEarlySignal(candles) {
-  if (!candles || candles.length < 25) return null;
-  const signals = calcHLSignals(candles, 20);
-  const todayIdx = candles.length - 1;
-  const sig = signals.find(s => s.index === todayIdx);
-  if (!sig || !(sig.h1 || sig.h2)) return null;
-  const lookback = candles.slice(Math.max(0, todayIdx - 10), todayIdx);
+  if (!candles || candles.length < 55) return null;
+  // EMA50 bias — matches the chart popup's default B:50 toggle (what the user actually
+  // looks at), not EMA20. Different bias length = a different bull/bear regime, so this
+  // mismatch alone could miss signals visible on the reference chart.
+  const signals = calcHLSignals(candles, 50);
+  const lastIdx = candles.length - 1;
+  // Scan the last 5 trading days, not just today — a recent H1/H2 is still actionable
+  // context even if it didn't fire on the literal most-recent bar.
+  const recent = signals.filter(s => s.index >= lastIdx - 4 && (s.h1 || s.h2)).sort((a, b) => b.index - a.index);
+  const sig = recent[0];
+  if (!sig) return null;
+  const lookback = candles.slice(Math.max(0, sig.index - 10), sig.index);
   if (!lookback.length) return null;
   const avgVol = lookback.reduce((s, c) => s + c.volume, 0) / lookback.length;
-  const todayVol = candles[todayIdx].volume;
-  const ratio = avgVol > 0 ? todayVol / avgVol : null;
-  return { type: sig.h1 ? 'H1' : 'H2', ratio, lowVolume: ratio !== null && ratio < 0.8 };
+  const sigVol = candles[sig.index].volume;
+  const ratio = avgVol > 0 ? sigVol / avgVol : null;
+  const daysAgo = lastIdx - sig.index;
+  return { type: sig.h1 ? 'H1' : 'H2', ratio, lowVolume: ratio !== null && ratio < 0.8, daysAgo, date: candles[sig.index].date };
 }
 
 // Heuristic default: the breakout day is simply the day with the HIGHEST CLOSING PRICE
@@ -1769,10 +1776,10 @@ async function loadWatchStatus(listType, posId) {
   const refEl = document.getElementById('wc-ref');
   if (!pos) return;
   try {
-    // 60 calendar days ≈ 40 trading days — needed so the EMA20-based H1/H2 fast signal
-    // (checkEarlySignal) has enough warm-up; 30 calendar days ≈ 20 trading days was never
-    // enough for a 20-period EMA to produce a single value, so it could never fire.
-    const candles = await fetchDailyCandlesLite(pos.ticker, 60);
+    // 130 calendar days ≈ 85-90 trading days — needed so the EMA50-based H1/H2 fast signal
+    // (checkEarlySignal) has enough warm-up; EMA50 needs 50 trading days just for its first
+    // value, leaving very little room left for the leg-tracker to stabilize on a tighter window.
+    const candles = await fetchDailyCandlesLite(pos.ticker, 130);
     _watchCandles = candles; _watchPos = pos;
     const def = detectWatchDefaults(candles);
     const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
@@ -1907,7 +1914,7 @@ function recomputeWatchStatus() {
   const early = checkEarlySignal(candles);
   const earlyBlock = early ? `
     <div style="margin-bottom:12px;padding:10px;background:${early.lowVolume ? '#e6f7ff' : '#fff7e6'};border:1px solid ${early.lowVolume ? '#1890ff' : '#faad14'};border-radius:8px">
-      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">⚡ ${early.type} 已觸發${early.ratio !== null ? `（量 ${early.ratio.toFixed(1)}x 均量）` : ''}${early.lowVolume ? ' — 量縮回升，可能啟動新一波上漲 Low-volume recovery — a new leg up may be starting' : ' — 量未縮，訊號較弱 Volume not light yet — weaker signal'}</div>
+      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">⚡ ${early.type} ${early.daysAgo === 0 ? '今天' : early.daysAgo + ' 天前 (' + early.date + ')'} 觸發${early.ratio !== null ? `（量 ${early.ratio.toFixed(1)}x 均量）` : ''}${early.lowVolume ? ' — 量縮回升，可能啟動新一波上漲 Low-volume recovery — a new leg up may be starting' : ' — 量未縮，訊號較弱 Volume not light yet — weaker signal'}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px">獨立快速訊號，與下方三項條件並行觀察，不互相取代 Independent fast signal — watch alongside the 3 conditions below, doesn't replace them</div>
     </div>` : '';
 
