@@ -1719,6 +1719,27 @@ function calcWatchEMA5(candles) {
   return ema;
 }
 
+// Independent fast-track signal — separate from C1/C2/C3, not ANDed with them. H1/H2 (from
+// the chart's own swing-leg tracker) confirm a recovery has ALREADY happened, which is a
+// different/faster detection than the zone+volume+breakout sequence below. Folding it in as
+// a 4th required condition would make entries rarer, not better, since it often fires at a
+// different moment than C1-C3 converge. Volume ratio = today's volume vs the trailing 10-bar
+// average (excluding today) — low ratio means the recovery happened on light volume, i.e.
+// sellers were already exhausted before the bounce (clean, not a panic short-covering spike).
+function checkEarlySignal(candles) {
+  if (!candles || candles.length < 25) return null;
+  const signals = calcHLSignals(candles, 20);
+  const todayIdx = candles.length - 1;
+  const sig = signals.find(s => s.index === todayIdx);
+  if (!sig || !(sig.h1 || sig.h2)) return null;
+  const lookback = candles.slice(Math.max(0, todayIdx - 10), todayIdx);
+  if (!lookback.length) return null;
+  const avgVol = lookback.reduce((s, c) => s + c.volume, 0) / lookback.length;
+  const todayVol = candles[todayIdx].volume;
+  const ratio = avgVol > 0 ? todayVol / avgVol : null;
+  return { type: sig.h1 ? 'H1' : 'H2', ratio, lowVolume: ratio !== null && ratio < 0.8 };
+}
+
 // Heuristic default: the breakout day is simply the day with the HIGHEST CLOSING PRICE
 // in the lookback window — no relative-volume-spike gate. A prior version required volume
 // to be >=1.5x the trailing 5-day average, but that rejects real breakout days whose volume
@@ -1880,8 +1901,16 @@ function recomputeWatchStatus() {
 
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
+  const early = checkEarlySignal(candles);
+  const earlyBlock = early ? `
+    <div style="margin-bottom:12px;padding:10px;background:${early.lowVolume ? '#e6f7ff' : '#fff7e6'};border:1px solid ${early.lowVolume ? '#1890ff' : '#faad14'};border-radius:8px">
+      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">⚡ ${early.type} 已觸發${early.ratio !== null ? `（量 ${early.ratio.toFixed(1)}x 均量）` : ''}${early.lowVolume ? ' — 量縮回升，可能啟動新一波上漲 Low-volume recovery — a new leg up may be starting' : ' — 量未縮，訊號較弱 Volume not light yet — weaker signal'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">獨立快速訊號，與下方三項條件並行觀察，不互相取代 Independent fast signal — watch alongside the 3 conditions below, doesn't replace them</div>
+    </div>` : '';
+
   statusEl.innerHTML = `
     <div style="font-weight:700;font-size:13px;margin-bottom:4px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
+    ${earlyBlock}
     ${row(c1ok, '條件一・空間回測 Space Retest', c1text)}
     ${row(c2ok, '條件二・籌碼沉澱 Time + Volume', c2text)}
     ${row(c3ok, '條件三・右側點火 Ignition Breakout', c3text)}
@@ -2143,7 +2172,7 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
     }
 
     prevBull = bull; prevBear = bear;
-    if (h1 || h2 || l1 || l2) signals.push({ time: c.time, h1, h2, l1, l2 });
+    if (h1 || h2 || l1 || l2) signals.push({ time: c.time, index: i, h1, h2, l1, l2 });
   }
   return signals;
 }
