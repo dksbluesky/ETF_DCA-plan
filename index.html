@@ -1938,23 +1938,74 @@ function recomputeWatchStatus() {
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
   const early = checkEarlySignal(candles, _watchBiasLen);
-  const sigLine = s => `⚡ ${s.type} ${s.daysAgo === 0 ? '今天' : s.daysAgo + ' 天前 (' + s.date + ')'} 觸發${s.ratio !== null ? `（量 ${s.ratio.toFixed(1)}x 均量）` : ''}${s.lowVolume ? ' — 量縮回升 low-volume recovery' : ' — 量未縮，訊號較弱 volume not light yet'}`;
-  const earlyBlock = early ? `
-    <div style="margin-bottom:12px;padding:10px;background:${early.lowVolume ? '#e6f7ff' : '#fff7e6'};border:1px solid ${early.lowVolume ? '#1890ff' : '#faad14'};border-radius:8px">
-      ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">${sigLine(early.precedingH1)}（前一腳 preceding leg）</div>` : ''}
-      <div style="font-weight:700;color:${early.lowVolume ? '#0958d9' : '#ad6800'}">${sigLine(early)}${early.lowVolume ? ' — 可能啟動新一波上漲 a new leg up may be starting' : ''}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">基準 Bias: EMA${_watchBiasLen}｜獨立快速訊號，與下方三項條件並行觀察，不互相取代 Independent fast signal — watch alongside the 3 conditions below, doesn't replace them</div>
-    </div>` : '';
+
+  // ── Trigger block (primary) ──────────────────────────────────────────
+  let tBg, tBorder, tColor, tTitle, tDetail;
+
+  if (early && early.type === 'H2' && early.lowVolume) {
+    tBg = '#f6ffed'; tBorder = '#52c41a'; tColor = '#237804';
+    tTitle = '⚡ H2 量縮回升 — 進場觸發訊號 Low-volume H2 recovery — ENTRY SIGNAL';
+  } else if (early && early.type === 'H1' && early.lowVolume) {
+    tBg = '#e6f7ff'; tBorder = '#1890ff'; tColor = '#0050b3';
+    tTitle = '⚡ H1 量縮 — 第一腳回升，等待 H2 確認後進場 First leg — watch for H2';
+  } else if (early && !early.lowVolume) {
+    tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tTitle = `⚡ ${early.type} 出現，但量未縮 — 訊號偏弱 ${early.type} fired but volume not light — weak signal`;
+  } else {
+    tBg = 'var(--card)'; tBorder = 'var(--border)'; tColor = 'var(--muted)';
+    tTitle = '⏳ 近5日尚未出現回升訊號 No recovery signal in the last 5 days';
+  }
+
+  const sigLine = s => `${s.type}・${s.daysAgo === 0 ? '今天 today' : s.daysAgo + ' 天前 (' + s.date + ')'}・量 ${s.ratio !== null ? s.ratio.toFixed(1) + 'x 均量' : 'N/A'}${s.lowVolume ? ' ✓量縮' : ' ✗量未縮'}`;
+
+  if (early) {
+    tDetail = `
+      ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">前一腳 preceding leg：${sigLine(early.precedingH1)}</div>` : ''}
+      <div style="font-weight:700;font-size:14px;color:${tColor};margin-bottom:4px">${sigLine(early)}</div>
+      <div style="font-size:12px;color:${tColor}">${early.lowVolume
+        ? '量縮回升 = 浮籌洗出、蓄勢待發，為右側進場依據 Low-volume recovery = weak hands washed, potential launch'
+        : '量未縮，訊號可靠性較低，繼續觀察是否出現更乾淨的量縮 Volume still high — watch for a cleaner dry-up'
+      }</div>`;
+  } else {
+    const waitMsg = c1ok && c2ok
+      ? '進場區已就位，等待 H1/H2 觸發訊號 In zone — awaiting H1/H2 recovery signal'
+      : c1ok
+      ? '已回測進入區間，等待籌碼沉澱與 H1/H2 訊號 Pullback in zone — waiting for consolidation'
+      : zoneHigh
+      ? '價格尚未回落進入支撐區 Price not yet in support zone'
+      : '請設定 Zone High 以啟用偵測 Set Zone High to enable detection';
+    tDetail = `<div style="font-size:13px;color:var(--muted)">${waitMsg}</div>`;
+  }
+
+  const triggerBlock = `
+    <div style="padding:12px 14px;background:${tBg};border:2px solid ${tBorder};border-radius:10px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:${tColor}">${tTitle}</div>
+      ${tDetail}
+    </div>`;
+
+  // ── Bottom synthesis line ─────────────────────────────────────────────
+  let bottomNote = '';
+  if (early && early.type === 'H2' && early.lowVolume) {
+    const quality = c1ok && c2ok
+      ? '🟢 觸發＋回測＋籌碼三者成立 — 可積極考慮進場 Strong setup — all conditions align'
+      : c1ok
+      ? '🟡 觸發＋回測成立，籌碼沉澱尚不足 — 可小量試單 Trigger + zone confirmed, consolidation pending'
+      : '🟡 觸發訊號出現，尚未確認回測區間 — 謹慎 Trigger without zone confirmation — be cautious';
+    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:13px">${quality}</div>`;
+  } else if (c3ok && !early) {
+    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:#fff1f0;border:1px solid #ff4d4f;border-radius:8px;font-size:12px;color:#a8071a;font-weight:700">⚠️ C3 右側點火今日出現，但近5日 H2 觸發未見 — 若未提前佈局，可能已錯過最佳進場 C3 breakout fired without a preceding H2 signal — ideal entry may have passed</div>`;
+  }
 
   statusEl.innerHTML = `
-    <div style="font-weight:700;font-size:13px;margin-bottom:4px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
-    ${earlyBlock}
-    ${row(c1ok, '條件一・空間回測 Space Retest', c1text)}
-    ${row(c2ok, '條件二・籌碼沉澱 Time + Volume', c2text)}
-    ${row(c3ok, '條件三・右側點火 Ignition Breakout', c3text)}
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
+    ${triggerBlock}
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:4px">── 進場條件參考 Setup Context ──</div>
+    ${row(c1ok, 'C1・空間回測 Space Retest', c1text)}
+    ${row(c2ok, 'C2・籌碼沉澱 Time + Volume', c2text)}
+    ${row(c3ok, 'C3・右側點火 Late Confirmation', c3text)}
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
-    ${(c1ok && c2ok && c3ok) ? `<div style="margin-top:10px;padding:10px;background:var(--green-l);border:1px solid var(--green);border-radius:8px;color:#276749;font-weight:700;text-align:center">🎯 三項條件全部成立 — 可考慮進場 All 3 conditions met</div>` : ''}
+    ${bottomNote}
   `;
 }
 
