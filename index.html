@@ -1442,10 +1442,16 @@ function openModal(type, ctx) {
         </select>
         <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
-        <span style="font-size:12px;color:var(--muted)">⚡ 快速訊號偏移基準 Fast signal bias:</span>
-        <button type="button" id="wc-bias-20" class="btn btn-outline btn-sm" onclick="switchWatchBias(20)">EMA20</button>
-        <button type="button" id="wc-bias-50" class="btn btn-primary btn-sm" onclick="switchWatchBias(50)">EMA50</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button type="button" id="wc-tab-status" class="btn btn-primary btn-sm" onclick="switchWatchTab('status')">📊 進場狀態 Status</button>
+          <button type="button" id="wc-tab-help" class="btn btn-outline btn-sm" onclick="switchWatchTab('help')">ℹ️ 解讀說明 How to Read</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--muted)">⚡ Bias:</span>
+          <button type="button" id="wc-bias-20" class="btn btn-outline btn-sm" onclick="switchWatchBias(20)">EMA20</button>
+          <button type="button" id="wc-bias-50" class="btn btn-primary btn-sm" onclick="switchWatchBias(50)">EMA50</button>
+        </div>
       </div>
       <div id="wc-status" style="margin-top:10px"></div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -1850,6 +1856,60 @@ function switchWatchBias(len) {
   document.getElementById('wc-bias-20').className = `btn btn-${len === 20 ? 'primary' : 'outline'} btn-sm`;
   document.getElementById('wc-bias-50').className = `btn btn-${len === 50 ? 'primary' : 'outline'} btn-sm`;
   recomputeWatchStatus();
+}
+
+function switchWatchTab(tab) {
+  document.getElementById('wc-tab-status').className = `btn btn-${tab === 'status' ? 'primary' : 'outline'} btn-sm`;
+  document.getElementById('wc-tab-help').className = `btn btn-${tab === 'help' ? 'primary' : 'outline'} btn-sm`;
+  if (tab === 'status') {
+    recomputeWatchStatus();
+  } else {
+    document.getElementById('wc-status').innerHTML = `
+      <div style="font-size:13px;line-height:1.7">
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px">📖 如何解讀進場監控 How to Read Entry Watch</div>
+
+        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">⚡ 進場觸發 Entry Trigger（上方色框）</div>
+        <div style="font-size:12px;margin-bottom:6px">回答：<b>現在該進場嗎？</b> &nbsp;Answers: <b>Should I act now?</b></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+          <tr style="background:#f6ffed">
+            <td style="padding:5px 8px;border:1px solid #b7eb8f;color:#237804;white-space:nowrap">🟢 綠 H2＋量縮</td>
+            <td style="padding:5px 8px;border:1px solid #b7eb8f">最強訊號。兩腳回升皆量縮，浮籌已洗，可考慮進場。<br><span style="color:#8c8c8c">Strongest — two low-volume recovery legs, actionable.</span></td>
+          </tr>
+          <tr style="background:#e6f7ff">
+            <td style="padding:5px 8px;border:1px solid #91d5ff;color:#0050b3;white-space:nowrap">🔵 藍 H1＋量縮</td>
+            <td style="padding:5px 8px;border:1px solid #91d5ff">第一腳完成，等待 H2 出現再進場。<br><span style="color:#8c8c8c">First leg done — wait for H2 to confirm before entering.</span></td>
+          </tr>
+          <tr style="background:#fff7e6">
+            <td style="padding:5px 8px;border:1px solid #ffd591;color:#874d00;white-space:nowrap">🟡 黃 量未縮</td>
+            <td style="padding:5px 8px;border:1px solid #ffd591">訊號出現但量不夠乾淨，可靠性較低，繼續觀察。<br><span style="color:#8c8c8c">Signal appeared but volume not light — keep watching.</span></td>
+          </tr>
+          <tr>
+            <td style="padding:5px 8px;border:1px solid var(--border);color:var(--muted);white-space:nowrap">⬜ 灰 等待中</td>
+            <td style="padding:5px 8px;border:1px solid var(--border)">近5日無回升訊號，仍在等待。<br><span style="color:#8c8c8c">No signal in last 5 days — still in pullback phase.</span></td>
+          </tr>
+        </table>
+
+        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">📋 進場條件參考 Setup Context（中段）</div>
+        <div style="font-size:12px;margin-bottom:6px">回答：<b>H2 發生在正確的區間嗎？</b> &nbsp;Answers: <b>Is the trigger happening in a good zone?</b></div>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+          <div><b>C1 空間回測：</b>價格已從高點拉回，觸及/跌破 5EMA。確認有真實的回測動作，不是虛晃一槍。<br><span style="color:#8c8c8c">Price pulled back from Zone High and touched the 5EMA — confirms a real retest, not a fake-out.</span></div>
+          <div><b>C2 籌碼沉澱：</b>5EMA 與現價靠攏（乖離 ≤1.2%）且今日量縮。確認浮籌已洗出、籌碼趨於穩定。<br><span style="color:#8c8c8c">EMA converging with price + volume quiet — weak hands have been washed out.</span></div>
+          <div><b>C3 右側點火（晚期確認）：</b>今日紅K突破近期盤整高點並帶量。若 C3 出現但 H2 未見，最佳進場點可能已過。<br><span style="color:#8c8c8c">Late confirmation — big volume breakout candle. If C3 fires without a preceding H2, the ideal entry has likely passed.</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:14px">⚠️ 三項條件不需全部成立才能進場。H2＋量縮訊號本身即可作為進場依據，C1/C2 是品質加分項，不是通行證。<br><span style="color:#8c8c8c">These are quality checks, not gates — H2 alone is actionable. C1 + C2 just tell you how clean the setup is.</span></div>
+
+        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">💡 底部結論 Bottom Synthesis</div>
+        <div style="font-size:12px;display:flex;flex-direction:column;gap:5px;margin-bottom:14px">
+          <div>🟢 <b>觸發＋回測＋籌碼三者成立</b> → H2量縮 ＋ C1 ＋ C2 都對齊。最佳進場，可積極操作。<br><span style="color:#8c8c8c">H2 low-vol + C1 + C2 all aligned — best possible setup, act confidently.</span></div>
+          <div>🟡 <b>觸發＋回測，籌碼沉澱不足</b> → H2量縮 ＋ C1，C2 尚未到位。可考慮小量試單。<br><span style="color:#8c8c8c">H2 + C1 confirmed, C2 pending — consider a small starter position.</span></div>
+          <div>🟡 <b>觸發訊號，回測區間未確認</b> → H2量縮，C1 尚未到位。謹慎判斷，確認確實在支撐區再進。<br><span style="color:#8c8c8c">H2 fired but C1 not met — be cautious, confirm the zone first.</span></div>
+          <div>⚠️ <b>C3 已點火，H2 未見</b> → 右側點火訊號已出，但你可能錯過了最佳 H2 進場點。<br><span style="color:#8c8c8c">C3 breakout fired without a preceding H2 — ideal entry window may have passed.</span></div>
+        </div>
+
+        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">🔀 EMA20 / EMA50 切換</div>
+        <div style="font-size:12px">決定 H1/H2 偵測時使用的多空偏移基準。<b>EMA50 = 預設</b>，對應 TradingView 圖表 B:50 按鈕。EMA20 反應較快，但較敏感、容易出現假訊號。切換後觸發訊號會重新計算。<br><span style="color:#8c8c8c">Sets the EMA bias used to detect H1/H2. EMA50 is the default (matches TradingView B:50). EMA20 is faster but noisier. Switching recalculates the trigger block.</span></div>
+      </div>`;
+  }
 }
 
 function recomputeWatchStatus() {
