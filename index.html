@@ -1433,6 +1433,7 @@ function openModal(type, ctx) {
         <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
         <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
       </div>
+      <div id="wc-zone-check"></div>
       <div class="form-group"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
       <div class="form-group">
         <label class="form-label">停損價 Stop Loss</label>
@@ -1833,6 +1834,7 @@ function onWatchStopModeChange(listType, posId) {
 // user's last typed values instead of losing them back to auto-detected suggestions.
 function onWatchFieldInput(listType, posId) {
   persistWatchCriteria(listType, posId);
+  recomputeZoneValidation();
   recomputeWatchStatus();
 }
 
@@ -1912,7 +1914,112 @@ function switchWatchTab(tab) {
   }
 }
 
+function recomputeZoneValidation() {
+  const checkEl = document.getElementById('wc-zone-check');
+  if (!checkEl) return;
+  const zoneLow = gf('wc-zonelow'), zoneHigh = gf('wc-zonehigh');
+  if (!zoneLow || !zoneHigh || !_watchCandles || _watchCandles.length < 25) {
+    checkEl.innerHTML = '';
+    return;
+  }
+  const candles = _watchCandles;
+  const zoneMid = (zoneLow + zoneHigh) / 2;
+
+  // EMA20
+  const ema20arr = calcEMAArray(candles, 20);
+  const ema20 = ema20arr[ema20arr.length - 1];
+
+  // 5EMA
+  const ma5 = calcWatchEMA5(candles);
+
+  // ── Check 1: EMA20 alignment ─────────────────────────────────────────
+  let c1icon, c1text;
+  if (ema20 === null) {
+    c1icon = '⬜'; c1text = '資料不足，無法計算 EMA20';
+  } else if (zoneLow <= ema20 && ema20 <= zoneHigh) {
+    c1icon = '✅'; c1text = `EMA20 NT$${ema20.toFixed(2)} 落在區間內 EMA20 sits inside the zone`;
+  } else {
+    const nearDist = ema20 < zoneLow
+      ? (zoneLow - ema20) / ema20 * 100
+      : (ema20 - zoneHigh) / ema20 * 100;
+    if (nearDist < 2) {
+      c1icon = '✅'; c1text = `EMA20 NT$${ema20.toFixed(2)} 距區間邊緣 ${nearDist.toFixed(1)}% — 接近 within 2% of zone`;
+    } else if (nearDist < 5) {
+      c1icon = '⚠️'; c1text = `EMA20 NT$${ema20.toFixed(2)} 距區間邊緣 ${nearDist.toFixed(1)}% — 略遠 2–5% from zone`;
+    } else {
+      c1icon = '🔴'; c1text = `EMA20 NT$${ema20.toFixed(2)} 距區間邊緣 ${nearDist.toFixed(1)}% — 偏離明顯 5%+ from zone`;
+    }
+  }
+
+  // ── Check 2: Recent swing low (last 30 candles, exclude today) ───────
+  const swingWindow = candles.slice(Math.max(0, candles.length - 32), candles.length - 1);
+  const swingLows = [];
+  for (let i = 1; i < swingWindow.length - 1; i++) {
+    if (swingWindow[i].low < swingWindow[i-1].low && swingWindow[i].low < swingWindow[i+1].low)
+      swingLows.push({ low: swingWindow[i].low, date: swingWindow[i].date });
+  }
+  let c2icon, c2text;
+  if (!swingLows.length) {
+    c2icon = '⚠️'; c2text = '近30日無明顯波段低點 No clear swing low in the last 30 trading days';
+  } else {
+    const best = swingLows.reduce((a, b) => Math.abs(b.low - zoneLow) < Math.abs(a.low - zoneLow) ? b : a);
+    const pct = Math.abs(best.low - zoneLow) / best.low * 100;
+    if (pct <= 1) {
+      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 與波段低點 NT$${best.low.toFixed(2)}（${best.date}）相符，差 ${pct.toFixed(1)}% — 有明確支撐 Zone low aligns with a recent swing low`;
+    } else {
+      c2icon = '⚠️'; c2text = `最近波段低點 NT$${best.low.toFixed(2)}（${best.date}），與 Zone Low 差 ${pct.toFixed(1)}% — 無明顯低點對齊 No clear swing low aligns with zone low`;
+    }
+  }
+
+  // ── Check 3: 5EMA distance from zone midpoint ────────────────────────
+  let c3icon, c3text;
+  if (!ma5) {
+    c3icon = '⬜'; c3text = '資料不足，無法計算 5EMA';
+  } else {
+    const diff = (ma5 - zoneMid) / ma5 * 100;
+    const absDiff = Math.abs(diff);
+    const dir = diff > 0 ? `低於 5EMA ${absDiff.toFixed(1)}%` : `高於 5EMA ${absDiff.toFixed(1)}%`;
+    if (absDiff < 2) {
+      c3icon = '✅'; c3text = `區間中點 NT$${zoneMid.toFixed(2)}，${dir} — 位置良好 Well-positioned`;
+    } else if (absDiff < 5) {
+      c3icon = '⚠️'; c3text = `區間中點 NT$${zoneMid.toFixed(2)}，${dir} — 保守但合理 Conservative but defensible`;
+    } else {
+      c3icon = '🔴'; c3text = `區間中點 NT$${zoneMid.toFixed(2)}，${dir} — 距當前結構偏遠 May be too far from current structure to be reached`;
+    }
+  }
+
+  // ── Overall verdict ──────────────────────────────────────────────────
+  const grades = [c1icon, c2icon, c3icon].filter(i => i !== '⬜');
+  let verdict, vBg, vColor;
+  if (grades.some(i => i === '🔴')) {
+    verdict = '🔴 Zone is aggressive or too conservative — review recommended　區間偏激進或過保守，建議複查';
+    vBg = '#fff1f0'; vColor = '#a8071a';
+  } else if (grades.some(i => i === '⚠️')) {
+    verdict = '⚠️ Zone is reasonable — minor deviation　區間合理，略有偏差';
+    vBg = '#fffbe6'; vColor = '#874d00';
+  } else {
+    verdict = '✅ Zone is technically supported　區間技術上有支撐';
+    vBg = '#f6ffed'; vColor = '#237804';
+  }
+
+  const row = (icon, label, detail) => `
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px">
+      <span style="font-size:14px;line-height:1.4;flex-shrink:0">${icon}</span>
+      <div style="font-size:12px;line-height:1.5"><span style="font-weight:600">${label}</span><br><span style="color:var(--muted)">${detail}</span></div>
+    </div>`;
+
+  checkEl.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card);margin-top:6px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:8px">🔍 區間技術驗證 Zone Technical Validation</div>
+      ${row(c1icon, 'EMA20 對齊 20EMA Alignment', c1text)}
+      ${row(c2icon, '近期波段低點 Recent Swing Low', c2text)}
+      ${row(c3icon, '5EMA 距離 5EMA Distance (zone midpoint)', c3text)}
+      <div style="margin-top:8px;padding:6px 10px;background:${vBg};border-radius:6px;font-size:12px;font-weight:700;color:${vColor}">${verdict}</div>
+    </div>`;
+}
+
 function recomputeWatchStatus() {
+  recomputeZoneValidation();
   const statusEl = document.getElementById('wc-status');
   if (!statusEl || !_watchCandles || !_watchPos) return;
   const candles = _watchCandles, pos = _watchPos;
