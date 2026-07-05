@@ -2255,7 +2255,12 @@ function saveWatchCriteria(listType, posId) {
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   if (!pos) return;
   persistWatchCriteria(listType, posId);
-  S.dirty = true; closeModal(); toast('觀察條件已儲存 Watch criteria saved', 'ok');
+  S.dirty = true; closeModal();
+  if (getPAT()) {
+    saveData(); // auto-push to GitHub so phone Sync picks up the new zone
+  } else {
+    toast('觀察條件已儲存（本機）Watch criteria saved locally — add PAT in ⚙️ to sync to phone', 'ok');
+  }
 }
 
 // Quote cache: keep last quote per ticker so mini candles survive re-renders
