@@ -393,16 +393,17 @@ function syncConfirm() {
   if (S.dirty && (S.data.dca.length || S.data.direct.length)) {
     if (!confirm('⚠️ 你有未儲存的資料！\nYou have unsaved data!\n\n點「確定」會從 GitHub 載入並覆蓋本機資料。\nOK = Load from GitHub (local changes will be LOST)\n\n建議先按「Save 儲存」再同步。\nSuggested: Save first, then Sync.')) return;
   }
-  loadData();
+  loadData(true); // force = true: always fetch fresh from GitHub, bypass local-cache guard
 }
 
-async function loadData() {
+async function loadData(force = false) {
   setSS('saving', '↺ Loading…');
 
   // If local cache is newer than last GitHub save, use it — preserves unsaved changes
+  // Skip this guard when force=true (user explicitly pressed Sync — always fetch fresh)
   const localTs  = parseInt(localStorage.getItem('p_local_ts')  || '0');
   const githubTs = parseInt(localStorage.getItem('p_github_ts') || '0');
-  if (localTs > githubTs) {
+  if (!force && localTs > githubTs) {
     const cached = localStorage.getItem('p_cache');
     if (cached) {
       try {
