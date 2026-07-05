@@ -1421,40 +1421,50 @@ function openModal(type, ctx) {
     const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
     if (!pos) return;
     const wc = pos.watchCriteria || {};
-    _watchCandles = null; _watchPos = null; _watchBiasLen = 50;
+    _watchCandles = null; _watchPos = null; _watchBiasLen = 50; _watchMainTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
-      <div style="text-align:right;margin:-6px 0 12px">
+      <div style="text-align:right;margin:-6px 0 10px">
         <button type="button" class="btn btn-outline btn-sm" onclick="refreshWatchData('${listType}','${posId}')">🔄 重新整理 Refresh</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults('${listType}','${posId}')">↺ 重設為建議值 Reset to Suggested</button>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
-        <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px">
+        <button type="button" id="wc-mtab-status" class="btn btn-primary btn-sm" style="border-radius:6px 6px 0 0;margin-bottom:-2px;border-bottom:2px solid var(--primary)" onclick="switchWatchMainTab('status')">📊 進場狀態 Status</button>
+        <button type="button" id="wc-mtab-zone" class="btn btn-outline btn-sm" style="border-radius:6px 6px 0 0;margin-bottom:-2px;border-bottom:2px solid transparent;margin-left:4px" onclick="switchWatchMainTab('zone')">⚙️ 區間設定 Zone Setup</button>
       </div>
-      <div id="wc-zone-check"></div>
-      <div class="form-group"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
-      <div class="form-group">
-        <label class="form-label">停損價 Stop Loss</label>
-        <select class="form-input form-select" id="wc-stopmode" onchange="onWatchStopModeChange('${listType}','${posId}')">
-          <option value="trail"${(!wc.stopLossMode || wc.stopLossMode === 'trail') ? ' selected' : ''}>移動停損價 Use Trail Stop${pos.trailStop ? '' : ' (未設定 not set)'}</option>
-          <option value="manual"${wc.stopLossMode === 'manual' ? ' selected' : ''}>手動輸入 Manual</option>
-        </select>
-        <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:6px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <button type="button" id="wc-tab-status" class="btn btn-primary btn-sm" onclick="switchWatchTab('status')">📊 進場狀態 Status</button>
-          <button type="button" id="wc-tab-help" class="btn btn-outline btn-sm" onclick="switchWatchTab('help')">ℹ️ 解讀說明 How to Read</button>
+
+      <div id="wc-panel-status">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;gap:6px">
+            <button type="button" id="wc-tab-status" class="btn btn-primary btn-sm" onclick="switchWatchTab('status')">📊 即時狀態</button>
+            <button type="button" id="wc-tab-help" class="btn btn-outline btn-sm" onclick="switchWatchTab('help')">ℹ️ 解讀說明</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--muted)">⚡ Bias:</span>
+            <button type="button" id="wc-bias-20" class="btn btn-outline btn-sm" onclick="switchWatchBias(20)">EMA20</button>
+            <button type="button" id="wc-bias-50" class="btn btn-primary btn-sm" onclick="switchWatchBias(50)">EMA50</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:12px;color:var(--muted)">⚡ Bias:</span>
-          <button type="button" id="wc-bias-20" class="btn btn-outline btn-sm" onclick="switchWatchBias(20)">EMA20</button>
-          <button type="button" id="wc-bias-50" class="btn btn-primary btn-sm" onclick="switchWatchBias(50)">EMA50</button>
-        </div>
+        <div id="wc-status"></div>
       </div>
-      <div id="wc-status" style="margin-top:10px"></div>`;
+
+      <div id="wc-panel-zone" style="display:none">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+          <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+        </div>
+        <div id="wc-zone-check"></div>
+        <div class="form-group" style="margin-top:10px"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+        <div class="form-group">
+          <label class="form-label">停損價 Stop Loss</label>
+          <select class="form-input form-select" id="wc-stopmode" onchange="onWatchStopModeChange('${listType}','${posId}')">
+            <option value="trail"${(!wc.stopLossMode || wc.stopLossMode === 'trail') ? ' selected' : ''}>移動停損價 Use Trail Stop${pos.trailStop ? '' : ' (未設定 not set)'}</option>
+            <option value="manual"${wc.stopLossMode === 'manual' ? ' selected' : ''}>手動輸入 Manual</option>
+          </select>
+          <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
+        </div>
+      </div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
             <button class="btn btn-primary" onclick="saveWatchCriteria('${listType}','${posId}')">儲存設定 Save</button>`;
     setTimeout(() => loadWatchStatus(listType, posId), 50);
@@ -1688,7 +1698,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchPos = null, _watchBiasLen = 50;
+let _watchCandles = null, _watchPos = null, _watchBiasLen = 50, _watchMainTab = 'status';
 
 async function fetchDailyCandlesLite(ticker, days) {
   const fugleKey = getFugleKey();
@@ -1853,6 +1863,23 @@ function persistWatchCriteria(listType, posId) {
                    // which is the only other place persistLocal() normally fires
 }
 
+function toggleZoneHelp(btn) {
+  const help = document.getElementById('wc-zone-help');
+  if (!help) return;
+  const showing = help.style.display !== 'none';
+  help.style.display = showing ? 'none' : 'block';
+  btn.className = `btn btn-${showing ? 'outline' : 'primary'} btn-sm`;
+  btn.style.cssText = 'font-size:11px;padding:2px 8px';
+}
+
+function switchWatchMainTab(tab) {
+  _watchMainTab = tab;
+  document.getElementById('wc-mtab-status').className = `btn btn-${tab === 'status' ? 'primary' : 'outline'} btn-sm`;
+  document.getElementById('wc-mtab-zone').className = `btn btn-${tab === 'zone' ? 'primary' : 'outline'} btn-sm`;
+  document.getElementById('wc-panel-status').style.display = tab === 'status' ? '' : 'none';
+  document.getElementById('wc-panel-zone').style.display = tab === 'zone' ? '' : 'none';
+}
+
 function switchWatchBias(len) {
   _watchBiasLen = len;
   document.getElementById('wc-bias-20').className = `btn btn-${len === 20 ? 'primary' : 'outline'} btn-sm`;
@@ -2010,7 +2037,36 @@ function recomputeZoneValidation() {
 
   checkEl.innerHTML = `
     <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card);margin-top:6px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:8px">🔍 區間技術驗證 Zone Technical Validation</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px">🔍 區間技術驗證 Zone Technical Validation</span>
+        <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:2px 8px" onclick="toggleZoneHelp(this)">ℹ️ 解讀說明</button>
+      </div>
+      <div id="wc-zone-help" style="display:none;margin-bottom:10px;font-size:12px;line-height:1.6;background:var(--bg);border-radius:6px;padding:8px 10px;border:1px solid var(--border)">
+        <div style="font-weight:700;margin-bottom:6px">📖 如何解讀區間驗證 How to Read Zone Validation</div>
+        <div style="margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:2px">1. EMA20 對齊 20EMA Alignment</div>
+          <div>✅ 區間與 EMA20 重疊，或邊緣距離 &lt;2% — Zone overlaps or within 2% of 20EMA</div>
+          <div>⚠️ 邊緣距離 2–5% — Zone is 2–5% away from 20EMA</div>
+          <div>🔴 邊緣距離 5%以上 — Zone is 5%+ away from 20EMA</div>
+        </div>
+        <div style="margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:2px">2. 近期波段低點 Recent Swing Low</div>
+          <div>✅ Zone Low 距最近波段低點 ≤1% — Zone low within 1% of a recent swing low</div>
+          <div>⚠️ 無明顯波段低點對齊 — No clear swing low aligns with zone low</div>
+        </div>
+        <div style="margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:2px">3. 5EMA 距離 5EMA Distance (zone midpoint)</div>
+          <div>✅ 區間中點距 5EMA &lt;2% — Well-positioned, within 2%</div>
+          <div>⚠️ 2–5% — Conservative but defensible</div>
+          <div>🔴 5%以上 — Zone may be too far from current structure to be reached in current trend</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:2px">綜合結論 Overall Verdict</div>
+          <div>✅ 三項全過 — Zone is technically supported</div>
+          <div>⚠️ 一項警告 — Zone is reasonable — minor deviation</div>
+          <div>🔴 任一紅燈 — Zone is aggressive or too conservative — review recommended</div>
+        </div>
+      </div>
       ${row(c1icon, 'EMA20 對齊 20EMA Alignment', c1text)}
       ${row(c2icon, '近期波段低點 Recent Swing Low', c2text)}
       ${row(c3icon, '5EMA 距離 5EMA Distance (zone midpoint)', c3text)}
