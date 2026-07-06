@@ -1980,6 +1980,8 @@ function recomputeZoneValidation() {
   }
 
   // ── Check 2: Recent swing low (last 30 candles, exclude today) ───────
+  // Swing lows are determined purely by price action — independent of the zone the user set.
+  // We then ask: does zone low land within 2% of any of them?
   const swingWindow = candles.slice(Math.max(0, candles.length - 32), candles.length - 1);
   const swingLows = [];
   for (let i = 1; i < swingWindow.length - 1; i++) {
@@ -1990,12 +1992,16 @@ function recomputeZoneValidation() {
   if (!swingLows.length) {
     c2icon = '⚠️'; c2text = '近30日無明顯波段低點 No clear swing low in the last 30 trading days';
   } else {
-    const best = swingLows.reduce((a, b) => Math.abs(b.low - zoneLow) < Math.abs(a.low - zoneLow) ? b : a);
-    const pct = Math.abs(best.low - zoneLow) / best.low * 100;
-    if (pct <= 1) {
-      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 與波段低點 NT$${best.low.toFixed(2)}（${best.date}）相符，差 ${pct.toFixed(1)}% — 有明確支撐 Zone low aligns with a recent swing low`;
+    // Find closest swing low to zone low (for display), but verdict is whether ANY is within 2%
+    const closest = swingLows.reduce((a, b) => Math.abs(b.low - zoneLow) < Math.abs(a.low - zoneLow) ? b : a);
+    const closestPct = Math.abs(closest.low - zoneLow) / closest.low * 100;
+    const allDates = swingLows.map(s => `NT$${s.low.toFixed(2)}（${s.date}）`).join('、');
+    if (closestPct <= 1) {
+      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 與波段低點 NT$${closest.low.toFixed(2)}（${closest.date}）相符，差 ${closestPct.toFixed(1)}% — 有明確支撐 Zone low aligns with a recent swing low`;
+    } else if (closestPct <= 2) {
+      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 接近波段低點 NT$${closest.low.toFixed(2)}（${closest.date}），差 ${closestPct.toFixed(1)}% — 支撐合理 Close enough to a swing low`;
     } else {
-      c2icon = '⚠️'; c2text = `最近波段低點 NT$${best.low.toFixed(2)}（${best.date}），與 Zone Low 差 ${pct.toFixed(1)}% — 無明顯低點對齊 No clear swing low aligns with zone low`;
+      c2icon = '⚠️'; c2text = `近30日波段低點：${allDates}，Zone Low 差最近低點 ${closestPct.toFixed(1)}% — 無明顯低點對齊 No swing low aligns with zone low`;
     }
   }
 
