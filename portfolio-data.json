@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.33,
+      "currentPrice": 33.38,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -109,7 +109,7 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 240,
+        "zoneLow": 241,
         "zoneHigh": 249.5,
         "volThreshold": 3000,
         "stopLossMode": "manual",
@@ -121,7 +121,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2445,
+      "currentPrice": 2450,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -130,5 +130,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-05T08:17:01.242Z"
+  "lastUpdated": "2026-07-06T00:54:40.934Z"
 }
