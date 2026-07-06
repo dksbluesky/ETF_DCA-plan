@@ -1982,7 +1982,7 @@ function recomputeZoneValidation() {
   // ── Check 2: Recent swing low (last 30 candles, exclude today) ───────
   // Swing lows are determined purely by price action — independent of the zone the user set.
   // We then ask: does zone low land within 2% of any of them?
-  const swingWindow = candles.slice(Math.max(0, candles.length - 32), candles.length - 1);
+  const swingWindow = candles.slice(Math.max(0, candles.length - 27), candles.length - 1); // ~25 trading days ≈ 1 month
   const swingLows = [];
   for (let i = 1; i < swingWindow.length - 1; i++) {
     if (swingWindow[i].low < swingWindow[i-1].low && swingWindow[i].low < swingWindow[i+1].low)
