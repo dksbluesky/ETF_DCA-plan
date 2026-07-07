@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.45,
+      "currentPrice": 32.97,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -41,7 +41,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 246.75,
+      "currentPrice": 246.5,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -109,8 +109,8 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 246,
-        "zoneHigh": 250.5,
+        "zoneLow": 246.2,
+        "zoneHigh": 250.05,
         "volThreshold": 3000,
         "stopLossMode": "manual",
         "stopLossManual": 248
@@ -121,7 +121,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2490,
+      "currentPrice": 2440,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -130,5 +130,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-07T05:08:36.472Z"
+  "lastUpdated": "2026-07-07T12:22:01.735Z"
 }
