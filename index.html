@@ -349,10 +349,10 @@ tr:hover td{background:var(--bg)}
     </div>
     <div class="chart-ohlcv" id="chart-ohlcv">滑鼠移至K線查看詳情 Hover for OHLCV details</div>
     <div style="padding:3px 18px;font-size:11px;display:flex;gap:14px;background:var(--surface2);border-bottom:1px solid var(--border)">
-      <span style="color:#d69e2e;font-weight:600">— EMA5</span>
-      <span style="color:#805ad5;font-weight:600">— EMA20</span>
-      <span id="legend-ema50" style="color:#48bb78;font-weight:600;display:none">— EMA50</span>
-      <span style="color:#f6ad55;font-weight:600">- - aVWAP</span>
+      <span style="color:#d69e2e;font-weight:600">— EMA5 <span id="leg-e5" style="font-weight:400">—</span></span>
+      <span style="color:#805ad5;font-weight:600">— EMA20 <span id="leg-e20" style="font-weight:400">—</span></span>
+      <span id="legend-ema50" style="color:#48bb78;font-weight:600;display:none">— EMA50 <span id="leg-e50" style="font-weight:400">—</span></span>
+      <span style="color:#f6ad55;font-weight:600">- - aVWAP <span id="leg-vwap" style="font-weight:400">—</span></span>
     </div>
     <div class="chart-body"><div id="chart-container" style="height:340px"></div></div>
     <div style="padding:10px 18px 14px;border-top:1px solid var(--border);background:var(--surface2)">
@@ -2630,27 +2630,37 @@ async function loadCandleChart(ticker, days) {
     _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
     // EMA 5 & 20 — computed on full warm-up dataset, then trimmed to display window
-    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-    ema5Series.setData(calcEMA(allCandles, 5).filter(p => p.time >= displayFrom));
+    const e5Data  = calcEMA(allCandles, 5).filter(p => p.time >= displayFrom);
+    const e20Data = calcEMA(allCandles, 20).filter(p => p.time >= displayFrom);
+    const ema5Series  = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
     const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-    ema20Series.setData(calcEMA(allCandles, 20).filter(p => p.time >= displayFrom));
-    // EMA50 bias line — shown when bias mode is B:50; declared outside if so crosshair handler can access it
-    let ema50Series = null;
+    ema5Series.setData(e5Data);
+    ema20Series.setData(e20Data);
+
+    // EMA50 bias line — declared outside if so crosshair handler can access it
+    let ema50Series = null, e50Data = [];
     const ema50LegEl = document.getElementById('legend-ema50');
     if (_biasEmaLen === 50) {
+      e50Data = calcEMA(allCandles, 50).filter(p => p.time >= displayFrom);
       ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-      ema50Series.setData(calcEMA(allCandles, 50).filter(p => p.time >= displayFrom));
+      ema50Series.setData(e50Data);
       if (ema50LegEl) ema50LegEl.style.display = '';
     } else {
       if (ema50LegEl) ema50LegEl.style.display = 'none';
     }
 
     // Anchored VWAP — calculated from first candle of the display window
+    const vwapData = calcVWAP(candles);
     const vwapSeries = _lwChart.addLineSeries({
       color: '#f6ad55', lineWidth: 1.5, lineStyle: 2,  // 2 = Dashed
       priceLineVisible: false, lastValueVisible: false
     });
-    vwapSeries.setData(calcVWAP(candles));
+    vwapSeries.setData(vwapData);
+
+    // Init legend with last-candle values
+    const setLeg = (id, arr) => { const el = document.getElementById(id); if (el && arr.length) el.textContent = arr[arr.length - 1].value.toFixed(2); };
+    setLeg('leg-e5', e5Data); setLeg('leg-e20', e20Data); setLeg('leg-vwap', vwapData);
+    if (e50Data.length) setLeg('leg-e50', e50Data);
 
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
     const hlMarkers = [];
@@ -2664,28 +2674,25 @@ async function loadCandleChart(ticker, days) {
 
     _lwChart.timeScale().fitContent();
 
+    const updLeg = (id, pt, arr) => { const el = document.getElementById(id); if (el) el.textContent = pt ? pt.value.toFixed(2) : (arr.length ? arr[arr.length-1].value.toFixed(2) : '—'); };
     _lwChart.subscribeCrosshairMove(param => {
       const el = document.getElementById('chart-ohlcv');
       if (!param.time || !param.seriesData) { el.textContent = '滑鼠移至K線查看詳情 Hover for OHLCV details'; return; }
       const c = param.seriesData.get(_lwSeries);
       if (!c) return;
-      const col = c.close >= c.open ? '#e53e3e' : '#38a169'; // TW: 紅漲綠跌
+      const col    = c.close >= c.open ? '#e53e3e' : '#38a169';
       const vwapPt = param.seriesData.get(vwapSeries);
       const volPt  = param.seriesData.get(volSeries);
-      const e5Pt   = param.seriesData.get(ema5Series);
-      const e20Pt  = param.seriesData.get(ema20Series);
-      const e50Pt  = ema50Series ? param.seriesData.get(ema50Series) : null;
       const volStr  = volPt  ? ` &nbsp;量 <b>${Math.round(volPt.value / 1000).toLocaleString()}張</b>` : '';
-      const e5Str   = e5Pt   ? ` &nbsp;<span style="color:#d69e2e">E5 <b>${e5Pt.value.toFixed(2)}</b></span>` : '';
-      const e20Str  = e20Pt  ? ` &nbsp;<span style="color:#805ad5">E20 <b>${e20Pt.value.toFixed(2)}</b></span>` : '';
-      const e50Str  = e50Pt  ? ` &nbsp;<span style="color:#48bb78">E50 <b>${e50Pt.value.toFixed(2)}</b></span>` : '';
-      const vwapStr = vwapPt ? ` &nbsp;<span style="color:#f6ad55">aVWAP <b>${vwapPt.value.toFixed(2)}</b></span>` : '';
+      const vwapStr = vwapPt ? ` &nbsp;aVWAP <b style="color:#f6ad55">${vwapPt.value.toFixed(2)}</b>` : '';
       el.innerHTML = `<span style="color:var(--muted)">${param.time} &nbsp;</span>` +
-        `開 <b>${c.open}</b> &nbsp;` +
-        `高 <b style="color:#e53e3e">${c.high}</b> &nbsp;` +
-        `低 <b style="color:#38a169">${c.low}</b> &nbsp;` +
-        `收 <b style="color:${col}">${c.close}</b>` +
-        volStr + e5Str + e20Str + e50Str + vwapStr;
+        `開 <b>${c.open}</b> &nbsp;高 <b style="color:#e53e3e">${c.high}</b> &nbsp;低 <b style="color:#38a169">${c.low}</b> &nbsp;收 <b style="color:${col}">${c.close}</b>` +
+        volStr + vwapStr;
+      // Update legend line with values at hovered candle
+      updLeg('leg-e5',   param.seriesData.get(ema5Series),  e5Data);
+      updLeg('leg-e20',  param.seriesData.get(ema20Series), e20Data);
+      updLeg('leg-vwap', vwapPt, vwapData);
+      if (ema50Series) updLeg('leg-e50', param.seriesData.get(ema50Series), e50Data);
     });
 
     // Responsive resize
