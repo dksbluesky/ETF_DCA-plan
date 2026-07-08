@@ -2099,7 +2099,6 @@ function recomputeWatchStatus() {
   const breakoutIdx = def ? candles.findIndex(c => c.date === def.breakoutDate) : -1;
   const windowStart = Math.max(breakoutIdx + 1, candles.length - 4);
   const priorWindow = candles.slice(windowStart, -1);
-  const consolHigh = priorWindow.length ? Math.max(...priorWindow.map(c => c.high)) : null;
   const avgVolPrior = priorWindow.length ? priorWindow.reduce((s, c) => s + c.volume, 0) / priorWindow.length : null;
   const avgVolPriorLots = avgVolPrior !== null ? Math.round(avgVolPrior / 1000) : null;
 
@@ -2133,14 +2132,26 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
+  // C3: Short-term neckline — most recent local swing high in last 8 candles (excl. today)
   let c3ok = false, c3text;
-  const isRed = today.close > today.open;
-  if (consolHigh === null) { c3text = '資料不足 Not enough data'; }
-  else {
-    const brokeHigh = today.close > consolHigh;
-    const volSpike = avgVolPrior ? today.volume > avgVolPrior * 1.5 : false;
-    c3ok = isRed && brokeHigh && volSpike;
-    c3text = `${isRed ? '✓紅K' : '✗非紅K'}｜${brokeHigh ? `✓突破近期高點 NT$${consolHigh.toFixed(2)}` : `✗未突破近期高點 NT$${consolHigh.toFixed(2)}`}｜${volSpike ? '✓帶量' : '✗量未放大'}`;
+  const neckWin = candles.slice(Math.max(0, candles.length - 10), candles.length - 1);
+  const swingHighsC3 = [];
+  for (let i = 1; i < neckWin.length - 1; i++) {
+    if (neckWin[i].high > neckWin[i-1].high && neckWin[i].high > neckWin[i+1].high)
+      swingHighsC3.push({ high: neckWin[i].high, date: neckWin[i].date });
+  }
+  const neckEntry = swingHighsC3.length
+    ? swingHighsC3[swingHighsC3.length - 1]
+    : (neckWin.length ? { high: Math.max(...neckWin.map(c => c.high)), date: '' } : null);
+  const neckline = neckEntry ? neckEntry.high : null;
+  const isBull = today.close > today.open;
+  if (!neckline) {
+    c3text = '資料不足 Not enough data';
+  } else {
+    const brokeNeck = today.close > neckline;
+    c3ok = isBull && brokeNeck;
+    const dateStr = neckEntry.date ? `（${neckEntry.date}）` : '';
+    c3text = `短線頸部 Neckline NT$${neckline.toFixed(2)}${dateStr}｜${isBull ? '✓紅K Bullish' : '✗非紅K Not bullish'}｜${brokeNeck ? '✓收盤突破頸部 Closed above neckline' : `✗收盤 NT$${today.close.toFixed(2)} 未突破頸部 Hasn't broken neckline yet`}`;
   }
 
   let stopPrice = null;
@@ -2223,7 +2234,7 @@ function recomputeWatchStatus() {
       : '🟡 觸發訊號出現，尚未確認回測區間 — 謹慎 Trigger without zone confirmation — be cautious';
     bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:13px">${quality}</div>`;
   } else if (c3ok && !early) {
-    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:#fff1f0;border:1px solid #ff4d4f;border-radius:8px;font-size:12px;color:#a8071a;font-weight:700">⚠️ C3 右側點火今日出現，但近5日 H2 觸發未見 — 若未提前佈局，可能已錯過最佳進場 C3 breakout fired without a preceding H2 signal — ideal entry may have passed</div>`;
+    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:#fff1f0;border:1px solid #ff4d4f;border-radius:8px;font-size:12px;color:#a8071a;font-weight:700">⚠️ C3 頸部突破今日出現，但近5日未見 H2 確認 — 若未提前佈局，可能已錯過最佳進場點 Neckline break without preceding H2 — ideal entry may have passed</div>`;
   }
 
   statusEl.innerHTML = `
@@ -2232,7 +2243,7 @@ function recomputeWatchStatus() {
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:4px">── 進場條件參考 Setup Context ──</div>
     ${row(c1ok, 'C1・空間回測 Space Retest', c1text)}
     ${row(c2ok, 'C2・籌碼沉澱 Time + Volume', c2text)}
-    ${row(c3ok, 'C3・右側點火 Late Confirmation', c3text)}
+    ${row(c3ok, 'C3・短線頸部突破 Neckline Break', c3text)}
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${bottomNote}
