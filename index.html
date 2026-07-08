@@ -2132,20 +2132,14 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
-  // C3: Short-term neckline = prior candle's effective resistance.
-  // On normal days: prior HIGH (where resistance was actually tested).
-  // On spike days (upper shadow > 1% of body top): prior BODY TOP = max(open, close).
-  // A spike that was rejected intraday doesn't represent sustainable resistance —
-  // the body top is where the market genuinely accepted price.
+  // C3: Short-term neckline = HIGH of the lowest-low candle in the last 10 sessions.
+  // The lowest-low candle anchors the current pullback; its high is the intraday
+  // resistance that, once broken on a bullish close, signals the pullback has ended.
   let c3ok = false, c3text;
-  const prev = candles.length >= 2 ? candles[candles.length - 2] : null;
-  let neckline = null, neckDate = '';
-  if (prev) {
-    const prevBodyTop = Math.max(prev.open, prev.close);
-    const upperShadowPct = (prev.high - prevBodyTop) / prevBodyTop;
-    neckline = upperShadowPct > 0.01 ? prevBodyTop : prev.high;
-    neckDate = prev.date;
-  }
+  const neckWin = candles.slice(Math.max(0, candles.length - 10), candles.length);
+  const swingLow = neckWin.reduce((min, c) => c.low < min.low ? c : min, neckWin[0]);
+  let neckline = swingLow ? swingLow.high : null;
+  let neckDate = swingLow ? swingLow.date : '';
   const isBull = today.close > today.open;
   if (!neckline) {
     c3text = '資料不足 Not enough data';
