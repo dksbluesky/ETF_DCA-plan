@@ -2630,14 +2630,14 @@ async function loadCandleChart(ticker, days) {
     _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
     // EMA 5 & 20 — computed on full warm-up dataset, then trimmed to display window
-    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E5' });
     ema5Series.setData(calcEMA(allCandles, 5).filter(p => p.time >= displayFrom));
-    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E20' });
     ema20Series.setData(calcEMA(allCandles, 20).filter(p => p.time >= displayFrom));
     // EMA50 bias line — shown when bias mode is B:50
     const ema50LegEl = document.getElementById('legend-ema50');
     if (_biasEmaLen === 50) {
-      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E50' });
       ema50Series.setData(calcEMA(allCandles, 50).filter(p => p.time >= displayFrom));
       if (ema50LegEl) ema50LegEl.style.display = '';
     } else {
@@ -2647,7 +2647,7 @@ async function loadCandleChart(ticker, days) {
     // Anchored VWAP — calculated from first candle of the display window
     const vwapSeries = _lwChart.addLineSeries({
       color: '#f6ad55', lineWidth: 1.5, lineStyle: 2,  // 2 = Dashed
-      priceLineVisible: false, lastValueVisible: false, title: ''
+      priceLineVisible: false, lastValueVisible: true, title: 'aVWAP'
     });
     vwapSeries.setData(calcVWAP(candles));
 
