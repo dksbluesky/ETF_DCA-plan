@@ -2132,12 +2132,21 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
-  // C3: Short-term neckline = HIGH of the lowest-low candle in the last 10 sessions.
-  // The lowest-low candle anchors the current pullback; its high is the intraday
-  // resistance that, once broken on a bullish close, signals the pullback has ended.
+  // C3: Short-term neckline = HIGH of the lowest-low candle since the most recent swing high.
+  // Step 1: Locate the most recent swing high (local peak = start of the current pullback).
+  //         This boundary excludes prior-phase lows (e.g. 06/26 trough) from the window.
+  // Step 2: Lowest low from that peak to today = the pullback anchor candle.
+  // Step 3: Neckline = anchor candle's HIGH. Breaking it on a bullish close = pullback ended.
   let c3ok = false, c3text;
-  const neckWin = candles.slice(Math.max(0, candles.length - 10), candles.length);
-  const swingLow = neckWin.reduce((min, c) => c.low < min.low ? c : min, neckWin[0]);
+  let swingHighIdx = -1;
+  for (let j = candles.length - 2; j >= Math.max(1, candles.length - 25); j--) {
+    if (candles[j].high > candles[j - 1].high && candles[j].high > candles[j + 1].high) {
+      swingHighIdx = j; break;
+    }
+  }
+  const pullbackStart = swingHighIdx >= 0 ? swingHighIdx : Math.max(0, candles.length - 5);
+  const pullbackSlice = candles.slice(pullbackStart, candles.length);
+  const swingLow = pullbackSlice.reduce((min, c) => c.low < min.low ? c : min, pullbackSlice[0]);
   let neckline = swingLow ? swingLow.high : null;
   let neckDate = swingLow ? swingLow.date : '';
   const isBull = today.close > today.open;
