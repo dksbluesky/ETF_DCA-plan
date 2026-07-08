@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.88,
+      "currentPrice": 32.81,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -41,7 +41,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 245,
+      "currentPrice": 244.55,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -113,7 +113,7 @@
         "zoneHigh": 248.9,
         "volThreshold": 3000,
         "stopLossMode": "manual",
-        "stopLossManual": 243
+        "stopLossManual": 240
       }
     },
     {
@@ -130,5 +130,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-08T02:00:30.748Z"
+  "lastUpdated": "2026-07-08T02:12:19.813Z"
 }
