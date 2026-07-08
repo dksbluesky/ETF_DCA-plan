@@ -2684,10 +2684,9 @@ async function loadCandleChart(ticker, days) {
       const vwapPt = param.seriesData.get(vwapSeries);
       const volPt  = param.seriesData.get(volSeries);
       const volStr  = volPt  ? ` &nbsp;量 <b>${Math.round(volPt.value / 1000).toLocaleString()}張</b>` : '';
-      const vwapStr = vwapPt ? ` &nbsp;aVWAP <b style="color:#f6ad55">${vwapPt.value.toFixed(2)}</b>` : '';
       el.innerHTML = `<span style="color:var(--muted)">${param.time} &nbsp;</span>` +
         `開 <b>${c.open}</b> &nbsp;高 <b style="color:#e53e3e">${c.high}</b> &nbsp;低 <b style="color:#38a169">${c.low}</b> &nbsp;收 <b style="color:${col}">${c.close}</b>` +
-        volStr + vwapStr;
+        volStr;
       // Update legend line with values at hovered candle
       updLeg('leg-e5',   param.seriesData.get(ema5Series),  e5Data);
       updLeg('leg-e20',  param.seriesData.get(ema20Series), e20Data);
