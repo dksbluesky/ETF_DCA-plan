@@ -2132,35 +2132,21 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
-  // C3: Short-term neckline = highest CLOSE of recent candles within the dynamic window.
-  // Using close (not high) avoids intraday spikes that don't represent settled resistance.
-  // Window stop: cap = lowestLow(last 5 prior candles) * 1.03, checked against each candle's close.
-  // Anchoring to prior lows keeps the cap stable on black-swan days.
+  // C3: Short-term neckline = prior day's close.
+  // Simplest valid definition: the level the market last settled at.
+  // C3 fires when today's close exceeds yesterday's close with a bullish candle —
+  // the clearest single-day momentum-shift signal in a pullback.
   let c3ok = false, c3text;
-  const priorSlice = candles.slice(Math.max(0, candles.length - 6), candles.length - 1);
-  const priorLow = priorSlice.length ? Math.min(...priorSlice.map(c => c.low)) : today.close;
-  const priceCap = priorLow * 1.03;
-  const neckWin = [];
-  for (let j = candles.length - 2; j >= 0 && neckWin.length < 12; j--) {
-    if (candles[j].close > priceCap) break;
-    neckWin.unshift(candles[j]);
-  }
-  let neckEntry = null;
-  if (neckWin.length) {
-    let maxClose = -Infinity, bestDate = '';
-    for (const c of neckWin) {
-      if (c.close > maxClose) { maxClose = c.close; bestDate = c.date; }
-    }
-    neckEntry = { high: maxClose, date: bestDate };
-  }
-  const neckline = neckEntry ? neckEntry.high : null;
+  const prev = candles.length >= 2 ? candles[candles.length - 2] : null;
+  const neckline = prev ? prev.close : null;
+  const neckDate = prev ? prev.date : '';
   const isBull = today.close > today.open;
   if (!neckline) {
     c3text = '資料不足 Not enough data';
   } else {
     const brokeNeck = today.close > neckline;
     c3ok = isBull && brokeNeck;
-    const dateStr = neckEntry.date ? `（${neckEntry.date}）` : '';
+    const dateStr = neckDate ? `（${neckDate}）` : '';
     c3text = `短線頸部 Neckline NT$${neckline.toFixed(2)}${dateStr}｜${isBull ? '✓紅K Bullish' : '✗非紅K Not bullish'}｜${brokeNeck ? '✓收盤突破頸部 Closed above neckline' : `✗收盤 NT$${today.close.toFixed(2)} 未突破頸部 Hasn't broken neckline yet`}`;
   }
 
