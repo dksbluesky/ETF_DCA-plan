@@ -2132,26 +2132,23 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
-  // C3: Short-term neckline — most recent local swing high in last 8 candles (excl. today)
-  // Only count swing highs below zoneHigh so the neckline is reachable from within the zone.
+  // C3: Short-term neckline — most recent local swing high in the last 7 candles (excl. today).
+  // 7-candle window = 5 interior candidates; keeps us inside the current pullback/consolidation
+  // naturally without needing zone bounds (which would make the signal zone-config-dependent).
   let c3ok = false, c3text;
-  const neckWin = candles.slice(Math.max(0, candles.length - 10), candles.length - 1);
-  const neckCap = zoneHigh || Infinity;
+  const neckWin = candles.slice(Math.max(0, candles.length - 7), candles.length - 1);
   const swingHighsC3 = [];
   for (let i = 1; i < neckWin.length - 1; i++) {
-    if (neckWin[i].high > neckWin[i-1].high && neckWin[i].high > neckWin[i+1].high
-        && neckWin[i].high < neckCap)
+    if (neckWin[i].high > neckWin[i-1].high && neckWin[i].high > neckWin[i+1].high)
       swingHighsC3.push({ high: neckWin[i].high, date: neckWin[i].date });
   }
   const neckEntry = swingHighsC3.length
     ? swingHighsC3[swingHighsC3.length - 1]
-    : (() => {
-        const inZone = neckWin.filter(c => c.high < neckCap);
-        if (!inZone.length) return null;
-        const maxH = Math.max(...inZone.map(c => c.high));
-        const best = inZone.find(c => c.high === maxH);
+    : (neckWin.length ? (() => {
+        const maxH = Math.max(...neckWin.map(c => c.high));
+        const best = neckWin.find(c => c.high === maxH);
         return { high: maxH, date: best ? best.date : '' };
-      })();
+      })() : null);
   const neckline = neckEntry ? neckEntry.high : null;
   const isBull = today.close > today.open;
   if (!neckline) {
