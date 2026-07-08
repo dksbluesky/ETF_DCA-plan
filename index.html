@@ -2132,31 +2132,27 @@ function recomputeWatchStatus() {
     c2text = `5EMA NT$${ma5.toFixed(2)}，距現價 ${biasPct.toFixed(2)}%${maClose ? '（已靠攏 converged）' : '（尚未靠攏 not yet）'}；近期均量 ${avgVolPriorLots.toLocaleString()} 張，今日量 ${todayVolLots.toLocaleString()} 張${volThreshold ? `，警戒值 ${volThreshold.toLocaleString()} 張 ${volQuiet ? '✓量縮' : '✗仍偏大'}` : '（未設警戒值）'}`;
   }
 
-  // C3: Short-term neckline — dynamic window anchored to prior-5 lowest low.
-  // Cap = lowestLow(last 5 candles before today) * 1.03.
-  // Anchoring to prior lows (not today.close) keeps the cap stable on black-swan crash days —
-  // a single bad day doesn't shrink the window and lose the neckline reference.
+  // C3: Short-term neckline = highest CLOSE of recent candles within the dynamic window.
+  // Using close (not high) avoids intraday spikes that don't represent settled resistance.
+  // Window stop: cap = lowestLow(last 5 prior candles) * 1.03, checked against each candle's close.
+  // Anchoring to prior lows keeps the cap stable on black-swan days.
   let c3ok = false, c3text;
   const priorSlice = candles.slice(Math.max(0, candles.length - 6), candles.length - 1);
   const priorLow = priorSlice.length ? Math.min(...priorSlice.map(c => c.low)) : today.close;
   const priceCap = priorLow * 1.03;
   const neckWin = [];
   for (let j = candles.length - 2; j >= 0 && neckWin.length < 12; j--) {
-    if (candles[j].high > priceCap) break;
+    if (candles[j].close > priceCap) break;
     neckWin.unshift(candles[j]);
   }
-  const swingHighsC3 = [];
-  for (let i = 1; i < neckWin.length - 1; i++) {
-    if (neckWin[i].high > neckWin[i-1].high && neckWin[i].high > neckWin[i+1].high)
-      swingHighsC3.push({ high: neckWin[i].high, date: neckWin[i].date });
+  let neckEntry = null;
+  if (neckWin.length) {
+    let maxClose = -Infinity, bestDate = '';
+    for (const c of neckWin) {
+      if (c.close > maxClose) { maxClose = c.close; bestDate = c.date; }
+    }
+    neckEntry = { high: maxClose, date: bestDate };
   }
-  const neckEntry = swingHighsC3.length
-    ? swingHighsC3[swingHighsC3.length - 1]
-    : (neckWin.length ? (() => {
-        const maxH = Math.max(...neckWin.map(c => c.high));
-        const best = neckWin.find(c => c.high === maxH);
-        return { high: maxH, date: best ? best.date : '' };
-      })() : null);
   const neckline = neckEntry ? neckEntry.high : null;
   const isBull = today.close > today.open;
   if (!neckline) {
