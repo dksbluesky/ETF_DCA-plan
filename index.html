@@ -2630,14 +2630,15 @@ async function loadCandleChart(ticker, days) {
     _lwChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
     // EMA 5 & 20 — computed on full warm-up dataset, then trimmed to display window
-    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E5' });
+    const ema5Series = _lwChart.addLineSeries({ color: '#d69e2e', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
     ema5Series.setData(calcEMA(allCandles, 5).filter(p => p.time >= displayFrom));
-    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E20' });
+    const ema20Series = _lwChart.addLineSeries({ color: '#805ad5', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
     ema20Series.setData(calcEMA(allCandles, 20).filter(p => p.time >= displayFrom));
-    // EMA50 bias line — shown when bias mode is B:50
+    // EMA50 bias line — shown when bias mode is B:50; declared outside if so crosshair handler can access it
+    let ema50Series = null;
     const ema50LegEl = document.getElementById('legend-ema50');
     if (_biasEmaLen === 50) {
-      const ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, title: 'E50' });
+      ema50Series = _lwChart.addLineSeries({ color: '#48bb78', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
       ema50Series.setData(calcEMA(allCandles, 50).filter(p => p.time >= displayFrom));
       if (ema50LegEl) ema50LegEl.style.display = '';
     } else {
@@ -2647,7 +2648,7 @@ async function loadCandleChart(ticker, days) {
     // Anchored VWAP — calculated from first candle of the display window
     const vwapSeries = _lwChart.addLineSeries({
       color: '#f6ad55', lineWidth: 1.5, lineStyle: 2,  // 2 = Dashed
-      priceLineVisible: false, lastValueVisible: true, title: 'aVWAP'
+      priceLineVisible: false, lastValueVisible: false
     });
     vwapSeries.setData(calcVWAP(candles));
 
@@ -2671,14 +2672,20 @@ async function loadCandleChart(ticker, days) {
       const col = c.close >= c.open ? '#e53e3e' : '#38a169'; // TW: 紅漲綠跌
       const vwapPt = param.seriesData.get(vwapSeries);
       const volPt  = param.seriesData.get(volSeries);
-      const volStr = volPt ? ` &nbsp;量 <b>${Math.round(volPt.value / 1000).toLocaleString()}張</b>` : '';
-      const vwapStr = vwapPt ? ` &nbsp;aVWAP <b style="color:#f6ad55">${vwapPt.value.toFixed(2)}</b>` : '';
+      const e5Pt   = param.seriesData.get(ema5Series);
+      const e20Pt  = param.seriesData.get(ema20Series);
+      const e50Pt  = ema50Series ? param.seriesData.get(ema50Series) : null;
+      const volStr  = volPt  ? ` &nbsp;量 <b>${Math.round(volPt.value / 1000).toLocaleString()}張</b>` : '';
+      const e5Str   = e5Pt   ? ` &nbsp;<span style="color:#d69e2e">E5 <b>${e5Pt.value.toFixed(2)}</b></span>` : '';
+      const e20Str  = e20Pt  ? ` &nbsp;<span style="color:#805ad5">E20 <b>${e20Pt.value.toFixed(2)}</b></span>` : '';
+      const e50Str  = e50Pt  ? ` &nbsp;<span style="color:#48bb78">E50 <b>${e50Pt.value.toFixed(2)}</b></span>` : '';
+      const vwapStr = vwapPt ? ` &nbsp;<span style="color:#f6ad55">aVWAP <b>${vwapPt.value.toFixed(2)}</b></span>` : '';
       el.innerHTML = `<span style="color:var(--muted)">${param.time} &nbsp;</span>` +
         `開 <b>${c.open}</b> &nbsp;` +
         `高 <b style="color:#e53e3e">${c.high}</b> &nbsp;` +
         `低 <b style="color:#38a169">${c.low}</b> &nbsp;` +
         `收 <b style="color:${col}">${c.close}</b>` +
-        volStr + vwapStr;
+        volStr + e5Str + e20Str + e50Str + vwapStr;
     });
 
     // Responsive resize
