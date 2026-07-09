@@ -2197,6 +2197,12 @@ function recomputeWatchStatus() {
   } else if (early && !early.lowVolume) {
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
     tTitle = `⚡ ${early.type} 出現，但量未縮 — 訊號偏弱 ${early.type} fired but volume not light — weak signal`;
+  } else if (c3ok) {
+    // C3 neckline break fired but no H1/H2 in last 5 days — C3 itself is the entry signal.
+    // H1/H2 was the ideal pre-position window; it has passed. Don't say "awaiting H1/H2" here
+    // because the last H2 may be at a higher price — waiting for it makes no sense.
+    tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tTitle = '⚡ C3 頸部突破確認 — 右側進場訊號 Neckline break confirmed — breakout entry signal';
   } else {
     tBg = 'var(--card)'; tBorder = 'var(--border)'; tColor = 'var(--muted)';
     tTitle = '⏳ 近5日尚未出現回升訊號 No recovery signal in the last 5 days';
@@ -2212,6 +2218,8 @@ function recomputeWatchStatus() {
         ? '量縮回升 = 浮籌洗出、蓄勢待發，為右側進場依據 Low-volume recovery = weak hands washed, potential launch'
         : '量未縮，訊號可靠性較低，繼續觀察是否出現更乾淨的量縮 Volume still high — watch for a cleaner dry-up'
       }</div>`;
+  } else if (c3ok) {
+    tDetail = `<div style="font-size:13px;color:${tColor}">H2 預佈局時機已過（最近一次 H2 高於現價），頸部突破為本次右側進場依據。${c1ok && c2ok ? 'C1 C2 C3 三條件均成立，可評估進場，注意追高風險。' : c1ok ? 'C1 成立，C2 籌碼沉澱尚不足，謹慎評估。' : '回測區間尚未確認，謹慎。'}<br><span style="font-size:12px">H2 pre-position window has passed — neckline break is the entry signal now. ${c1ok && c2ok ? 'All 3 conditions met; evaluate entry, watch for chasing risk.' : 'Not all conditions aligned — be cautious.'}</span></div>`;
   } else {
     const waitMsg = c1ok && c2ok
       ? '進場區已就位，等待 H1/H2 觸發訊號 In zone — awaiting H1/H2 recovery signal'
@@ -2239,7 +2247,12 @@ function recomputeWatchStatus() {
       : '🟡 觸發訊號出現，尚未確認回測區間 — 謹慎 Trigger without zone confirmation — be cautious';
     bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:13px">${quality}</div>`;
   } else if (c3ok && !early) {
-    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:#fff1f0;border:1px solid #ff4d4f;border-radius:8px;font-size:12px;color:#a8071a;font-weight:700">⚠️ C3 頸部突破今日出現，但近5日未見 H2 確認 — 若未提前佈局，可能已錯過最佳進場點 Neckline break without preceding H2 — ideal entry may have passed</div>`;
+    const quality = c1ok && c2ok
+      ? '🟡 C3 突破＋C1 C2 全成立 — 右側進場，H2 預佈局已過，注意追高風險 All conditions met; breakout entry, pre-position window passed'
+      : c1ok
+      ? '🟠 C3 突破＋回測成立，籌碼沉澱尚不足 — 謹慎評估 Breakout + zone confirmed, consolidation pending'
+      : '🟠 C3 突破，回測區間未確認 — 謹慎 Breakout without zone confirmation — be cautious';
+    bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:#fff7e6;border:1px solid #faad14;border-radius:8px;font-weight:700;font-size:13px">${quality}</div>`;
   }
 
   statusEl.innerHTML = `
