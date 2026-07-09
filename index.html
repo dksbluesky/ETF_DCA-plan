@@ -2259,7 +2259,6 @@ function recomputeWatchStatus() {
     </div>`;
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────
-  const freshSignal = early && early.daysAgo <= 4;
   let sBg, sBorder, sText;
   if (freshSignal && early.type === 'H2' && early.lowVolume && c1ok && c2ok) {
     sBg = '#f6ffed'; sBorder = '#52c41a';
