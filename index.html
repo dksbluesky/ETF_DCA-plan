@@ -1764,13 +1764,13 @@ function describeSig(candles, sig, lastIdx) {
 // biasLen: 20 or 50 — user-toggleable in the Entry Watch modal (matches the chart popup's
 // own B:20/B:50 toggle). Different bias length = a different bull/bear regime, so the two
 // can disagree on whether/when a leg recovered.
-function checkEarlySignal(candles, biasLen = 50) {
+function checkEarlySignal(candles, biasLen = 50, startIdx = null) {
   if (!candles || candles.length < biasLen + 15) return null;
   const signals = calcHLSignals(candles, biasLen);
   const lastIdx = candles.length - 1;
-  // Scan the last 5 trading days, not just today — a recent H1/H2 is still actionable
-  // context even if it didn't fire on the literal most-recent bar.
-  const recent = signals.filter(s => s.index >= lastIdx - 4 && (s.h1 || s.h2)).sort((a, b) => b.index - a.index);
+  // Scan from startIdx (breakout day) when provided, otherwise last 5 trading days.
+  const scanFrom = startIdx !== null ? startIdx : lastIdx - 4;
+  const recent = signals.filter(s => s.index >= scanFrom && (s.h1 || s.h2)).sort((a, b) => b.index - a.index);
   const sig = recent[0];
   if (!sig) return null;
   const result = describeSig(candles, sig, lastIdx);
@@ -2183,34 +2183,41 @@ function recomputeWatchStatus() {
 
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
-  const early = checkEarlySignal(candles, _watchBiasLen);
+  const early = checkEarlySignal(candles, _watchBiasLen, breakoutIdx > 0 ? breakoutIdx : null);
 
   // ── Trigger block (primary) ──────────────────────────────────────────
   let tBg, tBorder, tColor, tTitle, tDetail;
 
-  if (early && early.type === 'H2' && early.lowVolume) {
+  const freshSignal = early && early.daysAgo <= 4;
+  const staleSignal = early && early.daysAgo > 4;
+
+  if (freshSignal && early.type === 'H2' && early.lowVolume) {
     tBg = '#f6ffed'; tBorder = '#52c41a'; tColor = '#237804';
     tTitle = '⚡ H2 量縮回升 — 進場觸發訊號 Low-volume H2 recovery — ENTRY SIGNAL';
-  } else if (early && early.type === 'H1' && early.lowVolume) {
+  } else if (freshSignal && early.type === 'H1' && early.lowVolume) {
     tBg = '#e6f7ff'; tBorder = '#1890ff'; tColor = '#0050b3';
     tTitle = '⚡ H1 量縮 — 第一腳回升，等待 H2 確認後進場 First leg — watch for H2';
-  } else if (early && !early.lowVolume) {
+  } else if (freshSignal && !early.lowVolume) {
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
     tTitle = `⚡ ${early.type} 出現，但量未縮 — 訊號偏弱 ${early.type} fired but volume not light — weak signal`;
+  } else if (staleSignal && !c3ok) {
+    // H1/H2 fired since breakout but outside the fresh 5-day window — show as historical
+    // context, not a current entry signal. C3 hasn't broken out yet so we're still waiting.
+    tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tTitle = `⏳ ${early.type} ${early.daysAgo}天前出現 — 籌碼持續沉澱，等待 C3 突破 ${early.type} fired ${early.daysAgo}d ago — consolidating, watch for C3`;
   } else if (c3ok) {
-    // C3 neckline break fired but no H1/H2 in last 5 days — C3 itself is the entry signal.
-    // H1/H2 was the ideal pre-position window; it has passed. Don't say "awaiting H1/H2" here
-    // because the last H2 may be at a higher price — waiting for it makes no sense.
+    // C3 neckline break fired. H1/H2 was the ideal pre-position window; it has passed.
+    // Don't say "awaiting H1/H2" — the last H2 may be at a higher price already.
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
     tTitle = '⚡ C3 頸部突破確認 — 右側進場訊號 Neckline break confirmed — breakout entry signal';
   } else {
     tBg = 'var(--card)'; tBorder = 'var(--border)'; tColor = 'var(--muted)';
-    tTitle = '⏳ 近5日尚未出現回升訊號 No recovery signal in the last 5 days';
+    tTitle = '⏳ 突破後尚未出現回升訊號 No recovery signal since breakout';
   }
 
   const sigLine = s => `${s.type}・${s.daysAgo === 0 ? '今天 today' : s.daysAgo + ' 天前 (' + s.date + ')'}・量 ${s.ratio !== null ? s.ratio.toFixed(1) + 'x 均量' : 'N/A'}${s.lowVolume ? ' ✓量縮' : ' ✗量未縮'}`;
 
-  if (early) {
+  if (freshSignal) {
     tDetail = `
       ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">前一腳 preceding leg：${sigLine(early.precedingH1)}</div>` : ''}
       <div style="font-weight:700;font-size:14px;color:${tColor};margin-bottom:4px">${sigLine(early)}</div>
@@ -2218,6 +2225,11 @@ function recomputeWatchStatus() {
         ? '量縮回升 = 浮籌洗出、蓄勢待發，為右側進場依據 Low-volume recovery = weak hands washed, potential launch'
         : '量未縮，訊號可靠性較低，繼續觀察是否出現更乾淨的量縮 Volume still high — watch for a cleaner dry-up'
       }</div>`;
+  } else if (staleSignal && !c3ok) {
+    tDetail = `
+      ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">前一腳 preceding leg：${sigLine(early.precedingH1)}</div>` : ''}
+      <div style="font-size:13px;color:${tColor};margin-bottom:4px">${sigLine(early)}</div>
+      <div style="font-size:12px;color:var(--muted)">預佈局時機已確認，目前籌碼持續沉澱，等待 C3 頸部突破作為右側進場確認。<br>Pre-position timing confirmed — consolidation ongoing, watching for C3 neckline break.</div>`;
   } else if (c3ok) {
     tDetail = `<div style="font-size:13px;color:${tColor}">H2 預佈局時機已過（最近一次 H2 高於現價），頸部突破為本次右側進場依據。${c1ok && c2ok ? 'C1 C2 C3 三條件均成立，可評估進場，注意追高風險。' : c1ok ? 'C1 成立，C2 籌碼沉澱尚不足，謹慎評估。' : '回測區間尚未確認，謹慎。'}<br><span style="font-size:12px">H2 pre-position window has passed — neckline break is the entry signal now. ${c1ok && c2ok ? 'All 3 conditions met; evaluate entry, watch for chasing risk.' : 'Not all conditions aligned — be cautious.'}</span></div>`;
   } else {
@@ -2239,14 +2251,14 @@ function recomputeWatchStatus() {
 
   // ── Bottom synthesis line ─────────────────────────────────────────────
   let bottomNote = '';
-  if (early && early.type === 'H2' && early.lowVolume) {
+  if (freshSignal && early.type === 'H2' && early.lowVolume) {
     const quality = c1ok && c2ok
       ? '🟢 觸發＋回測＋籌碼三者成立 — 可積極考慮進場 Strong setup — all conditions align'
       : c1ok
       ? '🟡 觸發＋回測成立，籌碼沉澱尚不足 — 可小量試單 Trigger + zone confirmed, consolidation pending'
       : '🟡 觸發訊號出現，尚未確認回測區間 — 謹慎 Trigger without zone confirmation — be cautious';
     bottomNote = `<div style="margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:13px">${quality}</div>`;
-  } else if (c3ok && !early) {
+  } else if (c3ok) {
     const quality = c1ok && c2ok
       ? '🟡 C3 突破＋C1 C2 全成立 — 右側進場，H2 預佈局已過，注意追高風險 All conditions met; breakout entry, pre-position window passed'
       : c1ok
