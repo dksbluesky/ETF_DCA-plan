@@ -2195,32 +2195,34 @@ function recomputeWatchStatus() {
   const early = checkEarlySignal(candles, _watchBiasLen, breakoutIdx > 0 ? breakoutIdx : null);
 
   // ── Trigger block (primary) ──────────────────────────────────────────
-  let tBg, tBorder, tColor, tTitle, tDetail;
+  let tBg, tBorder, tColor, tTitle, tDetail, tBadge;
 
   const freshSignal = early && early.daysAgo <= 4;
   const staleSignal = early && early.daysAgo > 4;
 
   if (freshSignal && early.type === 'H2' && early.lowVolume) {
     tBg = '#f6ffed'; tBorder = '#52c41a'; tColor = '#237804';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#52c41a;color:#fff;margin-bottom:6px">● 綠 H2＋量縮</span>';
     tTitle = '⚡ H2 量縮回升 — 進場觸發訊號 Low-volume H2 recovery — ENTRY SIGNAL';
   } else if (freshSignal && early.type === 'H1' && early.lowVolume) {
     tBg = '#e6f7ff'; tBorder = '#1890ff'; tColor = '#0050b3';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#1890ff;color:#fff;margin-bottom:6px">● 藍 H1＋量縮</span>';
     tTitle = '⚡ H1 量縮 — 第一腳回升，等待 H2 確認後進場 First leg — watch for H2';
   } else if (freshSignal && !early.lowVolume) {
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#faad14;color:#fff;margin-bottom:6px">● 橙 量未縮</span>';
     tTitle = `⚡ ${early.type} 出現，但量未縮 — 訊號偏弱 ${early.type} fired but volume not light — weak signal`;
   } else if (staleSignal && !c3ok) {
-    // H1/H2 fired since breakout but outside the fresh 5-day window — show as historical
-    // context, not a current entry signal. C3 hasn't broken out yet so we're still waiting.
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#faad14;color:#fff;margin-bottom:6px">● 橙 H2/H1 歷史訊號</span>';
     tTitle = `⏳ ${early.type} ${early.daysAgo}天前出現 — 籌碼持續沉澱，等待 C3 突破 ${early.type} fired ${early.daysAgo}d ago — consolidating, watch for C3`;
   } else if (c3ok) {
-    // C3 neckline break fired. H1/H2 was the ideal pre-position window; it has passed.
-    // Don't say "awaiting H1/H2" — the last H2 may be at a higher price already.
     tBg = '#fff7e6'; tBorder = '#faad14'; tColor = '#874d00';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#faad14;color:#fff;margin-bottom:6px">● 橙 C3 突破</span>';
     tTitle = '⚡ C3 頸部突破確認 — 右側進場訊號 Neckline break confirmed — breakout entry signal';
   } else {
     tBg = 'var(--card)'; tBorder = 'var(--border)'; tColor = 'var(--muted)';
+    tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:var(--muted);color:#fff;margin-bottom:6px">▪ 灰 等待中</span>';
     tTitle = '⏳ 突破後尚未出現回升訊號 No recovery signal since breakout';
   }
 
@@ -2254,6 +2256,7 @@ function recomputeWatchStatus() {
 
   const triggerBlock = `
     <div style="padding:12px 14px;background:${tBg};border:2px solid ${tBorder};border-radius:10px;margin-bottom:12px">
+      ${tBadge}
       <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:${tColor}">${tTitle}</div>
       ${tDetail}
     </div>`;
