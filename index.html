@@ -2279,18 +2279,13 @@ function recomputeWatchStatus() {
     sBg = '#fffbe6'; sBorder = '#faad14';
     sText = `🟡 ${early.type} 訊號量未縮，繼續觀察更乾淨的量縮 ${early.type} signal — volume not dry enough, keep watching`;
   } else if (c3ok) {
-    sBg = '#fff1f0'; sBorder = '#ff4d4f';
-    sText = c1ok && c2ok
-      ? '⚠️ C3 突破＋C1 C2 全成立 — 右側進場，H2 預佈局已過，注意追高風險 Breakout + all conditions met; pre-entry window passed'
-      : c1ok
-      ? '⚠️ C3 突破＋回測成立，籌碼沉澱尚不足 — 謹慎評估 Breakout + zone confirmed, consolidation pending'
-      : '⚠️ C3 突破，回測區間未確認 — 謹慎 Breakout without zone confirmation — be cautious';
-  } else if (c1ok && c2ok) {
-    sBg = 'var(--surface2)'; sBorder = 'var(--border)';
-    sText = '⏳ 佈局條件成立，等待 H1/H2 觸發訊號 Setup conditions met — awaiting H1/H2 trigger';
+    sBg = '#f6ffed'; sBorder = '#52c41a';
+    sText = '🟢 右側進場確認 Right Side Confirmed — 頸部突破，進場訊號成立 Neckline broken, entry signal active';
   } else if (c1ok) {
-    sBg = 'var(--surface2)'; sBorder = 'var(--border)';
-    sText = '⏳ 已回測進入區間，等待籌碼沉澱與 H1/H2 訊號 In zone — waiting for consolidation + H1/H2';
+    sBg = '#fffbe6'; sBorder = '#faad14';
+    sText = c2ok
+      ? '🟡 左側進場機會 Left Side Setup — 價格在區間內且籌碼沉澱，等待頸部突破確認 Price in zone + consolidation done, awaiting breakout confirmation'
+      : '🟡 左側進場機會 Left Side Setup — 價格回落進入區間，等待籌碼沉澱 Price in zone — waiting for consolidation';
   } else {
     sBg = 'var(--surface2)'; sBorder = 'var(--border)';
     sText = '⬜ 尚未回落進入支撐區，持續觀察 Price not yet in support zone — keep watching';
@@ -2304,9 +2299,12 @@ function recomputeWatchStatus() {
   statusEl.innerHTML = `
     <div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
     ${triggerBlock}
-    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:4px">── 進場條件參考 Setup Context ──</div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:6px">── 進場條件參考 Setup Context ──</div>
+    <div style="font-size:10px;font-weight:700;color:#faad14;letter-spacing:0.3px;margin-bottom:3px">◀ 左側進場條件 Left Side Entry</div>
     ${row(c1ok, 'C1・空間回測 Space Retest', c1text)}
     ${row(c2ok, 'C2・籌碼沉澱 Time + Volume', c2text)}
+    <div style="font-size:10px;color:var(--muted);margin:6px 0;padding:4px 10px;background:var(--surface2);border-radius:6px;text-align:center;line-height:1.5">以下兩條件為二擇一，非同時滿足<br>C1/C3 are alternative entry paths — not required simultaneously</div>
+    <div style="font-size:10px;font-weight:700;color:#52c41a;letter-spacing:0.3px;margin-bottom:3px">▶ 右側確認條件 Right Side Confirmation</div>
     ${row(c3ok, 'C3・短線頸部突破 Neckline Break', c3text)}
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
