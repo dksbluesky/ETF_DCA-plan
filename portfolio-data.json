@@ -127,7 +127,7 @@
       "watchCriteria": {
         "zoneLow": 237,
         "zoneHigh": 242,
-        "volThreshold": 3000,
+        "volThreshold": 2564,
         "stopLossMode": "manual",
         "stopLossManual": 233
       }
@@ -146,5 +146,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-15T01:19:52.399Z"
+  "lastUpdated": "2026-07-15T01:20:27.081Z"
 }
