@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.95,
+      "currentPrice": 32.94,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -32,7 +32,14 @@
         }
       ],
       "trailStop": 5,
-      "trailHigh": 34.12
+      "trailHigh": 34.12,
+      "watchCriteria": {
+        "zoneLow": 33,
+        "zoneHigh": 34.3,
+        "volThreshold": 24206,
+        "stopLossMode": "trail",
+        "stopLossManual": null
+      }
     }
   ],
   "direct": [
@@ -139,5 +146,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-15T01:18:29.358Z"
+  "lastUpdated": "2026-07-15T01:19:52.399Z"
 }
