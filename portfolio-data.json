@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.71,
+      "currentPrice": 32.72,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -171,7 +171,20 @@
       "trailHigh": 2510,
       "transactions": [],
       "dividends": []
+    },
+    {
+      "id": "54bd2caa-a687-4095-b263-1a7ee2679628",
+      "ticker": "00878",
+      "name": "國泰高股息",
+      "type": "ETF",
+      "currentPrice": 32.72,
+      "annualYield": 7.9,
+      "dividendTracking": true,
+      "trailStop": 5,
+      "trailHigh": 32.72,
+      "transactions": [],
+      "dividends": []
     }
   ],
-  "lastUpdated": "2026-07-22T05:27:39.249Z"
+  "lastUpdated": "2026-07-22T05:29:44.562Z"
 }
