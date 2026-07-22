@@ -1966,6 +1966,17 @@ function recomputeZoneValidation() {
   const ema20arr = calcEMAArray(candles, 20);
   const ema20 = ema20arr[ema20arr.length - 1];
 
+  // EMA20 trend context is informational only. It explains whether the average is
+  // behaving more like support or overhead resistance without changing zone grades
+  // or the separate C1/C2/C3 and H1/H2 entry signals.
+  const currentPrice = candles[candles.length - 1].close;
+  const ema20ThreeDaysAgo = ema20arr[ema20arr.length - 4];
+  const ema20SlopePct = ema20 !== null && ema20ThreeDaysAgo !== null && ema20ThreeDaysAgo !== 0
+    ? (ema20 - ema20ThreeDaysAgo) / ema20ThreeDaysAgo * 100
+    : null;
+  const ema20SlopeThreshold = 0.1;
+
+
   // 5EMA
   const ma5 = calcWatchEMA5(candles);
 
@@ -1987,6 +1998,30 @@ function recomputeZoneValidation() {
       c1icon = '🔴'; c1text = `EMA20 NT$${ema20.toFixed(2)} 距區間邊緣 ${nearDist.toFixed(1)}% — 偏離明顯 5%+ from zone`;
     }
   }
+  // ── Informational: EMA20 trend context (not included in overall verdict) ─
+  let trendIcon, trendText;
+  if (ema20 === null || ema20SlopePct === null) {
+    trendIcon = '⬜'; trendText = '資料不足，無法判斷 EMA20 趨勢 Not enough data for EMA20 trend context';
+  } else {
+    const priceAbove = currentPrice > ema20;
+    const priceBelow = currentPrice < ema20;
+    const rising = ema20SlopePct > ema20SlopeThreshold;
+    const falling = ema20SlopePct < -ema20SlopeThreshold;
+    const slopeLabel = rising ? '上揚 rising' : falling ? '下彎 falling' : '走平 flat';
+    const context = `現價 NT$${currentPrice.toFixed(2)} ${priceAbove ? '高於 above' : priceBelow ? '低於 below' : '等於 at'} EMA20 NT$${ema20.toFixed(2)}；3日斜率 ${ema20SlopePct >= 0 ? '+' : ''}${ema20SlopePct.toFixed(2)}%（${slopeLabel}）`;
+    if (priceAbove && rising) {
+      trendIcon = '✅'; trendText = `${context} — EMA20 較可能是趨勢支撐 More likely acting as trend support`;
+    } else if (priceBelow && falling) {
+      trendIcon = '🔴'; trendText = `${context} — EMA20 較可能是上方反壓 More likely acting as overhead resistance`;
+    } else if (priceAbove && falling) {
+      trendIcon = '⚠️'; trendText = `${context} — 價格雖在均線上方，但趨勢尚未確認 Price is above EMA20, but trend support is not confirmed`;
+    } else if (priceBelow && rising) {
+      trendIcon = '⚠️'; trendText = `${context} — 可能是暫時跌破或復甦階段 Possible temporary breakdown or recovery setup`;
+    } else {
+      trendIcon = '⚠️'; trendText = `${context} — 趨勢過渡中，等待方向確認 Transitional; wait for direction confirmation`;
+    }
+  }
+
 
   // ── Check 2: Recent swing low (last 30 candles, exclude today) ───────
   // Swing lows are determined purely by price action — independent of the zone the user set.
@@ -2042,7 +2077,7 @@ function recomputeZoneValidation() {
     verdict = '⚠️ Zone is reasonable — minor deviation　區間合理，略有偏差';
     vBg = '#fffbe6'; vColor = '#874d00';
   } else {
-    verdict = '✅ Zone is technically supported　區間技術上有支撐';
+    verdict = '✅ Zone reference levels align — not an entry signal　區間參考位吻合 — 不代表進場訊號';
     vBg = '#f6ffed'; vColor = '#237804';
   }
 
@@ -2077,14 +2112,19 @@ function recomputeZoneValidation() {
           <div>⚠️ 2–5% — Conservative but defensible</div>
           <div>🔴 5%以上 — Zone may be too far from current structure to be reached in current trend</div>
         </div>
+        <div style="margin-bottom:8px">
+          <div style="font-weight:600;margin-bottom:2px">EMA20 趨勢背景 EMA20 Trend Context（不計入區間評分 informational only）</div>
+          <div>現價位置搭配 EMA20 的 3 個交易日標準化斜率；±0.1% 視為走平 — Combines price position with normalized 3-session EMA20 slope; ±0.1% is flat</div>
+        </div>
         <div>
           <div style="font-weight:600;margin-bottom:2px">綜合結論 Overall Verdict</div>
-          <div>✅ 三項全過 — Zone is technically supported</div>
+          <div>✅ 三項全過 — Zone reference levels align, not an entry signal</div>
           <div>⚠️ 一項警告 — Zone is reasonable — minor deviation</div>
           <div>🔴 任一紅燈 — Zone is aggressive or too conservative — review recommended</div>
         </div>
       </div>
       ${row(c1icon, 'EMA20 對齊 20EMA Alignment', c1text)}
+      ${row(trendIcon, 'EMA20 趨勢背景 EMA20 Trend Context', trendText)}
       ${row(c2icon, '近期主要波段低點 Recent Major Swing Low', c2text)}
       ${row(c3icon, '5EMA 距離 5EMA Distance (zone midpoint)', c3text)}
       <div style="margin-top:8px;padding:6px 10px;background:${vBg};border-radius:6px;font-size:12px;font-weight:700;color:${vColor}">${verdict}</div>
