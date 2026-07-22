@@ -1990,7 +1990,10 @@ function recomputeZoneValidation() {
 
   // ── Check 2: Recent swing low (last 30 candles, exclude today) ───────
   // Swing lows are determined purely by price action — independent of the zone the user set.
-  // We then ask: does zone low land within 2% of any of them?
+  // Use the lowest confirmed swing low in the lookback window as the major support reference.
+  // Selecting the swing low closest to zoneLow would make this validation circular: the
+  // reference would be chosen because it supports the user's input instead of independently
+  // checking that input against the most important recent price low.
   const swingWindow = candles.slice(Math.max(0, candles.length - 27), candles.length - 1); // ~25 trading days ≈ 1 month
   const swingLows = [];
   for (let i = 1; i < swingWindow.length - 1; i++) {
@@ -2001,16 +2004,14 @@ function recomputeZoneValidation() {
   if (!swingLows.length) {
     c2icon = '⚠️'; c2text = '近30日無明顯波段低點 No clear swing low in the last 30 trading days';
   } else {
-    // Find closest swing low to zone low (for display), but verdict is whether ANY is within 2%
-    const closest = swingLows.reduce((a, b) => Math.abs(b.low - zoneLow) < Math.abs(a.low - zoneLow) ? b : a);
-    const closestPct = Math.abs(closest.low - zoneLow) / closest.low * 100;
-    const allDates = swingLows.map(s => `NT$${s.low.toFixed(2)}（${s.date}）`).join('、');
-    if (closestPct <= 1) {
-      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 與波段低點 NT$${closest.low.toFixed(2)}（${closest.date}）相符，差 ${closestPct.toFixed(1)}% — 有明確支撐 Zone low aligns with a recent swing low`;
-    } else if (closestPct <= 2) {
-      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 接近波段低點 NT$${closest.low.toFixed(2)}（${closest.date}），差 ${closestPct.toFixed(1)}% — 支撐合理 Close enough to a swing low`;
+    const majorSwingLow = swingLows.reduce((lowest, swing) => swing.low < lowest.low ? swing : lowest);
+    const majorLowPct = Math.abs(majorSwingLow.low - zoneLow) / majorSwingLow.low * 100;
+    if (majorLowPct <= 1) {
+      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 與主要波段低點 NT$${majorSwingLow.low.toFixed(2)}（${majorSwingLow.date}）相符，差 ${majorLowPct.toFixed(1)}% — 有明確支撐 Zone low aligns with the recent major swing low`;
+    } else if (majorLowPct <= 2) {
+      c2icon = '✅'; c2text = `Zone Low NT$${zoneLow.toFixed(2)} 接近主要波段低點 NT$${majorSwingLow.low.toFixed(2)}（${majorSwingLow.date}），差 ${majorLowPct.toFixed(1)}% — 支撐合理 Close enough to the recent major swing low`;
     } else {
-      c2icon = '⚠️'; c2text = `近30日波段低點：${allDates}，Zone Low 差最近低點 ${closestPct.toFixed(1)}% — 無明顯低點對齊 No swing low aligns with zone low`;
+      c2icon = '⚠️'; c2text = `近30日主要波段低點 NT$${majorSwingLow.low.toFixed(2)}（${majorSwingLow.date}），Zone Low 相差 ${majorLowPct.toFixed(1)}% — 無主要低點對齊 Zone low does not align with the recent major swing low`;
     }
   }
 
@@ -2066,9 +2067,9 @@ function recomputeZoneValidation() {
           <div>🔴 邊緣距離 5%以上 — Zone is 5%+ away from 20EMA</div>
         </div>
         <div style="margin-bottom:8px">
-          <div style="font-weight:600;margin-bottom:2px">2. 近期波段低點 Recent Swing Low</div>
-          <div>✅ Zone Low 距最近波段低點 ≤1% — Zone low within 1% of a recent swing low</div>
-          <div>⚠️ 無明顯波段低點對齊 — No clear swing low aligns with zone low</div>
+          <div style="font-weight:600;margin-bottom:2px">2. 近期主要波段低點 Recent Major Swing Low</div>
+          <div>✅ Zone Low 距近30日最低確認波段低點 ≤1% — Zone low within 1% of the lowest confirmed swing low</div>
+          <div>⚠️ 無主要波段低點對齊 — Zone low does not align with the major swing low</div>
         </div>
         <div style="margin-bottom:8px">
           <div style="font-weight:600;margin-bottom:2px">3. 5EMA 距離 5EMA Distance (zone midpoint)</div>
@@ -2084,7 +2085,7 @@ function recomputeZoneValidation() {
         </div>
       </div>
       ${row(c1icon, 'EMA20 對齊 20EMA Alignment', c1text)}
-      ${row(c2icon, '近期波段低點 Recent Swing Low', c2text)}
+      ${row(c2icon, '近期主要波段低點 Recent Major Swing Low', c2text)}
       ${row(c3icon, '5EMA 距離 5EMA Distance (zone midpoint)', c3text)}
       <div style="margin-top:8px;padding:6px 10px;background:${vBg};border-radius:6px;font-size:12px;font-weight:700;color:${vColor}">${verdict}</div>
     </div>`;
