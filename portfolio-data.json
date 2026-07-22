@@ -183,8 +183,15 @@
       "trailStop": 5,
       "trailHigh": 32.72,
       "transactions": [],
-      "dividends": []
+      "dividends": [],
+      "watchCriteria": {
+        "zoneLow": 31.8,
+        "zoneHigh": 32.2,
+        "volThreshold": 24206,
+        "stopLossMode": "manual",
+        "stopLossManual": 30
+      }
     }
   ],
-  "lastUpdated": "2026-07-22T05:29:44.562Z"
+  "lastUpdated": "2026-07-22T05:30:52.817Z"
 }
