@@ -1422,7 +1422,7 @@ function openModal(type, ctx) {
     const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
     if (!pos) return;
     const wc = pos.watchCriteria || {};
-    _watchCandles = null; _watchPos = null; _watchBiasLen = 50; _watchMainTab = 'status';
+    _watchCandles = null; _watchPos = null; _watchQuote = null; _watchBiasLen = 50; _watchMainTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
@@ -1692,16 +1692,18 @@ async function fetchLivePrice(ticker) {
     }
 
     const tradeVol = d.total?.tradeVolume ?? null; // in 張 (整股 only, matches broker)
-    return { price, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle', open, high, low, prev, vwap, tradeVol };
+    const officialClose = isClose ? (d.closePrice ?? d.lastPrice ?? price) : null;
+    return { price, officialClose, state: isClose ? 'CLOSED' : 'REGULAR', source: 'Fugle', open, high, low, prev, vwap, tradeVol };
   }
   console.log('Fugle response (no price found):', JSON.stringify(d));
   throw new Error(`${ticker}: 查無報價`);
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchPos = null, _watchBiasLen = 50, _watchMainTab = 'status';
+let _watchCandles = null, _watchPos = null, _watchQuote = null, _watchBiasLen = 50, _watchMainTab = 'status';
 
 async function fetchDailyCandlesLite(ticker, days) {
+  _watchQuote = null;
   const fugleKey = getFugleKey();
   if (!fugleKey) throw new Error('請先至設定頁面輸入 Fugle API Key');
   const to = new Date().toISOString().split('T')[0];
@@ -1714,6 +1716,7 @@ async function fetchDailyCandlesLite(ticker, days) {
   if (!candles.length) throw new Error('查無歷史資料 No historical data');
   try {
     const q = await fetchLivePrice(ticker);
+    _watchQuote = q;
     const todayStr = new Date().toISOString().split('T')[0];
     const last = candles[candles.length - 1];
     const vol = (q.tradeVol ?? 0) * 1000; // 張 → shares, matches historical candle units
@@ -1749,11 +1752,64 @@ function calcWatchEMA5(candles) {
 // different moment than C1-C3 converge. Volume ratio = today's volume vs the trailing 10-bar
 // average (excluding today) — low ratio means the recovery happened on light volume, i.e.
 // sellers were already exhausted before the bounce (clean, not a panic short-covering spike).
-function volRatioAt(candles, idx) {
-  const lookback = candles.slice(Math.max(0, idx - 10), idx);
+function volRatioAt(candles, idx, periods = 10) {
+  const lookback = candles.slice(Math.max(0, idx - periods), idx);
   if (!lookback.length) return null;
   const avgVol = lookback.reduce((s, c) => s + c.volume, 0) / lookback.length;
   return avgVol > 0 ? candles[idx].volume / avgVol : null;
+}
+
+// Pure C4 calculation. It does not participate in C1/C2/C3, trigger, or synthesis logic.
+function calcCloseStrength(high, low, close, volumeRatioPct) {
+  const rawValues = [high, low, close];
+  if (rawValues.some(v => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)))) {
+    return { icon: '⬜', closeLocation: null, classification: 'Insufficient data', decision: 'Insufficient data', message: '缺少最高、最低或收盤資料 High, Low, or Close is missing.' };
+  }
+
+  const h = Number(high), l = Number(low), c = Number(close);
+  if (h <= l) {
+    return { icon: '⬜', closeLocation: null, classification: 'Unable to evaluate', decision: 'Unable to evaluate', message: '最高價等於或低於最低價，無法評估 High equals or is below Low.' };
+  }
+
+  const closeLocation = (c - l) / (h - l) * 100;
+  let icon, classification, message;
+  if (closeLocation >= 80) {
+    icon = '✅'; classification = 'Strong 強勢';
+    message = '收盤接近盤中高點 Close finished near the session high.';
+  } else if (closeLocation >= 70) {
+    icon = '🟡'; classification = 'Qualified 合格';
+    message = '收盤位於區間上緣，但仍需價格確認 Close held in the upper range; wait for price confirmation.';
+  } else if (closeLocation >= 40) {
+    icon = '⬜'; classification = 'Neutral 中性';
+    message = '收盤位於區間中段，等待確認 Close finished mid-range; wait for confirmation.';
+  } else {
+    icon = '🔴'; classification = 'Weak 弱勢';
+    message = '收盤遠離盤中高點，勿追價 Close finished far from the session high — do not chase.';
+  }
+
+  const hasVolumeRatio = Number.isFinite(volumeRatioPct);
+  let decision;
+  if (closeLocation < 40) {
+    decision = 'Weak — Do Not Chase 弱勢—勿追價';
+  } else if (closeLocation >= 80 && hasVolumeRatio && volumeRatioPct >= 60 && volumeRatioPct <= 120) {
+    decision = 'Strong — Small Trial Position Allowed 強勢—可小量試單';
+  } else if (closeLocation >= 70 && closeLocation < 80 && hasVolumeRatio && volumeRatioPct >= 60 && volumeRatioPct <= 120) {
+    decision = 'Qualified — Wait for Price Confirmation 合格—等待價格確認';
+  } else if (closeLocation >= 80 && hasVolumeRatio && volumeRatioPct < 60) {
+    decision = 'Strong Close but Insufficient Volume 收盤強但量能不足';
+  } else if (closeLocation >= 80 && hasVolumeRatio && volumeRatioPct > 150) {
+    decision = 'High Volume — Check for Breakout or Exhaustion 高量—確認突破或竭盡';
+  } else {
+    decision = 'Neutral — Wait for Confirmation 中性—等待確認';
+  }
+
+  return { icon, closeLocation, classification, decision, message };
+}
+
+function getCloseSessionLabel(state) {
+  if (state === 'REGULAR') return '盤中估算 Intraday Estimate';
+  if (state === 'CLOSED') return '正式收盤 Official Close';
+  return '交易時段未知 Session Status Unavailable';
 }
 
 function describeSig(candles, sig, lastIdx) {
@@ -1933,6 +1989,7 @@ function switchWatchTab(tab) {
           <div><b>C1 空間回測：</b>價格已從高點拉回，觸及/跌破 5EMA。確認有真實的回測動作，不是虛晃一槍。<br><span style="color:#8c8c8c">Price pulled back from Zone High and touched the 5EMA — confirms a real retest, not a fake-out.</span></div>
           <div><b>C2 籌碼沉澱：</b>5EMA 與現價靠攏（乖離 ≤1.2%）且今日量縮。確認浮籌已洗出、籌碼趨於穩定。<br><span style="color:#8c8c8c">EMA converging with price + volume quiet — weak hands have been washed out.</span></div>
           <div><b>C3 右側點火（右側確認）：</b>今日紅K突破近期盤整高點並帶量。H2 預佈局時機已過時，C3 本身即為右側進場依據，但需注意追高風險。<br><span style="color:#8c8c8c">Breakout candle — valid right-side entry when H2 window has passed, but watch for chasing risk.</span></div>
+          <div><b>C4 收盤強度：</b>收盤位置搭配20日均量比，僅作為確認指標，不改變 C1/C2/C3。<br><span style="color:#8c8c8c">Close location plus the 20-day volume ratio — confirmation only; does not change C1/C2/C3.</span></div>
         </div>
         <div style="font-size:12px;color:var(--muted);padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:14px">⚠️ 三項條件不需全部成立才能進場。H2＋量縮訊號本身即可作為進場依據，C1/C2 是品質加分項，不是通行證。<br><span style="color:#8c8c8c">These are quality checks, not gates — H2 alone is actionable. C1 + C2 just tell you how clean the setup is.</span></div>
 
@@ -2209,6 +2266,33 @@ function recomputeWatchStatus() {
     c3text = `短線頸部 Neckline NT$${neckline.toFixed(2)}${dateStr}｜${isBull ? '✓紅K Bullish' : '✗非紅K Not bullish'}｜${brokeNeck ? '✓收盤突破頸部 Closed above neckline' : `✗收盤 NT$${today.close.toFixed(2)} 未突破頸部 Hasn't broken neckline yet`}`;
   }
 
+  // C4: Close location + current volume versus the prior 20-session average.
+  // Informational only — deliberately excluded from all existing entry decisions.
+  const quoteState = _watchQuote?.state ?? null;
+  const c4High = _watchQuote?.high ?? today.high;
+  const c4Low = _watchQuote?.low ?? today.low;
+  const c4Close = quoteState === 'CLOSED'
+    ? (_watchQuote?.officialClose ?? _watchQuote?.price ?? today.close)
+    : quoteState === 'REGULAR'
+    ? (_watchQuote?.price ?? today.close)
+    : today.close;
+  const volumeRatio20Raw = candles.length >= 21 ? volRatioAt(candles, candles.length - 1, 20) : null;
+  const volumeRatio20Pct = volumeRatio20Raw === null ? null : volumeRatio20Raw * 100;
+  const avgVolume20 = volumeRatio20Raw !== null && volumeRatio20Raw > 0 ? today.volume / volumeRatio20Raw : null;
+  const c4 = calcCloseStrength(c4High, c4Low, c4Close, volumeRatio20Pct);
+  const c4SessionLabel = getCloseSessionLabel(quoteState);
+  const c4DisplayIcon = quoteState === 'REGULAR' ? '🟡' : quoteState === 'CLOSED' ? c4.icon : '⬜';
+  const c4LocationText = c4.closeLocation === null ? 'N/A' : `${Math.round(c4.closeLocation)}%`;
+  const c4VolumeText = volumeRatio20Pct === null ? 'N/A' : `${Math.round(volumeRatio20Pct)}%`;
+  const c4PriceLine = c4.closeLocation === null ? '' : `<br>H ${Number(c4High).toFixed(2)}｜L ${Number(c4Low).toFixed(2)}｜C ${Number(c4Close).toFixed(2)}`;
+  const c4VolumeDetail = avgVolume20 === null ? '' : `（今日量 ${Math.round(today.volume / 1000).toLocaleString()} 張｜20日均量 ${Math.round(avgVolume20 / 1000).toLocaleString()} 張）`;
+  const c4IntradayWarning = quoteState === 'REGULAR'
+    ? '<br><span style="color:#874d00">⚠️ 盤中估算，不是已確認的收盤進場訊號 Intraday estimate — not a confirmed end-of-day entry signal.</span>'
+    : quoteState === null
+    ? '<br><span style="color:#874d00">⚠️ 無法確認交易時段，不視為正式收盤 Session status unavailable — not treated as an official close.</span>'
+    : '';
+  const c4text = `${c4SessionLabel}<br>Close Location ${c4LocationText}｜${c4.classification}${c4PriceLine}<br>${c4.message}<br>20日量比 Volume Ratio ${c4VolumeText}${c4VolumeDetail}<br><b>Close Strength ${c4LocationText}｜Volume Ratio ${c4VolumeText}｜Decision: ${c4.decision}</b>${c4IntradayWarning}`;
+
   let stopPrice = null;
   if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
   else if (pos.trailStop && pos.trailHigh) stopPrice = pos.trailHigh * (1 - pos.trailStop / 100);
@@ -2347,6 +2431,7 @@ function recomputeWatchStatus() {
     <div style="font-size:10px;color:var(--muted);margin:6px 0;padding:4px 10px;background:var(--surface2);border-radius:6px;text-align:center;line-height:1.5">以下兩條件為二擇一，非同時滿足<br>C1/C3 are alternative entry paths — not required simultaneously</div>
     <div style="font-size:10px;font-weight:700;color:#52c41a;letter-spacing:0.3px;margin-bottom:3px">▶ 右側確認條件 Right Side Confirmation</div>
     ${row(c3ok, 'C3・短線頸部突破 Neckline Break', c3text)}
+    <div class="wc-row"><div class="wc-icon">${c4DisplayIcon}</div><div><div class="wc-label">C4 · Close Strength / Close Location 收盤強度 / 收盤位置</div><div class="wc-detail">${c4text}</div></div></div>
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${bottomSynth}
