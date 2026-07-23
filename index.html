@@ -1806,6 +1806,28 @@ function calcCloseStrength(high, low, close, volumeRatioPct) {
   return { icon, closeLocation, classification, decision, message };
 }
 
+function calcCurrentBias(closeLocation, volumeRatioPct) {
+  if (!Number.isFinite(closeLocation)) return 'Neutral 中性';
+  const hasVolume = Number.isFinite(volumeRatioPct);
+  if (closeLocation >= 90 && hasVolume && volumeRatioPct >= 80) return 'Very Strong 極強';
+  if (closeLocation >= 80 && hasVolume && volumeRatioPct >= 60) return 'Strong 強勢';
+  if (closeLocation >= 80 && hasVolume && volumeRatioPct < 60) return 'Moderately Strong 中度強勢';
+  if (closeLocation >= 80) return 'Neutral 中性';
+  if (closeLocation >= 40) return 'Neutral 中性';
+  if (closeLocation >= 20) return 'Weak 弱勢';
+  return 'Very Weak 極弱';
+}
+
+function getIntradayObservation(currentBias) {
+  if (currentBias.startsWith('Weak') || currentBias.startsWith('Very Weak')) {
+    return 'Avoid Chasing for Now 暫時避免追價';
+  }
+  if (currentBias.startsWith('Neutral')) {
+    return 'Monitoring Price Action 持續觀察價格';
+  }
+  return 'Watching for Confirmation 等待確認';
+}
+
 function getCloseSessionLabel(state) {
   if (state === 'REGULAR') return '盤中估算 Intraday Estimate';
   if (state === 'CLOSED') return '正式收盤 Official Close';
@@ -1956,6 +1978,7 @@ function switchWatchTab(tab) {
 
         <div style="font-weight:700;color:var(--primary);margin-bottom:4px">⚡ 進場觸發 Entry Trigger（上方色框）</div>
         <div style="font-size:12px;margin-bottom:6px">回答：<b>現在該進場嗎？</b> &nbsp;Answers: <b>Should I act now?</b></div>
+        <div style="font-size:12px;color:#874d00;background:#fffbe6;border:1px solid #ffe58f;border-radius:6px;padding:6px 8px;margin-bottom:8px">⚠️ 盤中顯示一律為暫時觀察，可能在收盤前改變；只有正式收盤後才能視為確認結論。<br>All market-hours observations are provisional and may change before close. Conclusions are confirmed only after the official close.</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
           <tr style="background:#f6ffed">
             <td style="padding:5px 8px;border:1px solid #b7eb8f;color:#237804;white-space:nowrap">🟢 綠 H2＋量縮</td>
@@ -1971,7 +1994,7 @@ function switchWatchTab(tab) {
           </tr>
           <tr style="background:#fff7e6">
             <td style="padding:5px 8px;border:1px solid #ffd591;color:#874d00;white-space:nowrap">🟡 橙 C3 突破</td>
-            <td style="padding:5px 8px;border:1px solid #ffd591">頸部突破今日出現。H2 預佈局時機已過，C3 本身為右側進場依據，注意追高風險。<br><span style="color:#8c8c8c">Neckline break confirmed — H2 window passed, C3 is the entry signal now.</span></td>
+            <td style="padding:5px 8px;border:1px solid #ffd591">盤中突破僅為暫時觀察；正式收盤仍站上頸部後，才視為 C3 確認。<br><span style="color:#8c8c8c">An intraday neckline break is provisional; C3 is confirmed only if the official close remains above the neckline.</span></td>
           </tr>
           <tr style="background:#fff7e6">
             <td style="padding:5px 8px;border:1px solid #ffd591;color:#874d00;white-space:nowrap">🟡 橙 量未縮</td>
@@ -1988,13 +2011,14 @@ function switchWatchTab(tab) {
         <div style="font-size:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
           <div><b>C1 空間回測：</b>價格已從高點拉回，觸及/跌破 5EMA。確認有真實的回測動作，不是虛晃一槍。<br><span style="color:#8c8c8c">Price pulled back from Zone High and touched the 5EMA — confirms a real retest, not a fake-out.</span></div>
           <div><b>C2 籌碼沉澱：</b>5EMA 與現價靠攏（乖離 ≤1.2%）且今日量縮。確認浮籌已洗出、籌碼趨於穩定。<br><span style="color:#8c8c8c">EMA converging with price + volume quiet — weak hands have been washed out.</span></div>
-          <div><b>C3 右側點火（右側確認）：</b>今日紅K突破近期盤整高點並帶量。H2 預佈局時機已過時，C3 本身即為右側進場依據，但需注意追高風險。<br><span style="color:#8c8c8c">Breakout candle — valid right-side entry when H2 window has passed, but watch for chasing risk.</span></div>
+          <div><b>C3 右側點火（右側確認）：</b>盤中突破僅標示為暫時狀態；正式收盤仍站上頸部後才確認。<br><span style="color:#8c8c8c">An intraday break remains provisional; right-side confirmation requires an official close above the neckline.</span></div>
           <div><b>C4 收盤強度：</b>收盤位置搭配20日均量比，僅作為確認指標，不改變 C1/C2/C3。<br><span style="color:#8c8c8c">Close location plus the 20-day volume ratio — confirmation only; does not change C1/C2/C3.</span></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:14px">⚠️ 三項條件不需全部成立才能進場。H2＋量縮訊號本身即可作為進場依據，C1/C2 是品質加分項，不是通行證。<br><span style="color:#8c8c8c">These are quality checks, not gates — H2 alone is actionable. C1 + C2 just tell you how clean the setup is.</span></div>
+        <div style="font-size:12px;color:var(--muted);padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:14px">⚠️ C1/C2/C3 為品質與結構參考；盤中一律不產生最終進場結論，必須等待正式收盤確認。<br><span style="color:#8c8c8c">C1/C2/C3 provide setup context. During market hours they never produce a final entry conclusion; official-close confirmation is required.</span></div>
 
         <div style="font-weight:700;color:var(--primary);margin-bottom:4px">💡 底部結論 Bottom Synthesis</div>
         <div style="font-size:12px;display:flex;flex-direction:column;gap:5px;margin-bottom:14px">
+        <div style="font-size:12px;color:#874d00;margin-bottom:6px">以下行動性結論僅適用正式收盤後 Official-close examples only; intraday values remain provisional.</div>
           <div>🟢 <b>觸發＋回測＋籌碼三者成立</b> → H2量縮（近4日）＋ C1 ＋ C2 都對齊。最佳進場，可積極操作。<br><span style="color:#8c8c8c">Fresh H2 low-vol + C1 + C2 all aligned — best possible setup, act confidently.</span></div>
           <div>🟡 <b>觸發＋回測，籌碼沉澱不足</b> → H2量縮 ＋ C1，C2 尚未到位。可考慮小量試單。<br><span style="color:#8c8c8c">H2 + C1 confirmed, C2 pending — consider a small starter position.</span></div>
           <div>🟡 <b>觸發訊號，回測區間未確認</b> → H2量縮，C1 尚未到位。謹慎判斷，確認確實在支撐區再進。<br><span style="color:#8c8c8c">H2 fired but C1 not met — be cautious, confirm the zone first.</span></div>
@@ -2196,6 +2220,9 @@ function recomputeWatchStatus() {
   const zoneLow = gf('wc-zonelow'), zoneHigh = gf('wc-zonehigh'), volThreshold = gf('wc-volth');
   const stopMode = gv('wc-stopmode');
   const today = candles[candles.length - 1];
+  const quoteState = _watchQuote?.state ?? null;
+  const isIntraday = quoteState === 'REGULAR';
+  const isUnconfirmedSession = quoteState !== 'CLOSED';
   const price = today.close;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
@@ -2263,12 +2290,19 @@ function recomputeWatchStatus() {
     const brokeNeck = today.close > neckline;
     c3ok = isBull && brokeNeck;
     const dateStr = neckDate ? `（${neckDate}）` : '';
-    c3text = `短線頸部 Neckline NT$${neckline.toFixed(2)}${dateStr}｜${isBull ? '✓紅K Bullish' : '✗非紅K Not bullish'}｜${brokeNeck ? '✓收盤突破頸部 Closed above neckline' : `✗收盤 NT$${today.close.toFixed(2)} 未突破頸部 Hasn't broken neckline yet`}`;
+    const candleStateText = isUnconfirmedSession
+      ? (isBull ? '盤中紅K Intraday up candle' : '盤中非紅K Not an intraday up candle')
+      : (isBull ? '✓紅K Bullish' : '✗非紅K Not bullish');
+    const necklineStateText = brokeNeck
+      ? (isUnconfirmedSession ? '△ 暫時突破頸部 Provisional neckline break — pending market close' : '✓收盤突破頸部 Closed above neckline')
+      : `${isUnconfirmedSession ? '目前價格 Current Price' : '收盤 Close'} NT$${today.close.toFixed(2)} 未突破頸部 Hasn't broken neckline yet`;
+    c3text = `短線頸部 Neckline NT$${neckline.toFixed(2)}${dateStr}｜${candleStateText}｜${necklineStateText}`;
+    if (isUnconfirmedSession) c3text += '｜盤中條件可能在收盤前改變 Intraday condition may change before market close';
   }
+  const c3DisplayIcon = isUnconfirmedSession && c3ok ? '🟡' : c3ok ? '✅' : '⬜';
 
   // C4: Close location + current volume versus the prior 20-session average.
   // Informational only — deliberately excluded from all existing entry decisions.
-  const quoteState = _watchQuote?.state ?? null;
   const c4High = _watchQuote?.high ?? today.high;
   const c4Low = _watchQuote?.low ?? today.low;
   const c4Close = quoteState === 'CLOSED'
@@ -2281,17 +2315,19 @@ function recomputeWatchStatus() {
   const avgVolume20 = volumeRatio20Raw !== null && volumeRatio20Raw > 0 ? today.volume / volumeRatio20Raw : null;
   const c4 = calcCloseStrength(c4High, c4Low, c4Close, volumeRatio20Pct);
   const c4SessionLabel = getCloseSessionLabel(quoteState);
-  const c4DisplayIcon = quoteState === 'REGULAR' ? '🟡' : quoteState === 'CLOSED' ? c4.icon : '⬜';
+  const c4DisplayIcon = isIntraday ? '🟡' : quoteState === 'CLOSED' ? c4.icon : '⬜';
   const c4LocationText = c4.closeLocation === null ? 'N/A' : `${Math.round(c4.closeLocation)}%`;
   const c4VolumeText = volumeRatio20Pct === null ? 'N/A' : `${Math.round(volumeRatio20Pct)}%`;
-  const c4PriceLine = c4.closeLocation === null ? '' : `<br>H ${Number(c4High).toFixed(2)}｜L ${Number(c4Low).toFixed(2)}｜C ${Number(c4Close).toFixed(2)}`;
+  const c4PriceText = c4.closeLocation === null ? '' : `H ${Number(c4High).toFixed(2)}｜L ${Number(c4Low).toFixed(2)}｜${isUnconfirmedSession ? 'Current 現價' : 'C'} ${Number(c4Close).toFixed(2)}`;
   const c4VolumeDetail = avgVolume20 === null ? '' : `（今日量 ${Math.round(today.volume / 1000).toLocaleString()} 張｜20日均量 ${Math.round(avgVolume20 / 1000).toLocaleString()} 張）`;
-  const c4IntradayWarning = quoteState === 'REGULAR'
-    ? '<br><span style="color:#874d00">⚠️ 盤中估算，不是已確認的收盤進場訊號 Intraday estimate — not a confirmed end-of-day entry signal.</span>'
-    : quoteState === null
-    ? '<br><span style="color:#874d00">⚠️ 無法確認交易時段，不視為正式收盤 Session status unavailable — not treated as an official close.</span>'
-    : '';
-  const c4text = `${c4SessionLabel}<br>Close Location ${c4LocationText}｜${c4.classification}${c4PriceLine}<br>${c4.message}<br>20日量比 Volume Ratio ${c4VolumeText}${c4VolumeDetail}<br><b>Close Strength ${c4LocationText}｜Volume Ratio ${c4VolumeText}｜Decision: ${c4.decision}</b>${c4IntradayWarning}`;
+  const currentBias = calcCurrentBias(c4.closeLocation, volumeRatio20Pct);
+  const intradayObservation = getIntradayObservation(currentBias);
+  const c4ProvisionalNote = isIntraday
+    ? 'Intraday estimate only.<br>High, Low, Current Price and Volume continue to update throughout the session.<br><b>This is NOT a confirmed end-of-day trading signal.</b><br>僅為盤中估算；最高、最低、現價與成交量仍會持續變動，並非已確認的收盤交易訊號。'
+    : 'Session status unavailable.<br><b>This is NOT treated as a confirmed end-of-day trading signal.</b><br>無法確認交易時段，因此不視為正式收盤交易訊號。';
+  const c4IntradayText = `${c4SessionLabel}<br><br><b>目前收盤強度 Current Close Strength</b><br>${c4LocationText} (${c4.classification})${c4PriceText ? `<br>${c4PriceText}` : ''}<br><br><b>目前量比 Current Volume Ratio</b><br>${c4VolumeText}${c4VolumeDetail}<br><br><b>目前偏向 Current Bias</b><br>${currentBias}<br>${intradayObservation}<br><br><b>最終決策 Final Decision</b><br>等待收盤 Pending Market Close<br><br><b>注意 Note</b><br><span style="color:#874d00">${c4ProvisionalNote}</span>`;
+  const c4OfficialText = `${c4SessionLabel}<br><br><b>收盤強度 Close Strength</b><br>${c4LocationText} (${c4.classification})${c4PriceText ? `<br>${c4PriceText}` : ''}<br>${c4.message}<br><br><b>量比 Volume Ratio</b><br>${c4VolumeText}${c4VolumeDetail}<br><br><b>最終決策 Final Decision</b><br>${c4.decision}`;
+  const c4text = isUnconfirmedSession ? c4IntradayText : c4OfficialText;
 
   let stopPrice = null;
   if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
@@ -2325,7 +2361,15 @@ function recomputeWatchStatus() {
   const freshSignal = early && early.daysAgo <= 4;
   const staleSignal = early && early.daysAgo > 4;
 
-  if (freshSignal && early.type === 'H2' && early.lowVolume) {
+  if (isUnconfirmedSession) {
+    tBg = '#fffbe6'; tBorder = '#faad14'; tColor = '#874d00';
+    tBadge = `<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#faad14;color:#fff;margin-bottom:6px">● ${isIntraday ? '盤中估算 Intraday Estimate' : '時段未知 Session Unavailable'}</span>`;
+    tTitle = c3ok
+      ? '△ C3 暫時突破 — 等待正式收盤確認 Provisional C3 break — pending market close'
+      : freshSignal
+      ? `△ ${early.type} 盤中條件出現 — 等待正式收盤確認 Provisional ${early.type} condition — pending market close`
+      : '⏳ 盤中條件監控中 — 等待正式收盤確認 Monitoring intraday conditions — pending market close';
+  } else if (freshSignal && early.type === 'H2' && early.lowVolume) {
     tBg = '#f6ffed'; tBorder = '#52c41a'; tColor = '#237804';
     tBadge = '<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;background:#52c41a;color:#fff;margin-bottom:6px">● 綠 H2＋量縮</span>';
     tTitle = '⚡ H2 量縮回升 — 進場觸發訊號 Low-volume H2 recovery — ENTRY SIGNAL';
@@ -2353,7 +2397,13 @@ function recomputeWatchStatus() {
 
   const sigLine = s => `${s.type}・${s.daysAgo === 0 ? '今天 today' : s.daysAgo + ' 天前 (' + s.date + ')'}・量 ${s.ratio !== null ? s.ratio.toFixed(1) + 'x 均量' : 'N/A'}${s.lowVolume ? ' ✓量縮' : ' ✗量未縮'}`;
 
-  if (freshSignal) {
+  if (isUnconfirmedSession) {
+    const provisionalLines = [];
+    if (freshSignal) provisionalLines.push(`<div style="font-weight:700;font-size:13px;color:${tColor};margin-bottom:4px">${sigLine(early)}</div>`);
+    if (c3ok) provisionalLines.push('<div style="font-size:12px;color:#874d00;margin-bottom:4px">頸部目前暫時突破 Provisional neckline break observed</div>');
+    tDetail = `${provisionalLines.join('')}
+      <div style="font-size:12px;color:#874d00">盤中條件僅供觀察，可能在收盤前改變；不構成已確認的進場訊號。<br>Intraday conditions are provisional and may change before market close; no entry signal is confirmed.</div>`;
+  } else if (freshSignal) {
     tDetail = `
       ${early.precedingH1 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">前一腳 preceding leg：${sigLine(early.precedingH1)}</div>` : ''}
       <div style="font-weight:700;font-size:14px;color:${tColor};margin-bottom:4px">${sigLine(early)}</div>
@@ -2388,7 +2438,10 @@ function recomputeWatchStatus() {
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────
   let sBg, sBorder, sText;
-  if (freshSignal && early.type === 'H2' && early.lowVolume && c1ok && c2ok) {
+  if (isUnconfirmedSession) {
+    sBg = '#fffbe6'; sBorder = '#faad14';
+    sText = '🟡 盤中條件觀察中 — 最終決策等待正式收盤；目前狀態可能在收盤前改變 Intraday setup monitoring — final decision pending market close; conditions may change before close';
+  } else if (freshSignal && early.type === 'H2' && early.lowVolume && c1ok && c2ok) {
     sBg = '#f6ffed'; sBorder = '#52c41a';
     sText = '🟢 觸發＋回測＋籌碼三者成立 — 可積極考慮進場 Strong setup — all conditions align';
   } else if (freshSignal && early.type === 'H2' && early.lowVolume && c1ok) {
@@ -2430,7 +2483,7 @@ function recomputeWatchStatus() {
     ${row(c2ok, 'C2・籌碼沉澱 Time + Volume', c2text)}
     <div style="font-size:10px;color:var(--muted);margin:6px 0;padding:4px 10px;background:var(--surface2);border-radius:6px;text-align:center;line-height:1.5">以下兩條件為二擇一，非同時滿足<br>C1/C3 are alternative entry paths — not required simultaneously</div>
     <div style="font-size:10px;font-weight:700;color:#52c41a;letter-spacing:0.3px;margin-bottom:3px">▶ 右側確認條件 Right Side Confirmation</div>
-    ${row(c3ok, 'C3・短線頸部突破 Neckline Break', c3text)}
+    <div class="wc-row"><div class="wc-icon">${c3DisplayIcon}</div><div><div class="wc-label">C3・短線頸部突破 Neckline Break</div><div class="wc-detail">${c3text}</div></div></div>
     <div class="wc-row"><div class="wc-icon">${c4DisplayIcon}</div><div><div class="wc-label">C4 · Close Strength / Close Location 收盤強度 / 收盤位置</div><div class="wc-detail">${c4text}</div></div></div>
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
