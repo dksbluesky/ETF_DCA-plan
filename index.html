@@ -1426,7 +1426,7 @@ function openModal(type, ctx) {
     const initialManualLow = wc.manualZoneLow ?? (initialZoneMode === 'manual' ? wc.zoneLow : '');
     const initialManualHigh = wc.manualZoneHigh ?? (initialZoneMode === 'manual' ? wc.zoneHigh : '');
     const initialMarketLevelTimeframe = wc.marketLevelTimeframe === '4h' ? '60m' : (wc.marketLevelTimeframe || 'daily');
-    _watchCandles = null; _watchMarketCandles = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status';
+    _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
@@ -1745,7 +1745,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchMarketCandles = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status';
+let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status';
 
 async function fetchDailyCandlesLite(ticker, days) {
   _watchQuote = null;
@@ -1778,7 +1778,7 @@ async function fetchDailyCandlesLite(ticker, days) {
 }
 
 async function fetchMarketLevelCandles(ticker, timeframe, dailyCandles) {
-  if (timeframe === 'daily') return dailyCandles.slice();
+  void dailyCandles;
   const fugleKey = getFugleKey();
   if (!fugleKey) throw new Error('請先至設定頁面輸入 Fugle API Key');
   let candles;
@@ -1807,17 +1807,39 @@ async function fetchMarketLevelCandles(ticker, timeframe, dailyCandles) {
       .sort((a, b) => a.date.localeCompare(b.date))
       .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
     candles = aggregateWeeklyCandles(uniqueDaily);
+  } else if (timeframe === 'daily') {
+    const to = new Date().toISOString().split('T')[0];
+    const from = new Date(Date.now() - 330 * 86400000).toISOString().split('T')[0];
+    const params = new URLSearchParams({ timeframe: 'D', from, to, sort: 'asc' });
+    const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?${params}`, {
+      headers: { 'X-API-KEY': fugleKey }
+    });
+    if (!r.ok) throw new Error(`Fugle Daily HTTP ${r.status}`);
+    const d = await r.json();
+    candles = (d.data || []).sort((a, b) => a.date.localeCompare(b.date))
+      .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
+    if (_watchQuote?.state !== 'CLOSED') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      candles = candles.filter(c => c.date.slice(0, 10) !== todayStr);
+    }
   } else {
     const params = new URLSearchParams({ timeframe: '60' });
     const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?${params}`, {
       headers: { 'X-API-KEY': fugleKey }
     });
-    if (!r.ok) throw new Error(`Fugle HTTP ${r.status}`);
+    if (r.status === 401) throw new Error('60-minute data unavailable: Fugle API key is invalid');
+    if (r.status === 403) throw new Error('60-minute data unavailable: API entitlement or quota does not allow access');
+    if (r.status === 404) throw new Error('60-minute data unavailable for this symbol');
+    if (!r.ok) throw new Error(`60-minute data unavailable: Fugle HTTP ${r.status}`);
     const d = await r.json();
     candles = (d.data || []).sort((a, b) => a.date.localeCompare(b.date))
       .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
   }
-  if (candles.length < 8) throw new Error('市場層級歷史資料不足 Not enough Market Level history');
+  if (candles.length < 8) {
+    if (timeframe === '60m')
+      throw new Error(`60-minute data unavailable: only ${candles.length} historical candles returned; at least 8 are required`);
+    throw new Error('市場層級歷史資料不足 Not enough Market Level history');
+  }
   return candles;
 }
 
@@ -2215,6 +2237,7 @@ function marketLevelTimeframeLabel(timeframe) {
 function formatWatchZone(zone, mode) {
   if (zone && Number.isFinite(zone.zoneLow) && Number.isFinite(zone.zoneHigh))
     return `NT$${zone.zoneLow.toFixed(2)} – NT$${zone.zoneHigh.toFixed(2)}`;
+  if (_watchMarketLevelError) return `資料無法使用 Data unavailable`;
   const label = marketLevelTimeframeLabel(_watchZoneEngine?.timeframe || getMarketLevelTimeframe());
   return mode === 'conservative'
     ? `未找到第二個更低的 ${label} 支撐 No second lower ${label} support`
@@ -2223,6 +2246,16 @@ function formatWatchZone(zone, mode) {
 
 function getMarketLevelTimeframe() {
   return gv('wc-level-timeframe') || 'daily';
+}
+
+function setMarketLevelTimeframeAvailability(timeframe, available, reason = '') {
+  if (timeframe !== '60m') return;
+  const option = document.querySelector('#wc-level-timeframe option[value="60m"]');
+  if (!option) return;
+  option.disabled = !available;
+  option.textContent = available
+    ? '60 Minutes 60分鐘'
+    : `60 Minutes 60分鐘 — Unavailable${reason ? `: ${reason}` : ''}`;
 }
 
 function renderSuggestedWatchZones() {
@@ -2302,17 +2335,21 @@ async function recalculateMarketLevelSuggestions(listType, posId, refreshData = 
   if (!pos || !_watchCandles) return false;
   const timeframe = getMarketLevelTimeframe();
   const summaryEl = document.getElementById('wc-level-summary');
+  _watchMarketLevelError = null;
   if (summaryEl) summaryEl.textContent = '市場層級計算中… Calculating Market Levels…';
   try {
     if (refreshData || !_watchMarketCandles || _watchZoneEngine?.timeframe !== timeframe) {
       _watchMarketCandles = await fetchMarketLevelCandles(pos.ticker, timeframe, _watchCandles);
     }
     _watchZoneEngine = buildWatchZoneEngine(_watchMarketCandles, timeframe, _watchCandles[_watchCandles.length - 1]?.close);
+    setMarketLevelTimeframeAvailability(timeframe, true);
     renderSuggestedWatchZones();
     persistWatchCriteria(listType, posId);
     return true;
   } catch (e) {
+    _watchMarketLevelError = e.message;
     _watchZoneEngine = null;
+    setMarketLevelTimeframeAvailability(timeframe, false, e.message);
     renderSuggestedWatchZones();
     if (summaryEl) summaryEl.textContent = `⚠️ ${e.message}`;
     return false;
