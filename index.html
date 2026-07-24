@@ -1422,13 +1422,17 @@ function openModal(type, ctx) {
     const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
     if (!pos) return;
     const wc = pos.watchCriteria || {};
-    _watchCandles = null; _watchPos = null; _watchQuote = null; _watchBiasLen = 50; _watchMainTab = 'status';
+    const initialZoneMode = wc.zoneMode || ((wc.zoneLow || wc.zoneHigh) ? 'manual' : 'aggressive');
+    const initialManualLow = wc.manualZoneLow ?? (initialZoneMode === 'manual' ? wc.zoneLow : '');
+    const initialManualHigh = wc.manualZoneHigh ?? (initialZoneMode === 'manual' ? wc.zoneHigh : '');
+    const initialMarketLevelTimeframe = wc.marketLevelTimeframe === '4h' ? '60m' : (wc.marketLevelTimeframe || 'daily');
+    _watchCandles = null; _watchMarketCandles = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
       <div style="text-align:right;margin:-6px 0 10px">
         <button type="button" class="btn btn-outline btn-sm" onclick="refreshWatchData('${listType}','${posId}')">🔄 重新整理 Refresh</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults('${listType}','${posId}')">↺ 重設為建議值 Reset to Suggested</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults('${listType}','${posId}')">↺ 重新計算建議區間 Recalculate Suggested Zones</button>
       </div>
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px">
         <button type="button" id="wc-mtab-status" class="btn btn-primary btn-sm" style="border-radius:6px 6px 0 0;margin-bottom:-2px;border-bottom:2px solid var(--primary)" onclick="switchWatchMainTab('status')">📊 進場狀態 Status</button>
@@ -1451,10 +1455,48 @@ function openModal(type, ctx) {
       </div>
 
       <div id="wc-panel-zone" style="display:none">
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">支撐區下緣 Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${wc.zoneLow ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
-          <div class="form-group"><label class="form-label">支撐區上緣 Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${wc.zoneHigh ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+        <div class="form-group">
+          <label class="form-label">市場層級週期 Market Level Timeframe</label>
+          <select class="form-input form-select" id="wc-level-timeframe" onchange="onMarketLevelTimeframeChange('${listType}','${posId}')">
+            <option value="weekly"${initialMarketLevelTimeframe === 'weekly' ? ' selected' : ''}>Weekly 週線</option>
+            <option value="daily"${initialMarketLevelTimeframe === 'daily' ? ' selected' : ''}>Daily 日線（預設 Default）</option>
+            <option value="60m"${initialMarketLevelTimeframe === '60m' ? ' selected' : ''}>60 Minutes 60分鐘</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px">只影響市場層級與建議區間，不改變 Entry Watch 的日線判斷。Only affects Market Levels and Suggested Zones.</div>
         </div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:8px">── 建議觀察區間 Suggested Watch Zones ──</div>
+        <div id="wc-level-summary" style="font-size:11px;color:var(--muted);line-height:1.5;margin:-3px 0 9px">市場層級計算中… Calculating Market Levels…</div>
+        <div class="form-row" style="align-items:stretch">
+          <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
+            <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Aggressive 積極</div>
+            <div id="wc-suggest-aggressive" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5">較早開始監控。安全邊際較低。<br>Earlier monitoring. Lower margin of safety.</div>
+          </div>
+          <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
+            <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Conservative 保守</div>
+            <div id="wc-suggest-conservative" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5">等待更深回檔。安全邊際較高。<br>Wait for a deeper pullback. Higher margin of safety.</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin:4px 0 8px">── 區間模式 Zone Mode ──</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="aggressive"${initialZoneMode === 'aggressive' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','aggressive')"> Aggressive 積極</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="conservative"${initialZoneMode === 'conservative' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','conservative')"> Conservative 保守</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="manual"${initialZoneMode === 'manual' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','manual')"> Manual 手動</label>
+        </div>
+
+        <div style="border:2px solid var(--primary);border-radius:10px;padding:10px 12px;background:var(--accent-l);margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:5px">ACTIVE ZONE｜目前啟用區間</div>
+          <div id="wc-active-zone" style="font-size:17px;font-weight:700;margin-bottom:3px">—</div>
+          <div style="font-size:12px"><span style="color:var(--muted)">Source 來源：</span><b id="wc-active-source">—</b></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">啟用區間下緣 Active Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualLow : (wc.zoneLow ?? '')}"${initialZoneMode === 'manual' ? '' : ' readonly'} oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+          <div class="form-group"><label class="form-label">啟用區間上緣 Active Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualHigh : (wc.zoneHigh ?? '')}"${initialZoneMode === 'manual' ? '' : ' readonly'} oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin:-6px 0 10px">區間設定只決定何處開始監控，不是買入訊號。Zone Setup defines where monitoring begins; it is not a buy signal.</div>
         <div id="wc-zone-check"></div>
         <div class="form-group" style="margin-top:10px"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
         <div class="form-group">
@@ -1468,7 +1510,10 @@ function openModal(type, ctx) {
       </div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
             <button class="btn btn-primary" onclick="saveWatchCriteria('${listType}','${posId}')">儲存設定 Save</button>`;
-    setTimeout(() => loadWatchStatus(listType, posId), 50);
+    setTimeout(() => {
+      setActiveWatchZoneInputs(initialZoneMode, null);
+      loadWatchStatus(listType, posId);
+    }, 50);
   }
 
   document.getElementById('m-title').textContent = title;
@@ -1700,7 +1745,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchPos = null, _watchQuote = null, _watchBiasLen = 50, _watchMainTab = 'status';
+let _watchCandles = null, _watchMarketCandles = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status';
 
 async function fetchDailyCandlesLite(ticker, days) {
   _watchQuote = null;
@@ -1730,6 +1775,72 @@ async function fetchDailyCandlesLite(ticker, days) {
     }
   } catch (e) { console.warn('Watch: live quote merge failed:', e.message); }
   return candles;
+}
+
+async function fetchMarketLevelCandles(ticker, timeframe, dailyCandles) {
+  if (timeframe === 'daily') return dailyCandles.slice();
+  const fugleKey = getFugleKey();
+  if (!fugleKey) throw new Error('請先至設定頁面輸入 Fugle API Key');
+  let candles;
+  if (timeframe === 'weekly') {
+    // Build a deeper Weekly structure from three API-safe Daily windows. Native W
+    // requests for some symbols return only a shallow history or reject date ranges.
+    const raw = [];
+    const windowDays = 330;
+    for (let part = 0; part < 3; part++) {
+      const toDate = new Date(Date.now() - part * windowDays * 86400000);
+      const fromDate = new Date(Date.now() - (part + 1) * windowDays * 86400000);
+      const params = new URLSearchParams({
+        timeframe: 'D',
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0],
+        sort: 'asc'
+      });
+      const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?${params}`, {
+        headers: { 'X-API-KEY': fugleKey }
+      });
+      if (!r.ok) throw new Error(`Fugle Weekly source HTTP ${r.status}`);
+      const d = await r.json();
+      raw.push(...(d.data || []));
+    }
+    const uniqueDaily = [...new Map(raw.map(c => [c.date, c])).values()]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
+    candles = aggregateWeeklyCandles(uniqueDaily);
+  } else {
+    const params = new URLSearchParams({ timeframe: '60' });
+    const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?${params}`, {
+      headers: { 'X-API-KEY': fugleKey }
+    });
+    if (!r.ok) throw new Error(`Fugle HTTP ${r.status}`);
+    const d = await r.json();
+    candles = (d.data || []).sort((a, b) => a.date.localeCompare(b.date))
+      .map(c => ({ date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0 }));
+  }
+  if (candles.length < 8) throw new Error('市場層級歷史資料不足 Not enough Market Level history');
+  return candles;
+}
+
+function aggregateWeeklyCandles(dailyCandles) {
+  const weeks = new Map();
+  dailyCandles.forEach(c => {
+    const date = new Date(`${c.date.slice(0, 10)}T00:00:00Z`);
+    const day = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    const key = `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+    if (!weeks.has(key)) weeks.set(key, []);
+    weeks.get(key).push(c);
+  });
+  return [...weeks.entries()].map(([week, bars]) => ({
+    date: week,
+    open: bars[0].open,
+    high: Math.max(...bars.map(c => c.high)),
+    low: Math.min(...bars.map(c => c.low)),
+    close: bars[bars.length - 1].close,
+    volume: bars.reduce((sum, c) => sum + c.volume, 0)
+  }));
 }
 
 // 5-period EMA (matches the "雙重 EMA (5 & 20)" indicator on the user's TradingView chart —
@@ -1886,6 +1997,336 @@ function detectWatchDefaults(candles) {
   return { zoneLow, zoneHigh, volThreshold, breakoutDate: breakout.date, breakoutHigh: breakout.high, breakoutVolLots: Math.round(breakout.volume / 1000) };
 }
 
+// Market Level Engine boundary. Entry Watch only reads wc-zonelow / wc-zonehigh,
+// so level detection, ranking and mode selection remain fully upstream.
+
+/**
+ * @typedef {Object} MarketLevel
+ * @property {number} price
+ * @property {'Support'|'Resistance'} type
+ * @property {number} score
+ * @property {string} source
+ * @property {string} timeframe
+ * @property {string} description
+ */
+
+function calcMarketATR(candles, period = 14) {
+  if (!candles || candles.length < 2) return null;
+  const trs = [];
+  for (let i = 1; i < candles.length; i++) {
+    const c = candles[i], prev = candles[i - 1];
+    trs.push(Math.max(c.high - c.low, Math.abs(c.high - prev.close), Math.abs(c.low - prev.close)));
+  }
+  const sample = trs.slice(-period);
+  return sample.reduce((sum, value) => sum + value, 0) / sample.length;
+}
+
+function calcMarketEMA(candles, period = 20) {
+  if (!candles || candles.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = candles.slice(0, period).reduce((sum, c) => sum + c.close, 0) / period;
+  for (let i = period; i < candles.length; i++) ema = candles[i].close * k + ema * (1 - k);
+  return ema;
+}
+
+function marketLevelCandidate(price, type, score, source, timeframe, description) {
+  return { price, type, score, source, timeframe, description };
+}
+
+function detectRawMarketLevels(candles, timeframe) {
+  if (!candles || candles.length < 8) return [];
+  const levels = [];
+  const atr = calcMarketATR(candles) || candles[candles.length - 1].close * 0.02;
+  const avgVolume = candles.reduce((sum, c) => sum + c.volume, 0) / candles.length;
+  const pivotSpan = timeframe === 'weekly' ? 1 : 2;
+
+  const addStructuralLow = (sample, source, score) => {
+    if (!sample.length) return;
+    const low = sample.reduce((lowest, c) => c.low < lowest.low ? c : lowest);
+    levels.push(marketLevelCandidate(low.low, 'Support', score, source, timeframe, `${source} at ${low.date}`));
+  };
+  addStructuralLow(candles, 'Major Structural Low', 52);
+  addStructuralLow(candles.slice(-Math.max(12, Math.floor(candles.length / 2))), 'Recent Structural Low', 44);
+
+  for (let i = pivotSpan; i < candles.length - pivotSpan; i++) {
+    const c = candles[i];
+    const left = candles.slice(i - pivotSpan, i), right = candles.slice(i + 1, i + pivotSpan + 1);
+    const pivotLow = left.every(x => c.low < x.low) && right.every(x => c.low <= x.low);
+    const pivotHigh = left.every(x => c.high > x.high) && right.every(x => c.high >= x.high);
+    const volumeBonus = avgVolume > 0 && c.volume >= avgVolume * 1.25 ? 8 : 0;
+    const ageBonus = i >= candles.length - Math.max(12, Math.floor(candles.length / 3)) ? 4 : 0;
+    if (pivotLow) {
+      const level = marketLevelCandidate(c.low, 'Support', 28 + volumeBonus + ageBonus, 'Pivot Low', timeframe, `Pivot low at ${c.date}`);
+      level.originIndex = i;
+      levels.push(level);
+    }
+    if (pivotHigh) {
+      const level = marketLevelCandidate(c.high, 'Resistance', 28 + volumeBonus + ageBonus, 'Pivot High', timeframe, `Pivot high at ${c.date}`);
+      level.originIndex = i;
+      levels.push(level);
+    }
+    const body = Math.abs(c.close - c.open);
+    const lowerWick = Math.min(c.open, c.close) - c.low;
+    if (c.close > c.open && lowerWick >= Math.max(body * 1.2, atr * 0.15) && avgVolume > 0 && c.volume >= avgVolume * 1.25) {
+      levels.push(marketLevelCandidate(c.low, 'Support', 42, 'High-volume Reversal Low', timeframe, `Bullish rejection at ${c.date}`));
+    }
+  }
+
+  const baseWindow = timeframe === 'weekly' ? 3 : 5;
+  for (let i = 0; i + baseWindow <= candles.length; i++) {
+    const window = candles.slice(i, i + baseWindow);
+    const rangeHigh = Math.max(...window.map(c => c.high));
+    const rangeLow = Math.min(...window.map(c => c.low));
+    if (rangeHigh - rangeLow <= atr * 1.5) {
+      const baseVolume = window.reduce((sum, c) => sum + c.volume, 0) / window.length;
+      const volumeBonus = avgVolume > 0 && baseVolume >= avgVolume ? 6 : 0;
+      levels.push(marketLevelCandidate(rangeLow, 'Support', 24 + volumeBonus, 'Consolidation Base', timeframe, `${baseWindow}-bar consolidation base`));
+      levels.push(marketLevelCandidate(rangeHigh, 'Resistance', 18 + volumeBonus, 'Consolidation Ceiling', timeframe, `${baseWindow}-bar consolidation ceiling`));
+    }
+  }
+
+  const tolerance = atr * 0.3;
+  const pivots = levels.filter(level => level.source === 'Pivot High');
+  pivots.forEach(pivot => {
+    const breakOffset = candles.slice(pivot.originIndex + 1).findIndex(c => c.close > pivot.price + tolerance);
+    const breakIdx = breakOffset < 0 ? -1 : pivot.originIndex + 1 + breakOffset;
+    if (breakIdx < 0) return;
+    const retest = candles.slice(breakIdx + 1).find(c => c.low <= pivot.price + tolerance && c.close >= pivot.price - tolerance);
+    if (retest) levels.push(marketLevelCandidate(pivot.price, 'Support', 48, 'Breakout Retest / Role Reversal', timeframe, `Former resistance retested near ${retest.date}`));
+  });
+
+  for (let i = 1; i < candles.length; i++) {
+    const prev = candles[i - 1], current = candles[i];
+    if (current.low > prev.high) {
+      levels.push(marketLevelCandidate(prev.high, 'Support', 30, 'Gap Boundary', timeframe, `Gap-up lower boundary at ${current.date}`));
+      levels.push(marketLevelCandidate(current.low, 'Support', 24, 'Gap Boundary', timeframe, `Gap-up upper boundary at ${current.date}`));
+    } else if (current.high < prev.low) {
+      levels.push(marketLevelCandidate(prev.low, 'Resistance', 30, 'Gap Boundary', timeframe, `Gap-down upper boundary at ${current.date}`));
+      levels.push(marketLevelCandidate(current.high, 'Resistance', 24, 'Gap Boundary', timeframe, `Gap-down lower boundary at ${current.date}`));
+    }
+  }
+  return levels;
+}
+
+function mergeAndRankMarketLevels(rawLevels, candles, timeframe, currentPriceOverride = null) {
+  if (!rawLevels.length) return [];
+  const atr = calcMarketATR(candles) || candles[candles.length - 1].close * 0.02;
+  const mergeDistance = Math.max(atr * 0.3, candles[candles.length - 1].close * 0.003);
+  const ema20 = calcMarketEMA(candles, 20);
+  const currentPrice = currentPriceOverride || candles[candles.length - 1].close;
+  const merged = [];
+
+  rawLevels.map(level => ({
+    ...level,
+    // A level below price is potential support; a level above price is overhead
+    // resistance. This prevents broken support above price being used as a buy zone.
+    type: level.price < currentPrice ? 'Support' : 'Resistance'
+  })).sort((a, b) => a.price - b.price).forEach(level => {
+    const existing = merged.find(item => item.type === level.type && Math.abs(item.price - level.price) <= mergeDistance);
+    if (!existing) {
+      merged.push({ ...level, sources: new Set([level.source]), reactions: 1 });
+      return;
+    }
+    const weight = Math.max(level.score, 1);
+    existing.price = (existing.price * existing.score + level.price * weight) / (existing.score + weight);
+    existing.score = Math.max(existing.score, level.score) + 8;
+    existing.reactions += 1;
+    existing.sources.add(level.source);
+    existing.description = `${existing.reactions} nearby reactions merged`;
+  });
+
+  merged.forEach(level => {
+    if (level.reactions >= 3) level.score += Math.min(18, (level.reactions - 2) * 6);
+    if (ema20 !== null && Math.abs(level.price - ema20) <= mergeDistance) level.score += 6;
+    level.score = Math.min(100, Math.round(level.score));
+    level.price = +level.price.toFixed(2);
+    level.source = [...level.sources].join(' + ');
+    level.timeframe = timeframe;
+    delete level.sources;
+    delete level.originIndex;
+  });
+
+  const supportsByPrice = merged.filter(level => level.type === 'Support' && level.price < currentPrice)
+    .sort((a, b) => b.price - a.price);
+  const nearestSupport = supportsByPrice[0] || null;
+  const strongestLowerSupport = supportsByPrice.slice(1).sort((a, b) => b.score - a.score || b.price - a.price)[0] || null;
+  const remainingSupports = supportsByPrice
+    .filter(level => level !== nearestSupport && level !== strongestLowerSupport)
+    .sort((a, b) => b.score - a.score);
+  const supports = [nearestSupport, strongestLowerSupport, ...remainingSupports].filter(Boolean);
+  const resistances = merged.filter(level => level.type === 'Resistance')
+    .sort((a, b) => b.score - a.score);
+  const selected = [...supports.slice(0, 3), ...resistances.slice(0, 2)]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  return selected.length >= 3 ? selected : merged.sort((a, b) => b.score - a.score).slice(0, 5);
+}
+
+function buildZoneAroundSupport(level, atr) {
+  if (!level || !atr) return null;
+  const halfWidth = Math.max(atr * 0.35, level.price * 0.004);
+  return {
+    zoneLow: +(level.price - halfWidth).toFixed(2),
+    zoneHigh: +(level.price + halfWidth).toFixed(2),
+    source: level.source,
+    supportPrice: level.price,
+    score: level.score,
+    timeframe: level.timeframe
+  };
+}
+
+function selectSuggestedWatchZones(levels, currentPrice, atr) {
+  const supports = levels.filter(level => level.type === 'Support' && level.price < currentPrice)
+    .sort((a, b) => b.price - a.price);
+  const aggressive = supports[0] || null;
+  const conservative = supports.find(level => !aggressive || level.price < aggressive.price - Math.max(atr * 0.3, currentPrice * 0.003)) || null;
+  return {
+    aggressive: buildZoneAroundSupport(aggressive, atr),
+    conservative: buildZoneAroundSupport(conservative, atr)
+  };
+}
+
+function buildWatchZoneEngine(candles, timeframe, currentPriceOverride = null) {
+  const rawLevels = detectRawMarketLevels(candles, timeframe);
+  const marketLevels = mergeAndRankMarketLevels(rawLevels, candles, timeframe, currentPriceOverride);
+  const atr = calcMarketATR(candles);
+  const currentPrice = currentPriceOverride || candles[candles.length - 1]?.close;
+  const suggestedZones = selectSuggestedWatchZones(marketLevels, currentPrice, atr);
+  console.debug('Market Level Engine', { timeframe, marketLevels, suggestedZones });
+  return { timeframe, marketLevels, atr, suggestedZones };
+}
+
+function getWatchZoneMode() {
+  return document.querySelector('input[name="wc-zonemode"]:checked')?.value || 'manual';
+}
+
+function zoneModeLabel(mode) {
+  if (mode === 'aggressive') return 'Aggressive 積極';
+  if (mode === 'conservative') return 'Conservative 保守';
+  return 'Manual 手動';
+}
+
+function marketLevelTimeframeLabel(timeframe) {
+  if (timeframe === 'weekly') return 'Weekly';
+  if (timeframe === '60m') return '60-minute';
+  return 'Daily';
+}
+
+function formatWatchZone(zone, mode) {
+  if (zone && Number.isFinite(zone.zoneLow) && Number.isFinite(zone.zoneHigh))
+    return `NT$${zone.zoneLow.toFixed(2)} – NT$${zone.zoneHigh.toFixed(2)}`;
+  const label = marketLevelTimeframeLabel(_watchZoneEngine?.timeframe || getMarketLevelTimeframe());
+  return mode === 'conservative'
+    ? `未找到第二個更低的 ${label} 支撐 No second lower ${label} support`
+    : `未找到有效的 ${label} 支撐 No valid ${label} support`;
+}
+
+function getMarketLevelTimeframe() {
+  return gv('wc-level-timeframe') || 'daily';
+}
+
+function renderSuggestedWatchZones() {
+  const aggressiveEl = document.getElementById('wc-suggest-aggressive');
+  const conservativeEl = document.getElementById('wc-suggest-conservative');
+  const summaryEl = document.getElementById('wc-level-summary');
+  if (aggressiveEl) aggressiveEl.textContent = formatWatchZone(_watchZoneEngine?.suggestedZones?.aggressive, 'aggressive');
+  if (conservativeEl) conservativeEl.textContent = formatWatchZone(_watchZoneEngine?.suggestedZones?.conservative, 'conservative');
+  if (summaryEl) {
+    const levels = _watchZoneEngine?.marketLevels || [];
+    summaryEl.textContent = levels.length
+      ? `已保留 ${levels.length} 個主要市場層級（${_watchZoneEngine.timeframe}）。分數與來源可在瀏覽器 Console 檢視。${levels.length} major Market Levels retained; scores are available in Console.`
+      : '未偵測到足夠的市場層級 No sufficient Market Levels detected.';
+  }
+}
+
+function renderActiveWatchZone() {
+  const mode = getWatchZoneMode();
+  const low = gf('wc-zonelow'), high = gf('wc-zonehigh');
+  const zoneEl = document.getElementById('wc-active-zone');
+  const sourceEl = document.getElementById('wc-active-source');
+  if (zoneEl) zoneEl.textContent = low && high ? `NT$${low.toFixed(2)} – NT$${high.toFixed(2)}` : '尚未設定 Not set';
+  if (sourceEl) sourceEl.textContent = zoneModeLabel(mode);
+}
+
+function setActiveWatchZoneInputs(mode, zone) {
+  const lowEl = document.getElementById('wc-zonelow');
+  const highEl = document.getElementById('wc-zonehigh');
+  if (!lowEl || !highEl) return;
+  lowEl.readOnly = mode !== 'manual';
+  highEl.readOnly = mode !== 'manual';
+  lowEl.style.background = mode === 'manual' ? '' : 'var(--surface2)';
+  highEl.style.background = mode === 'manual' ? '' : 'var(--surface2)';
+  if (zone) {
+    lowEl.value = zone.zoneLow ?? '';
+    highEl.value = zone.zoneHigh ?? '';
+  }
+  renderActiveWatchZone();
+}
+
+function onWatchZoneModeChange(listType, posId, mode) {
+  const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (!pos) return;
+  const previous = pos.watchCriteria || {};
+  const previousMode = previous.zoneMode || ((previous.zoneLow || previous.zoneHigh) ? 'manual' : 'aggressive');
+  if (previousMode === 'manual') {
+    previous.manualZoneLow = gf('wc-zonelow') || null;
+    previous.manualZoneHigh = gf('wc-zonehigh') || null;
+  }
+
+  let zone = null;
+  if (mode === 'manual') {
+    const fallbackLow = previous.zoneLow ?? gf('wc-zonelow') ?? null;
+    const fallbackHigh = previous.zoneHigh ?? gf('wc-zonehigh') ?? null;
+    zone = {
+      zoneLow: previous.manualZoneLow ?? fallbackLow,
+      zoneHigh: previous.manualZoneHigh ?? fallbackHigh
+    };
+  } else {
+    zone = _watchZoneEngine?.suggestedZones?.[mode] || null;
+    if (!zone) {
+      const priorRadio = document.querySelector(`input[name="wc-zonemode"][value="${previousMode}"]`);
+      if (priorRadio) priorRadio.checked = true;
+      toast('此建議區間目前無法計算 Suggested zone is unavailable', 'err');
+      return;
+    }
+  }
+
+  pos.watchCriteria = previous;
+  setActiveWatchZoneInputs(mode, zone);
+  persistWatchCriteria(listType, posId);
+  recomputeWatchStatus();
+}
+
+async function recalculateMarketLevelSuggestions(listType, posId, refreshData = false) {
+  const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (!pos || !_watchCandles) return false;
+  const timeframe = getMarketLevelTimeframe();
+  const summaryEl = document.getElementById('wc-level-summary');
+  if (summaryEl) summaryEl.textContent = '市場層級計算中… Calculating Market Levels…';
+  try {
+    if (refreshData || !_watchMarketCandles || _watchZoneEngine?.timeframe !== timeframe) {
+      _watchMarketCandles = await fetchMarketLevelCandles(pos.ticker, timeframe, _watchCandles);
+    }
+    _watchZoneEngine = buildWatchZoneEngine(_watchMarketCandles, timeframe, _watchCandles[_watchCandles.length - 1]?.close);
+    renderSuggestedWatchZones();
+    persistWatchCriteria(listType, posId);
+    return true;
+  } catch (e) {
+    _watchZoneEngine = null;
+    renderSuggestedWatchZones();
+    if (summaryEl) summaryEl.textContent = `⚠️ ${e.message}`;
+    return false;
+  }
+}
+
+async function onMarketLevelTimeframeChange(listType, posId) {
+  persistWatchCriteria(listType, posId);
+  const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
+  toast(ok
+    ? '已重新計算建議區間；目前啟用區間未變更 Suggested Zones recalculated; Active Zone unchanged'
+    : '無法計算此週期的市場層級 Could not calculate this timeframe', ok ? 'ok' : 'err');
+}
+
 async function loadWatchStatus(listType, posId) {
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   const refEl = document.getElementById('wc-ref');
@@ -1895,16 +2336,24 @@ async function loadWatchStatus(listType, posId) {
     // (checkEarlySignal) has enough warm-up; EMA50 needs 50 trading days just for its first
     // value, leaving very little room left for the leg-tracker to stabilize on a tighter window.
     const candles = await fetchDailyCandlesLite(pos.ticker, 130);
-    _watchCandles = candles; _watchPos = pos;
+    _watchCandles = candles; _watchMarketCandles = null; _watchPos = pos;
     const def = detectWatchDefaults(candles);
+    await recalculateMarketLevelSuggestions(listType, posId, true);
     const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
     if (def) {
-      if (zlEl && !zlEl.value) zlEl.value = def.zoneLow;
-      if (zhEl && !zhEl.value) zhEl.value = def.zoneHigh;
       if (vtEl && !vtEl.value) vtEl.value = def.volThreshold;
     }
+    const zoneMode = getWatchZoneMode();
+    const activeZoneMissing = !gf('wc-zonelow') || !gf('wc-zonehigh');
+    if (zoneMode === 'manual') {
+      setActiveWatchZoneInputs('manual', null);
+    } else if (activeZoneMissing) {
+      setActiveWatchZoneInputs(zoneMode, _watchZoneEngine?.suggestedZones?.[zoneMode] || null);
+    } else {
+      setActiveWatchZoneInputs(zoneMode, null);
+    }
     if (refEl) refEl.innerHTML = def
-      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b>（近30日收盤最高日 highest-closing day in the last 30 days），最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。以上區間/警戒值為系統建議，可自行調整。`
+      ? `📌 自動偵測參考｜Auto-detected reference: <b>${def.breakoutDate}</b>（近30日收盤最高日 highest-closing day in the last 30 days），最高 NT$${def.breakoutHigh.toFixed(2)}，成交量 ${def.breakoutVolLots.toLocaleString()} 張。建議觀察區間只決定何處開始監控，不是買入訊號。Suggested Watch Zones define where monitoring begins; they are not buy signals.`
       : '⚠️ 資料不足，無法自動偵測參考日，請手動輸入區間與警戒值 Not enough history to auto-detect a reference day — please enter the zone/threshold manually.';
     recomputeWatchStatus();
   } catch (e) {
@@ -1923,16 +2372,25 @@ function onWatchStopModeChange(listType, posId) {
 // user's last typed values instead of losing them back to auto-detected suggestions.
 function onWatchFieldInput(listType, posId) {
   persistWatchCriteria(listType, posId);
-  recomputeZoneValidation();
+  renderActiveWatchZone();
   recomputeWatchStatus();
 }
 
 function persistWatchCriteria(listType, posId) {
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   if (!pos) return;
+  const previous = pos.watchCriteria || {};
+  const zoneMode = getWatchZoneMode();
+  const zoneLow = gf('wc-zonelow') || null;
+  const zoneHigh = gf('wc-zonehigh') || null;
   pos.watchCriteria = {
-    zoneLow: gf('wc-zonelow') || null,
-    zoneHigh: gf('wc-zonehigh') || null,
+    ...previous,
+    marketLevelTimeframe: getMarketLevelTimeframe(),
+    zoneMode,
+    zoneLow,
+    zoneHigh,
+    manualZoneLow: zoneMode === 'manual' ? zoneLow : (previous.manualZoneLow ?? null),
+    manualZoneHigh: zoneMode === 'manual' ? zoneHigh : (previous.manualZoneHigh ?? null),
     volThreshold: gf('wc-volth') || null,
     stopLossMode: gv('wc-stopmode') || 'trail',
     stopLossManual: gf('wc-stopmanual') || null
@@ -2497,17 +2955,12 @@ function refreshWatchData(listType, posId) {
   loadWatchStatus(listType, posId);
 }
 
-function resetWatchDefaults(listType, posId) {
+async function resetWatchDefaults(listType, posId) {
   if (!_watchCandles) { toast('股價資料尚未載入完成 Price data still loading', 'err'); return; }
-  const def = detectWatchDefaults(_watchCandles);
-  if (!def) { toast('無法計算建議值 Could not compute suggested defaults', 'err'); return; }
-  const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
-  if (zlEl) zlEl.value = def.zoneLow;
-  if (zhEl) zhEl.value = def.zoneHigh;
-  if (vtEl) vtEl.value = def.volThreshold;
-  persistWatchCriteria(listType, posId);
-  recomputeWatchStatus();
-  toast('已重設為系統建議值 Reset to suggested defaults', 'ok');
+  const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
+  toast(ok
+    ? '已重新計算市場層級與建議觀察區間；目前啟用區間未變更 Market Levels and Suggested Zones recalculated; Active Zone unchanged'
+    : '無法重新計算建議值 Could not recalculate suggestions', ok ? 'ok' : 'err');
 }
 
 function saveWatchCriteria(listType, posId) {
