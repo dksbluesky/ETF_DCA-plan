@@ -1,9 +1,7 @@
 name: Cleanup Workflow Runs
 
 on:
-  workflow_run:
-    workflows: ["pages build and deployment"]
-    types: [completed]
+  page_build:
   workflow_dispatch:
 
 jobs:
