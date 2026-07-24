@@ -179,11 +179,11 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 233.5,
-        "zoneHigh": 236.5,
+        "zoneLow": 232.05,
+        "zoneHigh": 228.1,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 230
+        "stopLossManual": 227
       }
     },
     {
@@ -220,5 +220,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-24T03:04:28.021Z"
+  "lastUpdated": "2026-07-24T03:06:57.715Z"
 }
