@@ -1432,7 +1432,7 @@ function openModal(type, ctx) {
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
       <div style="text-align:right;margin:-6px 0 10px">
         <button type="button" class="btn btn-outline btn-sm" onclick="refreshWatchData('${listType}','${posId}')">🔄 重新整理 Refresh</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="resetWatchDefaults('${listType}','${posId}')">↺ 重新計算建議區間 Recalculate Suggested Zones</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="refreshWatchSuggestions('${listType}','${posId}')">↺ 更新建議 Refresh Suggestions</button>
       </div>
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px">
         <button type="button" id="wc-mtab-status" class="btn btn-primary btn-sm" style="border-radius:6px 6px 0 0;margin-bottom:-2px;border-bottom:2px solid var(--primary)" onclick="switchWatchMainTab('status')">📊 進場狀態 Status</button>
@@ -1470,20 +1470,21 @@ function openModal(type, ctx) {
           <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
             <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Aggressive 積極</div>
             <div id="wc-suggest-aggressive" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
+            <button type="button" id="wc-apply-aggressive" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','aggressive')" disabled>套用 Apply</button>
             <div style="font-size:11px;color:var(--muted);line-height:1.5">較早開始監控。安全邊際較低。<br>Earlier monitoring. Lower margin of safety.</div>
           </div>
           <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
             <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Conservative 保守</div>
             <div id="wc-suggest-conservative" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
+            <button type="button" id="wc-apply-conservative" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','conservative')" disabled>套用 Apply</button>
             <div style="font-size:11px;color:var(--muted);line-height:1.5">等待更深回檔。安全邊際較高。<br>Wait for a deeper pullback. Higher margin of safety.</div>
           </div>
         </div>
 
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin:4px 0 8px">── 區間模式 Zone Mode ──</div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin-bottom:12px">
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="aggressive"${initialZoneMode === 'aggressive' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','aggressive')"> Aggressive 積極</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="conservative"${initialZoneMode === 'conservative' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','conservative')"> Conservative 保守</label>
-          <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="wc-zonemode" value="manual"${initialZoneMode === 'manual' ? ' checked' : ''} onclick="onWatchZoneModeChange('${listType}','${posId}','manual')"> Manual 手動</label>
+        <input type="hidden" id="wc-zonemode" value="${initialZoneMode}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin:4px 0 12px">
+          <span style="font-size:11px;color:var(--muted);line-height:1.5">建議區間只會在按下 Apply 後成為目前啟用區間。Suggestions become active only after Apply.</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="applySuggestedWatchZone('${listType}','${posId}','manual')">套用手動區間 Apply Manual</button>
         </div>
 
         <div style="border:2px solid var(--primary);border-radius:10px;padding:10px 12px;background:var(--accent-l);margin-bottom:12px">
@@ -2219,7 +2220,7 @@ function buildWatchZoneEngine(candles, timeframe, currentPriceOverride = null) {
 }
 
 function getWatchZoneMode() {
-  return document.querySelector('input[name="wc-zonemode"]:checked')?.value || 'manual';
+  return gv('wc-zonemode') || 'manual';
 }
 
 function zoneModeLabel(mode) {
@@ -2261,9 +2262,15 @@ function setMarketLevelTimeframeAvailability(timeframe, available, reason = '') 
 function renderSuggestedWatchZones() {
   const aggressiveEl = document.getElementById('wc-suggest-aggressive');
   const conservativeEl = document.getElementById('wc-suggest-conservative');
+  const aggressiveApplyEl = document.getElementById('wc-apply-aggressive');
+  const conservativeApplyEl = document.getElementById('wc-apply-conservative');
   const summaryEl = document.getElementById('wc-level-summary');
-  if (aggressiveEl) aggressiveEl.textContent = formatWatchZone(_watchZoneEngine?.suggestedZones?.aggressive, 'aggressive');
-  if (conservativeEl) conservativeEl.textContent = formatWatchZone(_watchZoneEngine?.suggestedZones?.conservative, 'conservative');
+  const aggressive = _watchZoneEngine?.suggestedZones?.aggressive;
+  const conservative = _watchZoneEngine?.suggestedZones?.conservative;
+  if (aggressiveEl) aggressiveEl.textContent = formatWatchZone(aggressive, 'aggressive');
+  if (conservativeEl) conservativeEl.textContent = formatWatchZone(conservative, 'conservative');
+  if (aggressiveApplyEl) aggressiveApplyEl.disabled = !aggressive;
+  if (conservativeApplyEl) conservativeApplyEl.disabled = !conservative;
   if (summaryEl) {
     const levels = _watchZoneEngine?.marketLevels || [];
     summaryEl.textContent = levels.length
@@ -2296,11 +2303,11 @@ function setActiveWatchZoneInputs(mode, zone) {
   renderActiveWatchZone();
 }
 
-function onWatchZoneModeChange(listType, posId, mode) {
+function applySuggestedWatchZone(listType, posId, mode) {
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   if (!pos) return;
   const previous = pos.watchCriteria || {};
-  const previousMode = previous.zoneMode || ((previous.zoneLow || previous.zoneHigh) ? 'manual' : 'aggressive');
+  const previousMode = getWatchZoneMode();
   if (previousMode === 'manual') {
     previous.manualZoneLow = gf('wc-zonelow') || null;
     previous.manualZoneHigh = gf('wc-zonehigh') || null;
@@ -2317,17 +2324,23 @@ function onWatchZoneModeChange(listType, posId, mode) {
   } else {
     zone = _watchZoneEngine?.suggestedZones?.[mode] || null;
     if (!zone) {
-      const priorRadio = document.querySelector(`input[name="wc-zonemode"][value="${previousMode}"]`);
-      if (priorRadio) priorRadio.checked = true;
       toast('此建議區間目前無法計算 Suggested zone is unavailable', 'err');
       return;
     }
   }
 
   pos.watchCriteria = previous;
+  const modeEl = document.getElementById('wc-zonemode');
+  if (modeEl) modeEl.value = mode;
   setActiveWatchZoneInputs(mode, zone);
   persistWatchCriteria(listType, posId);
   recomputeWatchStatus();
+  toast(`${zoneModeLabel(mode)} 已套用；進場狀態已重新計算 Applied; Entry Watch recalculated`, 'ok');
+}
+
+// Backward-compatible entry point for older cached markup.
+function onWatchZoneModeChange(listType, posId, mode) {
+  applySuggestedWatchZone(listType, posId, mode);
 }
 
 async function recalculateMarketLevelSuggestions(listType, posId, refreshData = false) {
@@ -2344,7 +2357,6 @@ async function recalculateMarketLevelSuggestions(listType, posId, refreshData = 
     _watchZoneEngine = buildWatchZoneEngine(_watchMarketCandles, timeframe, _watchCandles[_watchCandles.length - 1]?.close);
     setMarketLevelTimeframeAvailability(timeframe, true);
     renderSuggestedWatchZones();
-    persistWatchCriteria(listType, posId);
     return true;
   } catch (e) {
     _watchMarketLevelError = e.message;
@@ -2992,12 +3004,17 @@ function refreshWatchData(listType, posId) {
   loadWatchStatus(listType, posId);
 }
 
-async function resetWatchDefaults(listType, posId) {
+async function refreshWatchSuggestions(listType, posId) {
   if (!_watchCandles) { toast('股價資料尚未載入完成 Price data still loading', 'err'); return; }
   const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
   toast(ok
     ? '已重新計算市場層級與建議觀察區間；目前啟用區間未變更 Market Levels and Suggested Zones recalculated; Active Zone unchanged'
     : '無法重新計算建議值 Could not recalculate suggestions', ok ? 'ok' : 'err');
+}
+
+// Backward-compatible entry point for older cached markup.
+function resetWatchDefaults(listType, posId) {
+  return refreshWatchSuggestions(listType, posId);
 }
 
 function saveWatchCriteria(listType, posId) {
