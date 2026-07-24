@@ -185,13 +185,13 @@
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
-        "zoneLow": 31.7,
-        "zoneHigh": 32.2,
+        "zoneLow": 31.8,
+        "zoneHigh": 32.6,
         "volThreshold": 24206,
         "stopLossMode": "manual",
         "stopLossManual": 30
       }
     }
   ],
-  "lastUpdated": "2026-07-24T00:46:44.582Z"
+  "lastUpdated": "2026-07-24T00:49:53.220Z"
 }
