@@ -179,15 +179,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 229.74,
-        "zoneHigh": 234.1,
+        "zoneLow": 227.85,
+        "zoneHigh": 233.2,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 227,
         "marketLevelTimeframe": "daily",
-        "zoneMode": "aggressive",
-        "manualZoneLow": 232.05,
-        "manualZoneHigh": 228.1
+        "zoneMode": "manual",
+        "manualZoneLow": 227.85,
+        "manualZoneHigh": 233.2
       }
     },
     {
@@ -224,5 +224,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-24T12:35:29.085Z"
+  "lastUpdated": "2026-07-25T01:29:16.218Z"
 }
