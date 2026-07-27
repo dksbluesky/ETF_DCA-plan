@@ -83,7 +83,7 @@ startButton.click();
 assert.equal(bridge.loadBridge().ticker, '00981A');
 assert.match(statusElement.textContent, /^Started /);
 assert.equal(values.get('p_cache'), '{"existing":true}');
-assert.deepEqual(opened, [bridge.TAR_OBI_URL, '_blank', 'noopener,noreferrer']);
+assert.deepEqual(opened, [bridge.TAR_OBI_URL, '_blank']);
 assert.equal(assigned, null);
 
 opened = null;

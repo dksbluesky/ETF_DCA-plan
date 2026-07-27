@@ -147,7 +147,7 @@
         return navigateSameTab() ? 'same-tab' : 'unavailable';
       }
       if (typeof root.open === 'function') {
-        root.open(TAR_OBI_URL, '_blank', 'noopener,noreferrer');
+        root.open(TAR_OBI_URL, '_blank');
         return 'new-tab';
       }
       return navigateSameTab() ? 'same-tab' : 'unavailable';
