@@ -9,7 +9,18 @@ global.localStorage = {
   removeItem(key) { values.delete(key); }
 };
 global.document = {};
-global.open = () => { throw new Error('The bridge must not launch another application.'); };
+let opened = null;
+let assigned = null;
+Object.defineProperty(global, 'navigator', {
+  configurable: true,
+  value: { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 0, userAgentData: { mobile: false } }
+});
+global.location = { assign(url) { assigned = url; } };
+global.open = (...args) => {
+  assert.ok(values.has('etfDca.executionBridge.v1'), 'Bridge must be saved before navigation.');
+  opened = args;
+  return {};
+};
 
 const bridge = require('./execution-bridge.js');
 
@@ -72,6 +83,28 @@ startButton.click();
 assert.equal(bridge.loadBridge().ticker, '00981A');
 assert.match(statusElement.textContent, /^Started /);
 assert.equal(values.get('p_cache'), '{"existing":true}');
+assert.deepEqual(opened, [bridge.TAR_OBI_URL, '_blank', 'noopener,noreferrer']);
+assert.equal(assigned, null);
+
+opened = null;
+assigned = null;
+Object.defineProperty(global, 'navigator', {
+  configurable: true,
+  value: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', maxTouchPoints: 5, userAgentData: { mobile: true } }
+});
+assert.equal(bridge.openTarObiMonitor(), 'same-tab');
+assert.equal(opened, null);
+assert.equal(assigned, bridge.TAR_OBI_URL);
+
+opened = null;
+assigned = null;
+Object.defineProperty(global, 'navigator', {
+  configurable: true,
+  value: { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit Mobile/15E148', maxTouchPoints: 5, userAgentData: { mobile: false } }
+});
+assert.equal(bridge.openTarObiMonitor(), 'same-tab');
+assert.equal(opened, null);
+assert.equal(assigned, bridge.TAR_OBI_URL);
 
 assert.throws(() => bridge.createBridgeObject({}), /requires a ticker/);
 

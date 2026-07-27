@@ -7,6 +7,7 @@
 
   const STORAGE_KEY = 'etfDca.executionBridge.v1';
   const CONTRACT_VERSION = '1.0';
+  const TAR_OBI_URL = 'https://dksbluesky.github.io/TAR-OBI/entry-assessment.html';
   const SOURCE_APPLICATION = 'ETF_DCA-plan';
 
   function optionalNumber(value) {
@@ -116,6 +117,48 @@
     return saveBridge(createBridgeObject(context));
   }
 
+  function isMobileOrTablet() {
+    const navigatorInfo = root.navigator || {};
+    const userAgent = String(navigatorInfo.userAgent || '');
+    return navigatorInfo.userAgentData?.mobile === true
+      || /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(userAgent)
+      || (/Macintosh/i.test(userAgent) && Number(navigatorInfo.maxTouchPoints) > 1);
+  }
+
+  function navigateSameTab() {
+    if (!root.location) return false;
+    if (typeof root.location.assign === 'function') {
+      root.location.assign(TAR_OBI_URL);
+    } else {
+      root.location.href = TAR_OBI_URL;
+    }
+    return true;
+  }
+
+  /**
+   * Opens TAR-OBI after a bridge has been saved.
+   * Desktop uses a new tab; mobile and tablet devices use the current tab.
+   * @returns {'new-tab'|'same-tab'|'unavailable'} Navigation mode used.
+   */
+  function openTarObiMonitor() {
+    try {
+      if (isMobileOrTablet()) {
+        return navigateSameTab() ? 'same-tab' : 'unavailable';
+      }
+      if (typeof root.open === 'function') {
+        root.open(TAR_OBI_URL, '_blank', 'noopener,noreferrer');
+        return 'new-tab';
+      }
+      return navigateSameTab() ? 'same-tab' : 'unavailable';
+    } catch (error) {
+      try {
+        return navigateSameTab() ? 'same-tab' : 'unavailable';
+      } catch (fallbackError) {
+        return 'unavailable';
+      }
+    }
+  }
+
   /**
    * Renders the optional Entry Watch bridge panel and binds its Start action.
    * @param {HTMLElement} container Element that will contain the bridge panel.
@@ -147,8 +190,9 @@
         const bridge = startBridge(context);
         statusElement.textContent = `Started ${new Date(bridge.createdAt).toLocaleString()}`;
         if (typeof root.toast === 'function') {
-          root.toast('Execution handoff prepared. TAR-OBI was not launched.', 'ok');
+          root.toast('Execution handoff prepared. Opening TAR-OBI.', 'ok');
         }
+        openTarObiMonitor();
       } catch (error) {
         if (typeof root.toast === 'function') root.toast(error.message, 'err');
       }
@@ -158,11 +202,13 @@
   return Object.freeze({
     STORAGE_KEY,
     CONTRACT_VERSION,
+    TAR_OBI_URL,
     createBridgeObject,
     saveBridge,
     loadBridge,
     removeBridge,
     startBridge,
+    openTarObiMonitor,
     render
   });
 });
