@@ -46,7 +46,7 @@
     const zoneHigh = optionalNumber(context.activeZone?.high);
     const createdAt = new Date().toISOString();
 
-    return {
+    const bridge = {
       version: CONTRACT_VERSION,
       bridgeId: createBridgeId(),
       ticker: String(context.ticker).trim().toUpperCase(),
@@ -70,6 +70,7 @@
       setupStatus: context.setupStatus || null,
       extensions: {}
     };
+    return root.ExecutionBridgeMonitor?.initializeNewBridge(bridge) || bridge;
   }
 
   /**
@@ -167,6 +168,16 @@
    */
   function render(container, context) {
     if (!container || !root.document) return;
+    if (typeof root.ExecutionBridgeMonitor?.renderPanel === 'function') {
+      root.ExecutionBridgeMonitor.renderPanel(container, context, {
+        startBridge,
+        openMonitor: openTarObiMonitor,
+        toast(message, type) {
+          if (typeof root.toast === 'function') root.toast(message, type);
+        }
+      });
+      return;
+    }
 
     const stored = loadBridge();
     const currentTicker = String(context?.ticker || '').trim().toUpperCase();
