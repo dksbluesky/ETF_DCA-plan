@@ -6,6 +6,7 @@
 <title>💰投資組合追蹤 · Portfolio Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="execution-bridge.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2995,7 +2996,38 @@ function recomputeWatchStatus() {
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     ${bottomSynth}
+    <div id="execution-bridge"></div>
   `;
+  window.ExecutionBridge?.render(document.getElementById('execution-bridge'), {
+    ticker: pos.ticker,
+    marketTimeframe: '1d',
+    marketLevelTimeframe: getMarketLevelTimeframe(),
+    marketSessionState: quoteState,
+    zoneMode: getWatchZoneMode(),
+    activeZone: zoneLow && zoneHigh ? { low: zoneLow, high: zoneHigh } : null,
+    preferredEntry: null,
+    maximumEntryPrice: null,
+    invalidationLevel: stopPrice,
+    h1H2Status: early ? {
+      type: early.type,
+      date: early.date,
+      daysAgo: early.daysAgo,
+      volumeRatio: early.ratio,
+      lowVolume: early.lowVolume,
+      fresh: freshSignal
+    } : null,
+    C1: { met: c1ok, provisional: isUnconfirmedSession },
+    C2: { met: c2ok, provisional: isUnconfirmedSession },
+    C3: { met: c3ok, provisional: isUnconfirmedSession },
+    C4: {
+      classification: c4.classification,
+      closeLocation: c4.closeLocation,
+      volumeRatio20Pct,
+      decision: c4.decision,
+      confirmed: !isUnconfirmedSession
+    },
+    setupStatus: { label: sText, provisional: isUnconfirmedSession }
+  });
 }
 
 function refreshWatchData(listType, posId) {
