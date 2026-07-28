@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 31.91,
+      "currentPrice": 31.92,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -195,7 +195,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2280,
+      "currentPrice": 2285,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -208,7 +208,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 31.91,
+      "currentPrice": 31.92,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -224,5 +224,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-07-28T01:10:04.239Z"
+  "lastUpdated": "2026-07-28T01:24:41.915Z"
 }
