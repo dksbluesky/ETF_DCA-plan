@@ -11,9 +11,15 @@
   const MARKET_CLOSE_MINUTE = 30;
   const LIFECYCLE_STATUSES = Object.freeze(['ACTIVE', 'PAUSED', 'COMPLETED', 'EXPIRED', 'INVALIDATED']);
   const TERMINAL_STATUSES = Object.freeze(['COMPLETED', 'EXPIRED', 'INVALIDATED']);
+  const SOURCE_CONTEXT_SYNC_DELAY_MS = 350;
+  const SOURCE_CONTEXT_FIELDS = Object.freeze([
+    'marketTimeframe', 'marketLevelTimeframe', 'marketSessionState', 'zoneMode', 'activeZone',
+    'preferredEntry', 'maximumEntryPrice', 'invalidationLevel', 'h1H2Status', 'C1', 'C2', 'C3', 'C4', 'setupStatus'
+  ]);
 
   let lastRender = null;
   let storageListenerBound = false;
+  let sourceContextSyncTimer = null;
 
   function storageGet() {
     try {
@@ -169,6 +175,106 @@
     return null;
   }
 
+  function validSourceContext(context) {
+    const low = Number(context?.activeZone?.low);
+    const high = Number(context?.activeZone?.high);
+    return Boolean(String(context?.ticker || '').trim())
+      && Number.isFinite(low)
+      && Number.isFinite(high)
+      && low > 0
+      && high > 0
+      && low <= high;
+  }
+
+  function sourceContextPatch(context) {
+    return {
+      marketTimeframe: context.marketTimeframe || '1d',
+      marketLevelTimeframe: context.marketLevelTimeframe || null,
+      marketSessionState: context.marketSessionState || null,
+      zoneMode: context.zoneMode || null,
+      activeZone: {
+        low: Number(context.activeZone.low),
+        high: Number(context.activeZone.high)
+      },
+      preferredEntry: context.preferredEntry ?? null,
+      maximumEntryPrice: context.maximumEntryPrice ?? null,
+      invalidationLevel: context.invalidationLevel ?? null,
+      h1H2Status: context.h1H2Status || null,
+      C1: context.C1 || null,
+      C2: context.C2 || null,
+      C3: context.C3 || null,
+      C4: context.C4 || null,
+      setupStatus: context.setupStatus || null
+    };
+  }
+
+  function sourceContextChanged(bridge, patch) {
+    return SOURCE_CONTEXT_FIELDS.some(field => JSON.stringify(bridge[field] ?? null) !== JSON.stringify(patch[field] ?? null));
+  }
+
+  function mergeSourceContext(bridge, context, now) {
+    if (!validSourceContext(context)) return bridge;
+    const patch = sourceContextPatch(context);
+    if (!sourceContextChanged(bridge, patch)) return bridge;
+    return {
+      ...bridge,
+      ...patch,
+      extensions: {
+        ...(bridge.extensions || {}),
+        sourceContextUpdatedAt: isoTime(now)
+      }
+    };
+  }
+
+  /**
+   * Merges the latest valid ETF Entry Watch context into the same active bridge.
+   * TAR-owned lifecycle, monitor result, notification and confirmation fields are preserved.
+   * @param {object} context Current Entry Watch setup context.
+   * @param {number|Date} [now] Injectable clock for tests.
+   * @param {number} [remainingAttempts] Compare-and-set retries after a concurrent TAR write.
+   * @returns {object|null} Latest stored bridge.
+   */
+  function syncStoredBridgeContext(context, now = Date.now(), remainingAttempts = 1) {
+    const raw = storageGet();
+    const stored = parseBridge(raw);
+    if (!stored || !validSourceContext(context)) return stored;
+    const current = initializeNewBridge(stored, now);
+    if (!['ACTIVE', 'PAUSED'].includes(current.lifecycle?.status)) return stored;
+    if (String(current.ticker || '').toUpperCase() !== String(context.ticker || '').toUpperCase()) return stored;
+    const updated = mergeSourceContext(current, context, now);
+    if (JSON.stringify(updated) === raw) return stored;
+    if (writeIfUnchanged(raw, updated)) return updated;
+    return remainingAttempts > 0
+      ? syncStoredBridgeContext(context, now, remainingAttempts - 1)
+      : parseBridge(storageGet());
+  }
+
+  /**
+   * Debounces one-way source-context synchronization after manual zone input.
+   * Invalid or partially entered zones are ignored.
+   * @param {object} context Current Entry Watch setup context.
+   * @param {number} [delayMs] Injectable debounce delay for tests.
+   * @returns {boolean} True when a valid context update was scheduled.
+   */
+  function scheduleSourceContextSync(context, delayMs = SOURCE_CONTEXT_SYNC_DELAY_MS) {
+    if (sourceContextSyncTimer !== null && typeof root.clearTimeout === 'function') {
+      root.clearTimeout(sourceContextSyncTimer);
+      sourceContextSyncTimer = null;
+    }
+    if (!validSourceContext(context)) return false;
+    if (typeof root.setTimeout !== 'function') {
+      syncStoredBridgeContext(context);
+      return true;
+    }
+    const snapshot = JSON.parse(JSON.stringify(context));
+    sourceContextSyncTimer = root.setTimeout(() => {
+      sourceContextSyncTimer = null;
+      syncStoredBridgeContext(snapshot);
+    }, Math.max(0, Number(delayMs) || 0));
+    sourceContextSyncTimer?.unref?.();
+    return true;
+  }
+
   function lifecycleUpdate(bridge, status, now, reason = null) {
     const updatedAt = isoTime(now);
     return {
@@ -189,8 +295,8 @@
   }
 
   /**
-   * Adds legacy lifecycle fields, expires old bridges, and invalidates changed ETF setups.
-   * Only the bridge matching the supplied ticker is source-compared.
+   * Adds legacy lifecycle fields and expires old bridges.
+   * Setup context synchronization is handled separately and never changes lifecycle state.
    * @param {object} context Current Entry Watch setup context.
    * @param {number|Date} [now] Injectable clock for tests.
    * @returns {object|null} Latest stored bridge after reconciliation.
@@ -206,10 +312,6 @@
       && Number.isFinite(Date.parse(next.lifecycle.expiresAt))
       && (Number.isFinite(time) ? time : Date.now()) >= Date.parse(next.lifecycle.expiresAt)) {
       next = lifecycleUpdate(next, 'EXPIRED', now, 'Bridge reached its Taiwan trading-day expiration.');
-    } else if (['ACTIVE', 'PAUSED'].includes(status)
-      && String(next.ticker).toUpperCase() === String(context?.ticker || '').toUpperCase()) {
-      const reason = sourceMismatchReason(next, context);
-      if (reason) next = lifecycleUpdate(next, 'INVALIDATED', now, reason);
     }
     const changed = JSON.stringify(next) !== raw;
     if (changed && !writeIfUnchanged(raw, next)) return parseBridge(storageGet());
@@ -303,6 +405,7 @@
     bindStorageListener();
 
     const stored = reconcileStoredBridge(context);
+    scheduleSourceContextSync(context);
     const ticker = String(context?.ticker || '').trim().toUpperCase();
     const current = stored && String(stored.ticker).toUpperCase() === ticker ? stored : null;
     const status = current?.lifecycle?.status || null;
@@ -396,10 +499,13 @@
     MARKET_CLOSE_MINUTE,
     LIFECYCLE_STATUSES,
     TERMINAL_STATUSES,
+    SOURCE_CONTEXT_SYNC_DELAY_MS,
     calculateExpiresAt,
     initializeNewBridge,
     sourceMismatchReason,
     reconcileStoredBridge,
+    syncStoredBridgeContext,
+    scheduleSourceContextSync,
     transitionStoredBridge,
     isTerminal,
     requiresReplacementConfirmation,

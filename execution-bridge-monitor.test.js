@@ -71,11 +71,93 @@ assert.equal(bridge.lifecycle.status, 'COMPLETED');
 assert.ok(bridge.lifecycle.completedAt);
 assert.equal(monitor.transitionStoredBridge('bridge-1', 'ACTIVE'), null);
 
-storage = storageWith(phase1Bridge());
+const tarOwnedState = {
+  monitorResult: {
+    assessmentState: 'WAIT_FOR_CONFIRMATION',
+    evaluatedAt: '2026-07-27T02:59:00.000Z'
+  },
+  notificationState: {
+    lastNotifiedState: null,
+    lastNotifiedAt: null,
+    entryConfirmation: { status: 'PENDING', consecutiveCount: 1, confirmedAt: null },
+    futureNotificationField: 'preserve'
+  }
+};
+storage = storageWith(phase1Bridge(tarOwnedState));
 monitor = loadMonitor(storage);
-bridge = monitor.reconcileStoredBridge({ ...context, activeZone: { low: 234, high: 235.6 } }, Date.parse('2026-07-27T03:00:00.000Z'));
-assert.equal(bridge.lifecycle.status, 'INVALIDATED');
-assert.match(bridge.lifecycle.reason, /Active Zone/);
+const liveContext = {
+  ...context,
+  marketTimeframe: '1d',
+  marketSessionState: 'LIVE',
+  zoneMode: 'manual',
+  activeZone: { low: 219.5, high: 221.8 },
+  preferredEntry: null,
+  maximumEntryPrice: null,
+  invalidationLevel: 218.9,
+  h1H2Status: { type: 'H2', fresh: true },
+  C1: { met: true, provisional: true },
+  C2: { met: false, provisional: true },
+  C3: { met: false, provisional: true },
+  C4: { classification: 'Weak Close', confirmed: false },
+  setupStatus: { label: 'Monitoring intraday', provisional: true }
+};
+bridge = monitor.reconcileStoredBridge(liveContext, Date.parse('2026-07-27T03:00:00.000Z'));
+assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a valid source-context change no longer invalidates the monitor');
+assert.deepEqual(bridge.activeZone, { low: 235.25, high: 235.6 }, 'context waits for the debounced synchronization');
+const beforeSync = JSON.parse(storage.getItem('etfDca.executionBridge.v1'));
+const originalSetTimeout = global.setTimeout;
+const originalClearTimeout = global.clearTimeout;
+let scheduled = null;
+try {
+  global.setTimeout = (callback, delay) => {
+    scheduled = { callback, delay };
+    return { unref() {} };
+  };
+  global.clearTimeout = () => {};
+  assert.equal(monitor.scheduleSourceContextSync(liveContext), true);
+  assert.equal(scheduled.delay, monitor.SOURCE_CONTEXT_SYNC_DELAY_MS);
+  assert.deepEqual(
+    JSON.parse(storage.getItem('etfDca.executionBridge.v1')).activeZone,
+    beforeSync.activeZone,
+    'source context does not update before the debounce completes'
+  );
+  scheduled.callback();
+} finally {
+  global.setTimeout = originalSetTimeout;
+  global.clearTimeout = originalClearTimeout;
+}
+
+bridge = JSON.parse(storage.getItem('etfDca.executionBridge.v1'));
+assert.equal(bridge.bridgeId, 'bridge-1');
+assert.equal(bridge.lifecycle.status, 'ACTIVE');
+assert.deepEqual(bridge.activeZone, { low: 219.5, high: 221.8 });
+assert.equal(bridge.zoneMode, 'manual');
+assert.equal(bridge.C1.met, true);
+assert.equal(bridge.C2.met, false);
+assert.equal(bridge.setupStatus.label, 'Monitoring intraday');
+assert.deepEqual(bridge.monitorResult, tarOwnedState.monitorResult);
+assert.equal(bridge.notificationState.lastNotifiedAt, null);
+assert.deepEqual(bridge.notificationState.entryConfirmation, tarOwnedState.notificationState.entryConfirmation);
+assert.equal(bridge.notificationState.futureNotificationField, 'preserve');
+assert.equal(bridge.notificationState.dataUnavailableSince, null);
+assert.equal(bridge.extensions.futureField, true);
+assert.ok(Number.isFinite(Date.parse(bridge.extensions.sourceContextUpdatedAt)));
+
+const validRaw = storage.getItem('etfDca.executionBridge.v1');
+assert.equal(monitor.scheduleSourceContextSync({ ...liveContext, activeZone: { low: null, high: 221.8 } }, 0), false);
+assert.equal(storage.getItem('etfDca.executionBridge.v1'), validRaw, 'partial zone input is ignored');
+
+storage = storageWith(phase1Bridge({
+  lifecycle: {
+    status: 'COMPLETED',
+    updatedAt: '2026-07-27T03:00:00.000Z',
+    expiresAt: '2026-07-27T05:30:00.000Z',
+    completedAt: '2026-07-27T03:00:00.000Z'
+  }
+}));
+monitor = loadMonitor(storage);
+bridge = monitor.syncStoredBridgeContext(liveContext, Date.parse('2026-07-27T03:01:00.000Z'));
+assert.deepEqual(bridge.activeZone, { low: 235.25, high: 235.6 }, 'terminal bridge context remains immutable');
 
 storage = storageWith(phase1Bridge());
 monitor = loadMonitor(storage);

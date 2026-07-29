@@ -1207,6 +1207,7 @@ function skipDCA(posId, date) {
 function today() { return new Date().toISOString().split('T')[0]; }
 
 function openModal(type, ctx) {
+  stopWatchAutoRefresh();
   S.mCtx = ctx || null;
   let title = '', body = '', foot = '';
 
@@ -1513,9 +1514,11 @@ function openModal(type, ctx) {
       </div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
             <button class="btn btn-primary" onclick="saveWatchCriteria('${listType}','${posId}')">儲存設定 Save</button>`;
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (!document.getElementById('overlay')?.classList.contains('open')) return;
       setActiveWatchZoneInputs(initialZoneMode, null);
-      loadWatchStatus(listType, posId);
+      await refreshWatchData(listType, posId);
+      startWatchAutoRefresh(listType, posId);
     }, 50);
   }
 
@@ -1530,7 +1533,7 @@ function openConfirm(posId, date, amount) {
   openModal('confirm-dca', `${posId}|${date}|${amount}`);
 }
 
-function closeModal() { document.getElementById('overlay').classList.remove('open'); S.mCtx = null; }
+function closeModal() { stopWatchAutoRefresh(); document.getElementById('overlay').classList.remove('open'); S.mCtx = null; }
 function closeBg(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
 
 function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
@@ -1711,7 +1714,8 @@ async function fetchLivePrice(ticker) {
   let r, d;
   try {
     r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${ticker}`, {
-      headers: { 'X-API-KEY': fugleKey }
+      headers: { 'X-API-KEY': fugleKey },
+      cache: 'no-store'
     });
     d = await r.json();
   } catch(e) {
@@ -1749,6 +1753,49 @@ async function fetchLivePrice(ticker) {
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
 let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status';
+const WATCH_AUTO_REFRESH_MS = 30 * 1000;
+let _watchRefreshTimer = null;
+let _watchRefreshInFlight = false;
+
+function stopWatchAutoRefresh() {
+  if (_watchRefreshTimer !== null) {
+    clearInterval(_watchRefreshTimer);
+    _watchRefreshTimer = null;
+  }
+}
+
+function startWatchAutoRefresh(listType, posId) {
+  stopWatchAutoRefresh();
+  const overlay = document.getElementById('overlay');
+  if (!overlay?.classList.contains('open') || !document.getElementById('wc-status')) return;
+  _watchRefreshTimer = setInterval(() => {
+    const overlay = document.getElementById('overlay');
+    if (!overlay?.classList.contains('open') || !document.getElementById('wc-status')) {
+      stopWatchAutoRefresh();
+      return;
+    }
+    if (document.hidden) return;
+    refreshWatchLivePrice(listType, posId);
+  }, WATCH_AUTO_REFRESH_MS);
+}
+
+function mergeWatchLiveQuote(candles, quote) {
+  if (!Array.isArray(candles) || !candles.length || !quote) return;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const last = candles[candles.length - 1];
+  const volume = (quote.tradeVol ?? 0) * 1000;
+  if (last.date === todayStr) {
+    if (quote.tradeVol) last.volume = volume;
+    last.close = quote.price;
+    if (quote.high) last.high = Math.max(last.high, quote.high);
+    if (quote.low) last.low = Math.min(last.low, quote.low);
+  } else {
+    candles.push({
+      date: todayStr, open: quote.open || quote.price, high: quote.high || quote.price,
+      low: quote.low || quote.price, close: quote.price, volume
+    });
+  }
+}
 
 async function fetchDailyCandlesLite(ticker, days) {
   _watchQuote = null;
@@ -1765,19 +1812,26 @@ async function fetchDailyCandlesLite(ticker, days) {
   try {
     const q = await fetchLivePrice(ticker);
     _watchQuote = q;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const last = candles[candles.length - 1];
-    const vol = (q.tradeVol ?? 0) * 1000; // 張 → shares, matches historical candle units
-    if (last.date === todayStr) {
-      if (q.tradeVol) last.volume = vol;
-      last.close = q.price;
-      if (q.high) last.high = Math.max(last.high, q.high);
-      if (q.low) last.low = Math.min(last.low, q.low);
-    } else {
-      candles.push({ date: todayStr, open: q.open || q.price, high: q.high || q.price, low: q.low || q.price, close: q.price, volume: vol });
-    }
+    mergeWatchLiveQuote(candles, q);
   } catch (e) { console.warn('Watch: live quote merge failed:', e.message); }
   return candles;
+}
+
+async function refreshWatchLivePrice(listType, posId) {
+  if (_watchRefreshInFlight || !_watchCandles) return;
+  const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
+  if (!pos) return;
+  _watchRefreshInFlight = true;
+  try {
+    const quote = await fetchLivePrice(pos.ticker);
+    _watchQuote = quote;
+    mergeWatchLiveQuote(_watchCandles, quote);
+    recomputeWatchStatus();
+  } catch (error) {
+    console.warn('Watch: automatic live-price refresh failed:', error.message);
+  } finally {
+    _watchRefreshInFlight = false;
+  }
 }
 
 async function fetchMarketLevelCandles(ticker, timeframe, dailyCandles) {
@@ -2733,6 +2787,9 @@ function recomputeWatchStatus() {
   const isIntraday = quoteState === 'REGULAR';
   const isUnconfirmedSession = quoteState !== 'CLOSED';
   const price = today.close;
+  const displayedPrice = isIntraday && Number.isFinite(Number(_watchQuote?.price))
+    ? Number(_watchQuote.price)
+    : price;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
   // Consolidation window = days strictly after the breakout day, last up to 3, excluding today.
@@ -2984,7 +3041,7 @@ function recomputeWatchStatus() {
     </div>`;
 
   statusEl.innerHTML = `
-    <div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${price.toFixed(2)}　${today.date}</div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${displayedPrice.toFixed(2)}　${today.date}</div>
     ${triggerBlock}
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:6px">── 進場條件參考 Setup Context ──</div>
     <div style="font-size:10px;font-weight:700;color:#faad14;letter-spacing:0.3px;margin-bottom:3px">◀ 左側進場條件 Left Side Entry</div>
@@ -3031,10 +3088,16 @@ function recomputeWatchStatus() {
   });
 }
 
-function refreshWatchData(listType, posId) {
+async function refreshWatchData(listType, posId) {
+  if (_watchRefreshInFlight) return;
+  _watchRefreshInFlight = true;
   const refEl = document.getElementById('wc-ref');
   if (refEl) refEl.innerHTML = '⏳ 重新整理中… Refreshing…';
-  loadWatchStatus(listType, posId);
+  try {
+    await loadWatchStatus(listType, posId);
+  } finally {
+    _watchRefreshInFlight = false;
+  }
 }
 
 async function refreshWatchSuggestions(listType, posId) {
