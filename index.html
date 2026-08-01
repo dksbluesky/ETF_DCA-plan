@@ -1429,6 +1429,11 @@ function openModal(type, ctx) {
     const initialManualLow = wc.manualZoneLow ?? (initialZoneMode === 'manual' ? wc.zoneLow : '');
     const initialManualHigh = wc.manualZoneHigh ?? (initialZoneMode === 'manual' ? wc.zoneHigh : '');
     const initialMarketLevelTimeframe = wc.marketLevelTimeframe === '4h' ? '60m' : (wc.marketLevelTimeframe || 'daily');
+    const savedStarterAllocation = Number(wc.starterAllocationPct);
+    const initialStarterAllocationPct = Number.isFinite(savedStarterAllocation)
+      ? Math.min(15, Math.max(10, savedStarterAllocation))
+      : 15;
+    const initialStarterExecuted = wc.starterExecuted === true;
     _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
@@ -1510,6 +1515,23 @@ function openModal(type, ctx) {
             <option value="manual"${wc.stopLossMode === 'manual' ? ' selected' : ''}>手動輸入 Manual</option>
           </select>
           <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
+        </div>
+        <div style="margin-top:12px;border:1px solid var(--gold);border-radius:10px;padding:12px;background:var(--gold-l)">
+          <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:8px">LEFT-SIDE STARTER｜左側第一筆試單</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Starter Allocation (%)｜第一筆配置比例</label>
+              <input class="form-input" id="wc-starter-allocation" type="number" min="10" max="15" step="1" value="${initialStarterAllocationPct}" oninput="onWatchFieldInput('${listType}','${posId}')">
+              <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px">僅允許 10–15%。此比例是第一筆小額部位，不是完整進場配置。<br>Limited to 10–15%. This is a starter position, not full allocation.</div>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;padding-top:25px">
+                <input type="checkbox" id="wc-starter-executed" ${initialStarterExecuted ? 'checked' : ''} onchange="onWatchFieldInput('${listType}','${posId}')">
+                <span>本輪 Starter 已執行<br><span style="font-size:11px;color:var(--muted)">Starter already executed for this setup</span></span>
+              </label>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#975a16;line-height:1.6">左側 Starter 只代表 ETF_DCA 允許小額第一筆。TAR、OBI、VWAP、Spread 與盤中賣壓仍由 TAR-OBI 評估，不會被視為已確認進場。</div>
         </div>
       </div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -2475,6 +2497,12 @@ function onWatchStopModeChange(listType, posId) {
 // Persist every field edit immediately (mirrors how other inputs in this app commit on
 // change) so closing the modal any way — ✕, click-outside, or the Save button — keeps the
 // user's last typed values instead of losing them back to auto-detected suggestions.
+function normalizeStarterAllocation(value, fallback = 15) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(15, Math.max(10, Math.round(number)));
+}
+
 function onWatchFieldInput(listType, posId) {
   persistWatchCriteria(listType, posId);
   renderActiveWatchZone();
@@ -2488,6 +2516,15 @@ function persistWatchCriteria(listType, posId) {
   const zoneMode = getWatchZoneMode();
   const zoneLow = gf('wc-zonelow') || null;
   const zoneHigh = gf('wc-zonehigh') || null;
+  const starterAllocationElement = document.getElementById('wc-starter-allocation');
+  const starterExecutedElement = document.getElementById('wc-starter-executed');
+  const starterAllocationPct = starterAllocationElement
+    ? normalizeStarterAllocation(starterAllocationElement.value)
+    : normalizeStarterAllocation(previous.starterAllocationPct);
+  const starterExecuted = starterExecutedElement
+    ? starterExecutedElement.checked
+    : previous.starterExecuted === true;
+
   pos.watchCriteria = {
     ...previous,
     marketLevelTimeframe: getMarketLevelTimeframe(),
@@ -2498,7 +2535,9 @@ function persistWatchCriteria(listType, posId) {
     manualZoneHigh: zoneMode === 'manual' ? zoneHigh : (previous.manualZoneHigh ?? null),
     volThreshold: gf('wc-volth') || null,
     stopLossMode: gv('wc-stopmode') || 'trail',
-    stopLossManual: gf('wc-stopmanual') || null
+    stopLossManual: gf('wc-stopmanual') || null,
+    starterAllocationPct,
+    starterExecuted
   };
   S.dirty = true;
   persistLocal(); // write through immediately — this path never calls renderAll(),
@@ -2899,6 +2938,36 @@ function recomputeWatchStatus() {
   if (stopMode === 'manual') stopPrice = gf('wc-stopmanual') || null;
   else if (pos.trailStop && pos.trailHigh) stopPrice = pos.trailHigh * (1 - pos.trailStop / 100);
 
+  // Left-Side Starter base authorization. TAR / OBI / VWAP / spread execution
+  // risk remains owned by TAR-OBI and does not become a confirmed entry signal here.
+  const isDcaPosition = S.data.dca.some(item => item.id === pos.id);
+  const activeZoneValid = Number.isFinite(zoneLow)
+    && Number.isFinite(zoneHigh)
+    && zoneLow > 0
+    && zoneHigh > 0
+    && zoneLow <= zoneHigh;
+  const priceInsideActiveZone = activeZoneValid
+    && displayedPrice >= zoneLow - 1e-9
+    && displayedPrice <= zoneHigh + 1e-9;
+  const structuralInvalidationAvailable = Number.isFinite(stopPrice) && stopPrice > 0;
+  const aboveStructuralInvalidation = structuralInvalidationAvailable
+    && displayedPrice >= stopPrice - 1e-9;
+  const starterAllocationElement = document.getElementById('wc-starter-allocation');
+  const starterExecutedElement = document.getElementById('wc-starter-executed');
+  const starterAllocationPct = starterAllocationElement
+    ? normalizeStarterAllocation(starterAllocationElement.value)
+    : normalizeStarterAllocation(pos.watchCriteria?.starterAllocationPct);
+  const starterExecuted = starterExecutedElement
+    ? starterExecutedElement.checked
+    : pos.watchCriteria?.starterExecuted === true;
+  const starterBaseEligible = isDcaPosition
+    && activeZoneValid
+    && priceInsideActiveZone
+    && c1ok
+    && structuralInvalidationAvailable
+    && aboveStructuralInvalidation
+    && !starterExecuted;
+
   // BIAS (乖離率) — signed deviation of price from the 5EMA. Positive = price has run ahead
   // of its average cost (the larger, the more "stretched" and prone to a profit-taking
   // pullback / mean reversion). Negative = price is below average cost, i.e. recent buyers
@@ -2920,12 +2989,36 @@ function recomputeWatchStatus() {
   const row = (ok, label, detail) => `<div class="wc-row"><div class="wc-icon">${ok ? '✅' : '⬜'}</div><div><div class="wc-label">${label}</div><div class="wc-detail">${detail}</div></div></div>`;
 
   const early = checkEarlySignal(candles, _watchBiasLen, breakoutIdx > 0 ? breakoutIdx : null);
+  const freshSignal = early && early.daysAgo <= 4;
+  const staleSignal = early && early.daysAgo > 4;
+
+  // A confirmed/right-side setup supersedes left-side starter mode.
+  // ETF_DCA determines the intended execution mode only; TAR-OBI retains its
+  // independent TAR / OBI / VWAP / spread assessment and 2-of-2 confirmation.
+  const rightSideSetupConfirmed = !isUnconfirmedSession && (
+    c3ok || (freshSignal && early.type === 'H2' && early.lowVolume)
+  );
+  const starterEligible = starterBaseEligible && !rightSideSetupConfirmed;
+  const entryMode = starterEligible ? 'left_side_starter' : 'confirmed';
+  const starterRiskReasons = [];
+  if (!c2ok) starterRiskReasons.push('C2 consolidation is not confirmed');
+  if (!c3ok) starterRiskReasons.push('C3 right-side confirmation is not present');
+  if (c4.classification === 'Weak 弱勢') starterRiskReasons.push('C4 close strength is weak');
+  if (isUnconfirmedSession) starterRiskReasons.push('Current session data is provisional');
+  const starterRisk = {
+    level: starterRiskReasons.length >= 3 ? 'HIGH' : starterRiskReasons.length > 0 ? 'ELEVATED' : 'CONTROLLED',
+    reasons: starterRiskReasons,
+    c1Required: true,
+    c1Met: c1ok,
+    c2Met: c2ok,
+    c3Met: c3ok,
+    c4Classification: c4.classification,
+    priceInsideActiveZone,
+    aboveStructuralInvalidation
+  };
 
   // ── Trigger block (primary) ──────────────────────────────────────────
   let tBg, tBorder, tColor, tTitle, tDetail, tBadge;
-
-  const freshSignal = early && early.daysAgo <= 4;
-  const staleSignal = early && early.daysAgo > 4;
 
   if (isUnconfirmedSession) {
     tBg = '#fffbe6'; tBorder = '#faad14'; tColor = '#874d00';
@@ -3004,9 +3097,15 @@ function recomputeWatchStatus() {
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────
   let sBg, sBorder, sText;
-  if (isUnconfirmedSession) {
+  if (starterEligible) {
+    sBg = '#fffff0'; sBorder = '#d69e2e';
+    sText = `🟡 左側第一筆試單符合 ETF_DCA 基礎條件 Left-Side Starter Eligible — 僅限 ${starterAllocationPct}% 小額第一筆；尚未完成右側確認，TAR-OBI 將繼續評估盤中賣壓與執行品質`;
+  } else if (starterExecuted) {
+    sBg = 'var(--surface2)'; sBorder = 'var(--border)';
+    sText = '⬜ 本輪左側 Starter 已執行 — 不得重複建立第一筆部位 Starter already executed for this setup';
+  } else if (isUnconfirmedSession) {
     sBg = '#fffbe6'; sBorder = '#faad14';
-    sText = '🟡 盤中條件觀察中 — 最終決策等待正式收盤；目前狀態可能在收盤前改變 Intraday setup monitoring — final decision pending market close; conditions may change before close';
+    sText = '🟡 盤中條件觀察中 — 尚未符合左側 Starter 基礎條件；最終右側決策等待正式收盤 Intraday monitoring — starter conditions not fully satisfied; right-side decision pending market close';
   } else if (freshSignal && early.type === 'H2' && early.lowVolume && c1ok && c2ok) {
     sBg = '#f6ffed'; sBorder = '#52c41a';
     sText = '🟢 觸發＋回測＋籌碼三者成立 — 可積極考慮進場 Strong setup — all conditions align';
@@ -3053,6 +3152,33 @@ function recomputeWatchStatus() {
     <div class="wc-row"><div class="wc-icon">${c4DisplayIcon}</div><div><div class="wc-label">C4 · Close Strength / Close Location 收盤強度 / 收盤位置</div><div class="wc-detail">${c4text}</div></div></div>
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
+    <div class="wc-row">
+      <div class="wc-icon">${starterEligible ? '🟡' : starterExecuted ? '🔒' : '⬜'}</div>
+      <div>
+        <div class="wc-label">左側第一筆試單 Left-Side Starter</div>
+        <div class="wc-detail">${
+          starterEligible
+            ? `Eligible｜符合基礎資格｜配置 ${starterAllocationPct}%｜Mode: left_side_starter`
+            : starterExecuted
+              ? 'Already executed｜本輪已執行，不可重複建立'
+              : !isDcaPosition
+                ? 'Unavailable｜僅適用 DCA 標的'
+                : !activeZoneValid
+                  ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
+                  : !priceInsideActiveZone
+                    ? 'Price is outside Active Zone｜現價不在啟用區間'
+                    : !c1ok
+                      ? 'C1 pullback requirement not met｜尚未完成 C1 空間回測'
+                      : !structuralInvalidationAvailable
+                        ? 'Invalidation level required｜必須先設定有效失效價'
+                        : !aboveStructuralInvalidation
+                          ? 'Price below invalidation level｜現價已低於失效價'
+                          : rightSideSetupConfirmed
+                            ? 'Upgraded to confirmed mode｜已升級為右側確認模式'
+                            : 'Not eligible｜目前不符合條件'
+        }</div>
+      </div>
+    </div>
     ${bottomSynth}
     <div id="execution-bridge"></div>
   `;
@@ -3066,6 +3192,11 @@ function recomputeWatchStatus() {
     preferredEntry: null,
     maximumEntryPrice: null,
     invalidationLevel: stopPrice,
+    entryMode,
+    starterEligible,
+    starterAllocationPct,
+    starterExecuted,
+    starterRisk,
     h1H2Status: early ? {
       type: early.type,
       date: early.date,
