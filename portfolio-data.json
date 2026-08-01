@@ -183,7 +183,7 @@
         "zoneHigh": 231.43,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 208,
+        "stopLossManual": 220,
         "marketLevelTimeframe": "daily",
         "zoneMode": "conservative",
         "manualZoneLow": 215.05,
@@ -226,5 +226,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-01T03:38:36.569Z"
+  "lastUpdated": "2026-08-01T03:50:16.710Z"
 }
