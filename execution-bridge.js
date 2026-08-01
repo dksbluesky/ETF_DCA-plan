@@ -62,6 +62,17 @@
       preferredEntry: optionalNumber(context.preferredEntry),
       maximumEntryPrice: optionalNumber(context.maximumEntryPrice),
       invalidationLevel: optionalNumber(context.invalidationLevel),
+
+      // Optional entry-mode metadata. These fields extend the v1 bridge without
+      // changing existing lifecycle, monitor, notification, or trading behavior.
+      entryMode: context.entryMode === 'left_side_starter' ? 'left_side_starter' : 'confirmed',
+      starterEligible: context.starterEligible === true,
+      starterAllocationPct: optionalNumber(context.starterAllocationPct),
+      starterExecuted: context.starterExecuted === true,
+      starterRisk: context.starterRisk && typeof context.starterRisk === 'object'
+        ? { ...context.starterRisk }
+        : null,
+
       h1H2Status: context.h1H2Status || null,
       C1: context.C1 || null,
       C2: context.C2 || null,
