@@ -3181,8 +3181,10 @@ function recomputeWatchStatus() {
             ? `Eligible｜符合基礎資格｜配置 ${starterAllocationPct}%｜Mode: left_side_starter`
             : starterExecuted
               ? 'Already executed｜本輪已執行，不可重複建立'
+              : rightSideSetupConfirmed
+                ? 'Right-side setup already confirmed｜已完成右側確認，不再使用 Left-Side Starter'
                 : !activeZoneValid
-                 ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
+                  ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
                   : !priceInsideActiveZone
                     ? 'Price is outside Active Zone｜現價不在啟用區間'
                     : !c1ok
@@ -3191,9 +3193,7 @@ function recomputeWatchStatus() {
                         ? 'Invalidation level required｜必須先設定有效失效價'
                         : !aboveStructuralInvalidation
                           ? 'Price below invalidation level｜現價已低於失效價'
-                          : rightSideSetupConfirmed
-                            ? 'Upgraded to confirmed mode｜已升級為右側確認模式'
-                            : 'Not eligible｜目前不符合條件'
+                          : 'Not eligible｜目前不符合條件'
         }</div>
       </div>
     </div>
