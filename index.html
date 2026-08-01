@@ -2961,8 +2961,7 @@ function recomputeWatchStatus() {
 
   // Left-Side Starter base authorization. TAR / OBI / VWAP / spread execution
   // risk remains owned by TAR-OBI and does not become a confirmed entry signal here.
-  const isDcaPosition = S.data.dca.some(item => item.id === pos.id);
-  const activeZoneValid = Number.isFinite(zoneLow)
+   const activeZoneValid = Number.isFinite(zoneLow)
     && Number.isFinite(zoneHigh)
     && zoneLow > 0
     && zoneHigh > 0
@@ -2981,13 +2980,13 @@ function recomputeWatchStatus() {
   const starterExecuted = starterExecutedElement
     ? starterExecutedElement.checked
     : pos.watchCriteria?.starterExecuted === true;
-  const starterBaseEligible = isDcaPosition
-    && activeZoneValid
-    && priceInsideActiveZone
-    && c1ok
-    && structuralInvalidationAvailable
-    && aboveStructuralInvalidation
-    && !starterExecuted;
+  const starterBaseEligible =
+  activeZoneValid
+  && priceInsideActiveZone
+  && c1ok
+  && structuralInvalidationAvailable
+  && aboveStructuralInvalidation
+  && !starterExecuted;
 
   // BIAS (乖離率) — signed deviation of price from the 5EMA. Positive = price has run ahead
   // of its average cost (the larger, the more "stretched" and prone to a profit-taking
@@ -3182,10 +3181,8 @@ function recomputeWatchStatus() {
             ? `Eligible｜符合基礎資格｜配置 ${starterAllocationPct}%｜Mode: left_side_starter`
             : starterExecuted
               ? 'Already executed｜本輪已執行，不可重複建立'
-              : !isDcaPosition
-                ? 'Unavailable｜僅適用 DCA 標的'
                 : !activeZoneValid
-                  ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
+                 ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
                   : !priceInsideActiveZone
                     ? 'Price is outside Active Zone｜現價不在啟用區間'
                     : !c1ok
