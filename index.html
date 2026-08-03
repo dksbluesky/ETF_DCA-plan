@@ -2930,7 +2930,7 @@ function recomputeWatchStatus() {
   const c4ProvisionalNote = isIntraday
     ? 'Intraday estimate only.<br>High, Low, Current Price and Volume continue to update throughout the session.<br><b>This is NOT a confirmed end-of-day trading signal.</b><br>僅為盤中估算；最高、最低、現價與成交量仍會持續變動，並非已確認的收盤交易訊號。'
     : 'Session status unavailable.<br><b>This is NOT treated as a confirmed end-of-day trading signal.</b><br>無法確認交易時段，因此不視為正式收盤交易訊號。';
-  const c4IntradayText = `${c4SessionLabel}<br><br><b>目前收盤強度 Current Close Strength</b><br>${c4LocationText} (${c4.classification})${c4PriceText ? `<br>${c4PriceText}` : ''}<br><br><b>目前量比 Current Volume Ratio</b><br>${c4VolumeText}${c4VolumeDetail}<br><br><b>目前偏向 Current Bias</b><br>${currentBias}<br>${intradayObservation}<br><br><b>最終決策 Final Decision</b><br>等待收盤 Pending Market Close<br><br><b>注意 Note</b><br><span style="color:#874d00">${c4ProvisionalNote}</span>`;
+  const c4IntradayText = `${c4SessionLabel}<br><b>目前收盤強度 Current Close Strength</b><br>${c4LocationText} (${c4.classification})${c4PriceText ? `<br>${c4PriceText}` : ''}<br><b>目前量比 Current Volume Ratio</b><br>${c4VolumeText}${c4VolumeDetail}<br><b>目前偏向 Current Bias</b><br>${currentBias}<br>${intradayObservation}<br><b>最終決策 Final Decision</b><br>等待收盤 Pending Market Close<br><b>注意 Note</b><br><span style="color:#874d00">${c4ProvisionalNote}</span>`;
   const c4OfficialText = `
   <div style="line-height:1.35">
     <div style="margin-bottom:5px">${c4SessionLabel}</div>
