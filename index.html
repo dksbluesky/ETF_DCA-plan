@@ -3019,7 +3019,11 @@ function recomputeWatchStatus() {
     c3ok || (freshSignal && early.type === 'H2' && early.lowVolume)
   );
   const starterEligible = starterBaseEligible && !rightSideSetupConfirmed;
-  const entryMode = starterEligible ? 'left_side_starter' : 'confirmed';
+  const entryMode = starterEligible
+  ? 'left_side_starter'
+  : rightSideSetupConfirmed
+    ? 'confirmed'
+    : 'pending';
   const starterRiskReasons = [];
   if (!c2ok) starterRiskReasons.push('C2 consolidation is not confirmed');
   if (!c3ok) starterRiskReasons.push('C3 right-side confirmation is not present');
