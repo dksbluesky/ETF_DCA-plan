@@ -286,8 +286,10 @@
 
       entryMode:
         context.entryMode === 'left_side_starter'
-          ? 'left_side_starter'
-          : 'confirmed',
+           ? 'left_side_starter'
+           : context.entryMode === 'confirmed'
+             ? 'confirmed'
+             : 'pending',
 
       starterEligible:
         context.starterEligible === true,
@@ -818,11 +820,17 @@
       : 'Unavailable';
   }
 
-  function entryModeLabel(mode) {
-    return mode === 'left_side_starter'
-      ? 'Left-Side Starter'
-      : 'Confirmed / Right-Side';
-  }
+   function entryModeLabel(mode) {
+   if (mode === 'left_side_starter') {
+    return 'Left-Side Starter';
+   }
+
+   if (mode === 'confirmed') {
+    return 'Confirmed / Right-Side';
+   }
+
+   return 'Pending / Intraday Monitoring';
+}
 
   function starterStatusLabel(
     bridge,
@@ -1328,11 +1336,11 @@
         : current
           || context;
 
-    const effectiveEntryMode =
-      result?.entryMode
-      || current?.entryMode
-      || context?.entryMode
-      || 'confirmed';
+   const effectiveEntryMode =
+       current?.entryMode
+       || context?.entryMode
+       || result?.entryMode
+       || 'pending';
 
     setText(
       'status',
