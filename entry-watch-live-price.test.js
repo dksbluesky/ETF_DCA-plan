@@ -29,8 +29,8 @@ assert.match(
 
 assert.match(
   html,
-  /const WATCH_AUTO_REFRESH_MS = 30 \* 1000;/,
-  'Entry Watch refreshes every 30 seconds while open'
+  /const WATCH_AUTO_REFRESH_MS = 10 \* 1000;/,
+  'Entry Watch refreshes every 10 seconds while open'
 );
 assert.match(
   html,
