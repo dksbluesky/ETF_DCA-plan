@@ -2263,12 +2263,35 @@ function mergeAndRankMarketLevels(rawLevels, candles, timeframe, currentPriceOve
   return selected.length >= 3 ? selected : merged.sort((a, b) => b.score - a.score).slice(0, 5);
 }
 
-function buildZoneAroundSupport(level, atr) {
+function getTaiwanTickSize(price, securityType = 'Stock') {
+  const value = Number(price);
+  if (!Number.isFinite(value) || value <= 0) return null;
+
+  if (String(securityType).toUpperCase() === 'ETF') {
+    return value < 50 ? 0.01 : 0.05;
+  }
+
+  if (value < 10) return 0.01;
+  if (value < 50) return 0.05;
+  if (value < 100) return 0.1;
+  if (value < 500) return 0.5;
+  if (value < 1000) return 1;
+  return 5;
+}
+
+function snapPriceToTaiwanTick(price, securityType = 'Stock') {
+  const value = Number(price);
+  const tickSize = getTaiwanTickSize(value, securityType);
+  if (!tickSize) return null;
+  return +(Math.round((value + Number.EPSILON) / tickSize) * tickSize).toFixed(2);
+}
+
+function buildZoneAroundSupport(level, atr, securityType = 'Stock') {
   if (!level || !atr) return null;
   const halfWidth = Math.max(atr * 0.35, level.price * 0.004);
   return {
-    zoneLow: +(level.price - halfWidth).toFixed(2),
-    zoneHigh: +(level.price + halfWidth).toFixed(2),
+    zoneLow: snapPriceToTaiwanTick(level.price - halfWidth, securityType),
+    zoneHigh: snapPriceToTaiwanTick(level.price + halfWidth, securityType),
     source: level.source,
     supportPrice: level.price,
     score: level.score,
@@ -2276,23 +2299,23 @@ function buildZoneAroundSupport(level, atr) {
   };
 }
 
-function selectSuggestedWatchZones(levels, currentPrice, atr) {
+function selectSuggestedWatchZones(levels, currentPrice, atr, securityType = 'Stock') {
   const supports = levels.filter(level => level.type === 'Support' && level.price < currentPrice)
     .sort((a, b) => b.price - a.price);
   const aggressive = supports[0] || null;
   const conservative = supports.find(level => !aggressive || level.price < aggressive.price - Math.max(atr * 0.3, currentPrice * 0.003)) || null;
   return {
-    aggressive: buildZoneAroundSupport(aggressive, atr),
-    conservative: buildZoneAroundSupport(conservative, atr)
+    aggressive: buildZoneAroundSupport(aggressive, atr, securityType),
+    conservative: buildZoneAroundSupport(conservative, atr, securityType)
   };
 }
 
-function buildWatchZoneEngine(candles, timeframe, currentPriceOverride = null) {
+function buildWatchZoneEngine(candles, timeframe, currentPriceOverride = null, securityType = 'Stock') {
   const rawLevels = detectRawMarketLevels(candles, timeframe);
   const marketLevels = mergeAndRankMarketLevels(rawLevels, candles, timeframe, currentPriceOverride);
   const atr = calcMarketATR(candles);
   const currentPrice = currentPriceOverride || candles[candles.length - 1]?.close;
-  const suggestedZones = selectSuggestedWatchZones(marketLevels, currentPrice, atr);
+  const suggestedZones = selectSuggestedWatchZones(marketLevels, currentPrice, atr, securityType);
   console.debug('Market Level Engine', { timeframe, marketLevels, suggestedZones });
   return { timeframe, marketLevels, atr, suggestedZones };
 }
@@ -2432,7 +2455,7 @@ async function recalculateMarketLevelSuggestions(listType, posId, refreshData = 
     if (refreshData || !_watchMarketCandles || _watchZoneEngine?.timeframe !== timeframe) {
       _watchMarketCandles = await fetchMarketLevelCandles(pos.ticker, timeframe, _watchCandles);
     }
-    _watchZoneEngine = buildWatchZoneEngine(_watchMarketCandles, timeframe, _watchCandles[_watchCandles.length - 1]?.close);
+    _watchZoneEngine = buildWatchZoneEngine(_watchMarketCandles, timeframe, _watchCandles[_watchCandles.length - 1]?.close, pos.type);
     setMarketLevelTimeframeAvailability(timeframe, true);
     renderSuggestedWatchZones();
     return true;
