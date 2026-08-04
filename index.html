@@ -2874,11 +2874,9 @@ function recomputeWatchStatus() {
   // as a reference, just no longer used to gate pass/fail here.
   let c1ok = false, c1text;
   const crossedMA = ma5 !== null && price <= ma5; // strict — a near-miss above the MA does NOT count as crossed
-  const farBelowMA = ma5 !== null && (ma5 - price) / ma5 * 100 > 3; // >3% below the live 5EMA — support may be failing
   if (!zoneHigh) { c1text = '尚未設定支撐區上緣 Zone High not set'; }
   else if (price > zoneHigh) { c1text = `價格 NT$${price.toFixed(2)} 仍懸在 NT$${zoneHigh} 之上，尚未回測 — 不要進場 Price still above the ceiling, no pullback yet`; }
   else if (ma5 === null) { c1text = `價格已回落，但資料不足無法確認是否觸及 5EMA Price has pulled back, but not enough data to confirm 5EMA contact`; }
-  else if (farBelowMA) { c1text = `⚠️ 價格 NT$${price.toFixed(2)} 已明顯跌破 5EMA NT$${ma5.toFixed(2)}（${((ma5 - price) / ma5 * 100).toFixed(2)}%），支撐可能已失效 Price has fallen well below the 5EMA — support may be failing`; }
   else if (!crossedMA) { c1text = `價格 NT$${price.toFixed(2)} 已低於上緣，但仍高於 5EMA NT$${ma5.toFixed(2)}，尚未真正觸及均線 — 再等等 Below the ceiling, but still above the 5EMA — hasn't actually met the average yet`; }
   else { c1ok = true; c1text = `價格 NT$${price.toFixed(2)} 已回測並觸及/跌破 5EMA NT$${ma5.toFixed(2)} Price has pulled back and met the 5EMA`; }
 
