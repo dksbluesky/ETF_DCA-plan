@@ -6,6 +6,8 @@
 <title>💰投資組合追蹤 · Portfolio Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="decision-journal.js"></script>
+<script src="review-journal.js"></script>
 <script src="execution-bridge-monitor.js"></script>
 <script src="execution-bridge.js"></script>
 <style>
@@ -1839,6 +1841,22 @@ async function fetchDailyCandlesLite(ticker, days) {
   return candles;
 }
 
+async function fetchJournalOutcomeCandles(ticker, fromDate) {
+  const fugleKey = getFugleKey();
+  if (!fugleKey) throw new Error('Fugle API Key is required to collect outcome checkpoints.');
+  const to = new Date().toISOString().split('T')[0];
+  const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${encodeURIComponent(ticker)}?timeframe=D&from=${fromDate}&to=${to}`, {
+    headers: { 'X-API-KEY': fugleKey },
+    cache: 'no-store'
+  });
+  if (!r.ok) throw new Error(`Fugle outcome history HTTP ${r.status} for ${ticker}`);
+  const data = await r.json();
+  return (data.data || []).map(candle => ({
+    date: candle.date, open: candle.open, high: candle.high, low: candle.low,
+    close: candle.close, volume: candle.volume ?? null
+  }));
+}
+
 async function refreshWatchLivePrice(listType, posId) {
   if (_watchRefreshInFlight || !_watchCandles) return;
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
@@ -3223,10 +3241,21 @@ function recomputeWatchStatus() {
       </div>
     </div>
     ${bottomSynth}
+    <div id="decision-journal"></div>
+    <div id="review-journal"></div>
     <div id="execution-bridge"></div>
   `;
-  window.ExecutionBridge?.render(document.getElementById('execution-bridge'), {
+  const watchSnapshot = {
     ticker: pos.ticker,
+    evaluatedAt: new Date().toISOString(),
+    quoteDate: today.date,
+    currentPrice: displayedPrice,
+    open: _watchQuote?.open ?? today.open,
+    high: _watchQuote?.high ?? today.high,
+    low: _watchQuote?.low ?? today.low,
+    previousClose: _watchQuote?.prev ?? null,
+    ema5: ma5,
+    atr: _watchZoneEngine?.atr ?? null,
     marketTimeframe: '1d',
     marketLevelTimeframe: getMarketLevelTimeframe(),
     marketSessionState: quoteState,
@@ -3259,7 +3288,15 @@ function recomputeWatchStatus() {
       confirmed: !isUnconfirmedSession
     },
     setupStatus: { label: sText, provisional: isUnconfirmedSession }
+  };
+  watchSnapshot.gapContext = window.EtfDcaDecisionJournal?.calculateGapContext(watchSnapshot) || null;
+  window.EtfDcaDecisionJournal?.recordSetupSnapshot(watchSnapshot);
+  window.EtfDcaDecisionJournal?.renderPanel(document.getElementById('decision-journal'), watchSnapshot);
+  window.EtfDcaReviewJournal?.renderControls(document.getElementById('review-journal'), {
+    fetchCandles: fetchJournalOutcomeCandles,
+    toast
   });
+  window.ExecutionBridge?.render(document.getElementById('execution-bridge'), watchSnapshot);
 }
 
 async function refreshWatchData(listType, posId) {

@@ -126,7 +126,9 @@
    * @returns {object} The new persisted bridge object.
    */
   function startBridge(context) {
-    return saveBridge(createBridgeObject(context));
+    const bridge = saveBridge(createBridgeObject(context));
+    root.EtfDcaDecisionJournal?.recordBridgeStart?.(context, bridge);
+    return bridge;
   }
 
   function isMobileOrTablet() {
