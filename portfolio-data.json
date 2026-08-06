@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.11,
+      "currentPrice": 33.15,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -75,7 +75,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 237.65,
+      "currentPrice": 238.1,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -179,15 +179,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 229,
-        "zoneHigh": 234,
+        "zoneLow": 230.8,
+        "zoneHigh": 234.75,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 220,
+        "stopLossManual": 227,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 229,
-        "manualZoneHigh": 234,
+        "manualZoneLow": 230.8,
+        "manualZoneHigh": 234.75,
         "starterAllocationPct": 15,
         "starterExecuted": false
       }
@@ -210,11 +210,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.11,
+      "currentPrice": 33.15,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 33.11,
+      "trailHigh": 33.15,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -226,5 +226,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-05T04:23:38.451Z"
+  "lastUpdated": "2026-08-06T01:00:10.117Z"
 }
