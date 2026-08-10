@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.28,
+      "currentPrice": 33.4,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -81,7 +81,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 238.6,
+      "currentPrice": 238.7,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -185,15 +185,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 230.8,
-        "zoneHigh": 234.75,
+        "zoneLow": 233.8,
+        "zoneHigh": 238.4,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 227,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 230.8,
-        "manualZoneHigh": 234.75,
+        "manualZoneLow": 233.8,
+        "manualZoneHigh": 238.4,
         "starterAllocationPct": 15,
         "starterExecuted": false
       }
@@ -203,7 +203,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2390,
+      "currentPrice": 2380,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -216,11 +216,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.28,
+      "currentPrice": 33.4,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 33.28,
+      "trailHigh": 33.4,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -236,7 +236,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 28.64,
+      "currentPrice": 28.53,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -245,5 +245,5 @@
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-08-10T03:30:54.454Z"
+  "lastUpdated": "2026-08-10T08:31:16.017Z"
 }
