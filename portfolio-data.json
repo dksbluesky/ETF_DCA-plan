@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.85,
+      "currentPrice": 33.28,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -61,11 +61,17 @@
       "trailStop": 5,
       "trailHigh": 34.12,
       "watchCriteria": {
-        "zoneLow": 33,
-        "zoneHigh": 34.3,
+        "zoneLow": 32.5,
+        "zoneHigh": 33.06,
         "volThreshold": 24206,
         "stopLossMode": "trail",
-        "stopLossManual": null
+        "stopLossManual": null,
+        "manualZoneLow": 33,
+        "manualZoneHigh": 34.3,
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "conservative",
+        "starterAllocationPct": 15,
+        "starterExecuted": false
       }
     }
   ],
@@ -75,7 +81,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 235.05,
+      "currentPrice": 238.6,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -197,7 +203,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2365,
+      "currentPrice": 2390,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -210,11 +216,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 32.85,
+      "currentPrice": 33.28,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 33.15,
+      "trailHigh": 33.28,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -224,7 +230,20 @@
         "stopLossMode": "manual",
         "stopLossManual": 30
       }
+    },
+    {
+      "id": "3a83fbc0-805d-494d-87de-b2814afb9e4f",
+      "ticker": "00981A",
+      "name": "主動統一台股增長",
+      "type": "ETF",
+      "currentPrice": 28.64,
+      "annualYield": 4,
+      "dividendTracking": true,
+      "trailStop": 3,
+      "trailHigh": 28.65,
+      "transactions": [],
+      "dividends": []
     }
   ],
-  "lastUpdated": "2026-08-07T05:37:15.074Z"
+  "lastUpdated": "2026-08-10T03:30:54.454Z"
 }
