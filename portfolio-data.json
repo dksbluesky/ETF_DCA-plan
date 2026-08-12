@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.52,
+      "currentPrice": 33.51,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -48,13 +48,18 @@
           "notes": "DCA"
         },
         {
-          "id": "9602746e-c4ec-459a-9588-e5fb328d2877",
+          "id": "75cb6edd-0fd5-43aa-adb0-dc6800dcc464",
+          "date": "2026-08-24",
+          "type": "skipped"
+        },
+        {
+          "id": "8f2b4cbe-4966-402e-ad99-2619a237fe9f",
           "date": "2026-08-12",
           "amount": 39874,
           "shares": 1190,
           "pricePerShare": 33.48,
-          "type": "scheduled",
-          "notes": "direct buy"
+          "type": "lumpsum",
+          "notes": ""
         }
       ],
       "dividends": [
@@ -90,7 +95,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 240.95,
+      "currentPrice": 241,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -225,7 +230,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.52,
+      "currentPrice": 33.51,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -245,7 +250,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.31,
+      "currentPrice": 29.3,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -267,5 +272,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-12T04:58:44.684Z"
+  "lastUpdated": "2026-08-12T05:02:36.189Z"
 }
