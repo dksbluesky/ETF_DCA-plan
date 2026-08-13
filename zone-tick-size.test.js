@@ -41,6 +41,8 @@ assert.match(html, /const halfWidth = Math\.max\(atr \* 0\.35, level\.price \* 0
 assert.match(html, /function recomputeZoneValidation\(\)[\s\S]*?const zoneLow = gf\('wc-zonelow'\), zoneHigh = gf\('wc-zonehigh'\);/, 'Zone Validation continues to read the Active Zone');
 assert.match(html, /if \(!zoneHigh\)[\s\S]*?else if \(price > zoneHigh\)/, 'C1 continues to use the Active Zone high');
 assert.match(html, /pos\.watchCriteria = \{[\s\S]*?zoneLow,[\s\S]*?zoneHigh,/, 'Active Zone persistence path is unchanged');
-assert.match(html, /activeZone: zoneLow && zoneHigh \? \{ low: zoneLow, high: zoneHigh \} : null,/, 'Bridge output continues to use the persisted Active Zone');
+assert.match(html, /const configuredActiveZone = Number\.isFinite\(zoneLow\) && Number\.isFinite\(zoneHigh\)/, 'Existing zone values remain available as configured context');
+assert.match(html, /activeZone: selectedActiveZone,/, 'New bridge output uses the isolated selected context zone');
+assert.match(html, /if \(!zoneHigh\)[\s\S]*?else if \(price > zoneHigh\)/, 'C1 continues to use the persisted Active Zone high');
 
 console.log('Suggested Zone tick-size tests passed.');

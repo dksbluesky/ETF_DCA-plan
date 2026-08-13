@@ -109,7 +109,9 @@
       marketSessionState: snapshot.marketSessionState || null,
       quoteDate: snapshot.quoteDate || null,
       gapDirection: snapshot.gapContext?.direction || null,
-      gapZoneRelation: snapshot.gapContext?.zoneRelation || null
+      gapZoneRelation: snapshot.gapContext?.zoneRelation || null,
+      marketContext: snapshot.extensions?.marketContextV1?.context || null,
+      zoneType: snapshot.extensions?.marketContextV1?.zoneType || null
     });
   }
 
@@ -169,6 +171,7 @@
       C3: conditionValue(input.C3),
       C4: c4Value(input.C4),
       setupStatus: input.setupStatus || null,
+      extensions: input.extensions?.marketContextV1 ? { marketContextV1: input.extensions.marketContextV1 } : {},
       gapContext
     };
     const events = eventTypes(previous, snapshot);
@@ -196,7 +199,8 @@
       bridgeId: bridge?.bridgeId || null,
       activeZone: context?.activeZone || bridge?.activeZone || null,
       zoneMode: context?.zoneMode || bridge?.zoneMode || null,
-      setupStatus: context?.setupStatus || bridge?.setupStatus || null
+      setupStatus: context?.setupStatus || bridge?.setupStatus || null,
+      extensions: context?.extensions?.marketContextV1 ? { marketContextV1: context.extensions.marketContextV1 } : {}
     };
     store.entries.push(entry);
     return writeStore(store) ? entry : null;

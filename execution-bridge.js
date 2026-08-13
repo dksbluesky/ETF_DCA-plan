@@ -65,10 +65,10 @@
 
       // Optional entry-mode metadata. These fields extend the v1 bridge without
       // changing existing lifecycle, monitor, notification, or trading behavior.
-      entryMode: context.entryMode === 'left_side_starter' ? 'left_side_starter' : 'confirmed',
-      starterEligible: context.starterEligible === true,
-      starterAllocationPct: optionalNumber(context.starterAllocationPct),
-      starterExecuted: context.starterExecuted === true,
+      entryMode: context.entryMode === 'confirmed' ? 'confirmed' : 'pending',
+      starterEligible: false,
+      starterAllocationPct: null,
+      starterExecuted: false,
       starterRisk: context.starterRisk && typeof context.starterRisk === 'object'
         ? { ...context.starterRisk }
         : null,
@@ -79,7 +79,9 @@
       C3: context.C3 || null,
       C4: context.C4 || null,
       setupStatus: context.setupStatus || null,
-      extensions: {}
+      extensions: context.extensions && typeof context.extensions === 'object'
+        ? JSON.parse(JSON.stringify(context.extensions))
+        : {}
     };
     return root.ExecutionBridgeMonitor?.initializeNewBridge(bridge) || bridge;
   }

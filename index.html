@@ -10,6 +10,7 @@
 <script src="review-journal.js"></script>
 <script src="execution-bridge-monitor.js"></script>
 <script src="execution-bridge.js"></script>
+<script src="market-context-zone.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1518,7 +1519,7 @@ function openModal(type, ctx) {
           </select>
           <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
         </div>
-        <div style="margin-top:12px;border:1px solid var(--gold);border-radius:10px;padding:12px;background:var(--gold-l)">
+        <div style="margin-top:12px;border:1px solid var(--gold);border-radius:10px;padding:12px;background:var(--gold-l);display:none" aria-hidden="true">
           <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:8px">LEFT-SIDE STARTER｜左側第一筆試單</div>
           <div class="form-row">
             <div class="form-group">
@@ -2559,12 +2560,8 @@ function persistWatchCriteria(listType, posId) {
   const zoneHigh = gf('wc-zonehigh') || null;
   const starterAllocationElement = document.getElementById('wc-starter-allocation');
   const starterExecutedElement = document.getElementById('wc-starter-executed');
-  const starterAllocationPct = starterAllocationElement
-    ? normalizeStarterAllocation(starterAllocationElement.value)
-    : normalizeStarterAllocation(previous.starterAllocationPct);
-  const starterExecuted = starterExecutedElement
-    ? starterExecutedElement.checked
-    : previous.starterExecuted === true;
+  const starterAllocationPct = null;
+  const starterExecuted = false;
 
   pos.watchCriteria = {
     ...previous,
@@ -2872,6 +2869,14 @@ function recomputeWatchStatus() {
   const displayedPrice = isIntraday && Number.isFinite(Number(_watchQuote?.price))
     ? Number(_watchQuote.price)
     : price;
+  const configuredActiveZone = Number.isFinite(zoneLow) && Number.isFinite(zoneHigh)
+    ? { low: zoneLow, high: zoneHigh }
+    : null;
+  const manualOverride = getWatchZoneMode() === 'manual';
+  const marketContext = window.EtfDcaMarketContextZone?.classify(candles, { currentPrice: displayedPrice, securityType: pos.type }) || null;
+  const selectedActiveZone = marketContext?.context === 'bullish'
+    ? (manualOverride ? configuredActiveZone : marketContext.activeZone)
+    : null;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
   // Consolidation window = days strictly after the breakout day, last up to 3, excluding today.
@@ -3015,12 +3020,8 @@ function recomputeWatchStatus() {
     && displayedPrice >= stopPrice - 1e-9;
   const starterAllocationElement = document.getElementById('wc-starter-allocation');
   const starterExecutedElement = document.getElementById('wc-starter-executed');
-  const starterAllocationPct = starterAllocationElement
-    ? normalizeStarterAllocation(starterAllocationElement.value)
-    : normalizeStarterAllocation(pos.watchCriteria?.starterAllocationPct);
-  const starterExecuted = starterExecutedElement
-    ? starterExecutedElement.checked
-    : pos.watchCriteria?.starterExecuted === true;
+  const starterAllocationPct = null;
+  const starterExecuted = false;
   const starterBaseEligible =
   activeZoneValid
   && priceInsideActiveZone
@@ -3059,12 +3060,8 @@ function recomputeWatchStatus() {
   const rightSideSetupConfirmed = !isUnconfirmedSession && (
     c3ok || (freshSignal && early.type === 'H2' && early.lowVolume)
   );
-  const starterEligible = starterBaseEligible && !rightSideSetupConfirmed;
-  const entryMode = starterEligible
-  ? 'left_side_starter'
-  : rightSideSetupConfirmed
-    ? 'confirmed'
-    : 'pending';
+  const starterEligible = false;
+  const entryMode = rightSideSetupConfirmed ? 'confirmed' : 'pending';
   const starterRiskReasons = [];
   if (!c2ok) starterRiskReasons.push('C2 consolidation is not confirmed');
   if (!c3ok) starterRiskReasons.push('C3 right-side confirmation is not present');
@@ -3261,8 +3258,8 @@ function recomputeWatchStatus() {
     marketTimeframe: '1d',
     marketLevelTimeframe: getMarketLevelTimeframe(),
     marketSessionState: quoteState,
-    zoneMode: getWatchZoneMode(),
-    activeZone: zoneLow && zoneHigh ? { low: zoneLow, high: zoneHigh } : null,
+    zoneMode: manualOverride ? 'manual_override' : ('context_' + (marketContext?.zoneType || 'none')),
+    activeZone: selectedActiveZone,
     preferredEntry: null,
     maximumEntryPrice: null,
     invalidationLevel: stopPrice,
@@ -3289,7 +3286,8 @@ function recomputeWatchStatus() {
       decision: c4.decision,
       confirmed: !isUnconfirmedSession
     },
-    setupStatus: { label: sText, provisional: isUnconfirmedSession }
+    setupStatus: { label: sText, provisional: isUnconfirmedSession },
+    extensions: { marketContextV1: { ...marketContext, evaluatedAt: new Date().toISOString(), manualOverride } }
   };
   watchSnapshot.gapContext = window.EtfDcaDecisionJournal?.calculateGapContext(watchSnapshot) || null;
   window.EtfDcaDecisionJournal?.recordSetupSnapshot(watchSnapshot);
