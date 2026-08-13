@@ -2430,13 +2430,17 @@ function completedDailyDateForMarketContext(candles) {
 
 function renderNoActiveLongZoneCard(candles, historicalDiagnostic = '', context = null) {
   const vRecoveryBreakout = context?.noZoneSubtype === 'v_recovery_breakout_awaiting_hl';
+  const breakoutDetails = context?.vRecoveryBreakout;
   const message = vRecoveryBreakout
     ? `<div style="font-size:14px;font-weight:700;color:#874d00">V-recovery breakout — awaiting post-breakout Higher Low</div><div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px">Price has recovered from the V low and broken above the prior swing high.</div><div style="font-size:12px;font-weight:700;color:#874d00;line-height:1.5;margin-top:5px">No Active Long Zone yet; wait for a confirmed retracement Higher Low before bridging to TAR-OBI.</div>`
     : `<div style="font-size:14px;font-weight:700;color:#874d00">No Active Long Zone — current structure does not yet support a long setup.</div><div style="font-size:12px;font-weight:700;color:#874d00;line-height:1.5;margin-top:5px">No long Zone is selected; TAR-OBI long bridge is unavailable.</div>`;
   const details = vRecoveryBreakout
     ? 'Context is awaiting a post-breakout Higher Low; this is not a short signal.'
     : 'Context remains range/unclear; this is not a short signal.';
-  return `<div style="padding:12px 14px;background:#fffbe6;border:2px solid var(--gold);border-radius:10px;margin-bottom:12px">${message}<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Structure details</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${recentConfirmedSwingDetails(candles)}<br>${details}</div></details>${historicalDiagnostic}</div>`;
+  const structureDetails = vRecoveryBreakout && breakoutDetails
+    ? `V low NT$${Number(breakoutDetails.vLow.price).toFixed(2)} (${breakoutDetails.vLow.date}) → completed breakout close NT$${Number(breakoutDetails.breakout.close).toFixed(2)} (${breakoutDetails.breakout.date}) above prior swing high NT$${Number(breakoutDetails.priorHigh.price).toFixed(2)} (${breakoutDetails.priorHigh.date}). Awaiting a post-breakout Higher Low.`
+    : recentConfirmedSwingDetails(candles);
+  return `<div style="padding:12px 14px;background:#fffbe6;border:2px solid var(--gold);border-radius:10px;margin-bottom:12px">${message}<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Structure details</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${structureDetails}<br>${details}</div></details>${historicalDiagnostic}</div>`;
 }
 function renderContextActiveZone() {
   const panel = document.getElementById('wc-context-zone-panel');
