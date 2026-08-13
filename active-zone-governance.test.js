@@ -8,12 +8,36 @@ const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const monitor = fs.readFileSync(path.join(__dirname, 'execution-bridge-monitor.js'), 'utf8');
 const bridge = require('./execution-bridge.js');
 
+const noZoneUiSource = html.match(/function recentConfirmedSwingDetails[\s\S]*?(?=function renderContextActiveZone)/)?.[0];
+assert.ok(noZoneUiSource, 'no-zone UI helpers are present');
+const noZoneUi = new Function('window', `${noZoneUiSource}; return { renderNoActiveLongZoneCard };`)({
+  EtfDcaMarketContextZone: { DEFAULT_PARAMETERS: { swingWindow: 1 } }
+});
+const bearishFixture = [
+  { date: '2026-07-01', open: 9.5, high: 10, low: 9, close: 9.7 },
+  { date: '2026-07-02', open: 10, high: 12, low: 10, close: 11 },
+  { date: '2026-07-03', open: 10, high: 11, low: 8, close: 9 },
+  { date: '2026-07-04', open: 10, high: 11.5, low: 9, close: 10.5 },
+  { date: '2026-07-05', open: 9, high: 10, low: 7, close: 8 },
+  { date: '2026-07-06', open: 9, high: 10.5, low: 8, close: 9.5 }
+];
+const renderedNoZone = noZoneUi.renderNoActiveLongZoneCard(
+  bearishFixture,
+  '<details><summary>Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary></details>'
+);
+
 assert.match(html, /const noActiveLongZone = !hasValidActiveLongZone;/);
 assert.match(html, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);
 assert.match(html, /statusEl\.innerHTML = noActiveLongZone/);
 assert.match(html, /window\.ExecutionBridgeMonitor\?\.reconcileStoredBridge\(watchSnapshot\);/);
 assert.match(html, /if \(hasValidActiveLongZone\) \{\s*window\.ExecutionBridge\?\.render\(bridgeContainer, watchSnapshot\);/);
-assert.match(html, /Reference only — no valid Active Long Zone; cannot activate long monitoring or TAR-OBI bridge\./);
+assert.match(renderedNoZone, /No Active Long Zone — current structure does not yet support a long setup\./);
+assert.match(renderedNoZone, /No long Zone is selected; TAR-OBI long bridge is unavailable\./);
+assert.match(renderedNoZone, /<details[^>]*>[\s\S]*<summary[^>]*>Structure details<\/summary>/);
+assert.match(renderedNoZone, /Recent confirmed swings: LH NT\$11\.50 \(2026-07-04\) → LL NT\$7\.00 \(2026-07-05\)\./);
+assert.match(renderedNoZone, /Context remains range\/unclear; this is not a short signal\./);
+assert.match(renderedNoZone, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);
+assert.doesNotMatch(renderedNoZone.split('<details')[0], /Lower High \+ Lower Low|LL \+ LH|bearish/i);
 assert.match(html, /aggressiveApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !aggressive;/);
 assert.match(html, /conservativeApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !conservative;/);
 assert.match(html, /Active Long Zone A — Pullback Reversal/);
