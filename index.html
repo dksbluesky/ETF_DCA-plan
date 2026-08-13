@@ -1436,7 +1436,7 @@ function openModal(type, ctx) {
       ? Math.min(15, Math.max(10, savedStarterAllocation))
       : 15;
     const initialStarterExecuted = wc.starterExecuted === true;
-    _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status';
+    _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status'; _watchStatusTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
@@ -1776,7 +1776,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status';
+let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status';
 const WATCH_AUTO_REFRESH_MS = 10 * 1000;
 let _watchRefreshTimer = null;
 let _watchRefreshInFlight = false;
@@ -2610,6 +2610,7 @@ function switchWatchBias(len) {
 }
 
 function switchWatchTab(tab) {
+  _watchStatusTab = tab;
   document.getElementById('wc-tab-status').className = `btn btn-${tab === 'status' ? 'primary' : 'outline'} btn-sm`;
   document.getElementById('wc-tab-help').className = `btn btn-${tab === 'help' ? 'primary' : 'outline'} btn-sm`;
   if (tab === 'status') {
@@ -2857,6 +2858,7 @@ function recomputeZoneValidation() {
 
 function recomputeWatchStatus() {
   recomputeZoneValidation();
+  if (_watchStatusTab !== 'status') return;
   const statusEl = document.getElementById('wc-status');
   if (!statusEl || !_watchCandles || !_watchPos) return;
   const candles = _watchCandles, pos = _watchPos;
