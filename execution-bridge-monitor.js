@@ -256,6 +256,20 @@
     return null;
   }
 
+  function sourceLongZoneInvalidationReason(context) {
+    const marketContext = context?.extensions?.marketContextV1;
+    // Legacy bridges without the context extension preserve their original behavior.
+    if (!marketContext) return null;
+    if (marketContext.context !== 'bullish' || marketContext.automaticZoneEligible !== true) {
+      return 'No valid bullish Active Zone remains.';
+    }
+    const low = Number(context?.activeZone?.low);
+    const high = Number(context?.activeZone?.high);
+    if (!Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high < low) {
+      return 'The selected Active Zone is no longer valid.';
+    }
+    return null;
+  }
   function validSourceContext(context) {
     const low = Number(context?.activeZone?.low);
     const high = Number(context?.activeZone?.high);
@@ -342,6 +356,7 @@
 
       extensions: {
         ...(bridge.extensions || {}),
+        ...(context.extensions?.marketContextV1 ? { marketContextV1: context.extensions.marketContextV1 } : {}),
         sourceContextUpdatedAt: isoTime(now)
       }
     };
@@ -367,12 +382,7 @@
     const raw = storageGet();
     const stored = parseBridge(raw);
 
-    if (
-      !stored
-      || !validSourceContext(context)
-    ) {
-      return stored;
-    }
+    if (!stored) return null;
 
     const current =
       initializeNewBridge(
@@ -390,6 +400,14 @@
     ) {
       return stored;
     }
+
+    const invalidationReason = sourceLongZoneInvalidationReason(context);
+    if (invalidationReason) {
+      const invalidated = lifecycleUpdate(current, 'INVALIDATED', now, invalidationReason);
+      return writeIfUnchanged(raw, invalidated) ? invalidated : parseBridge(storageGet());
+    }
+
+    if (!validSourceContext(context)) return stored;
 
     if (
       String(
@@ -1062,9 +1080,12 @@
         stored.lifecycle?.status
       );
 
+    const sourceLongZoneBlocked = Boolean(sourceLongZoneInvalidationReason(context));
     let buttons = '';
 
-    if (!current) {
+    if (sourceLongZoneBlocked) {
+      buttons = `<span style="font-size:11px;color:var(--muted)">Bridge unavailable: no valid Active Long Zone.</span>`;
+    } else if (!current) {
       buttons = `
         <button
           type="button"

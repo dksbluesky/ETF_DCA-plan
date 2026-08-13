@@ -2935,6 +2935,13 @@ function recomputeWatchStatus() {
   const selectedActiveZone = marketContext?.context === 'bullish'
     ? (manualOverride ? configuredActiveZone : marketContext.activeZone)
     : null;
+  const hasValidActiveLongZone = marketContext?.context === 'bullish'
+    && marketContext?.automaticZoneEligible === true
+    && Number.isFinite(selectedActiveZone?.low)
+    && Number.isFinite(selectedActiveZone?.high)
+    && selectedActiveZone.low > 0
+    && selectedActiveZone.high >= selectedActiveZone.low;
+  const noActiveLongZone = !hasValidActiveLongZone;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
   // Consolidation window = days strictly after the breakout day, last up to 3, excluding today.
@@ -3208,12 +3215,17 @@ function recomputeWatchStatus() {
     tDetail = `<div style="font-size:13px;color:var(--muted)">${waitMsg}</div>`;
   }
 
-  const triggerBlock = `
+  const normalTriggerBlock = `
     <div style="padding:12px 14px;background:${tBg};border:2px solid ${tBorder};border-radius:10px;margin-bottom:12px">
       ${tBadge}
       <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:${tColor}">${tTitle}</div>
       ${tDetail}
     </div>`;
+  const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--primary);letter-spacing:.5px">ACTIVE LONG ZONE｜${String(marketContext?.zoneType || '').replaceAll('_', ' ')}</div><div style="font-size:16px;font-weight:700;margin-top:4px">NT$${selectedActiveZone?.low.toFixed(2)} – NT$${selectedActiveZone?.high.toFixed(2)}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Invalidation: NT$${marketContext?.invalidationLevel?.toFixed(2) ?? 'Unavailable'} · ${formatMarketContextEvidence(marketContext)}</div></div>`;
+  const noLongZoneLabel = marketContext?.context === 'bearish' ? 'No Active Long Zone — bearish structure' : 'No Active Long Zone — range/unclear; no favourable long location';
+  const historicalDiagnostic = `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${early ? sigLine(early) : 'No historical H1/H2 signal is available.'}</div></details>`;
+  const noLongZoneBlock = `<div style="padding:12px 14px;background:#fffbe6;border:2px solid var(--gold);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:#874d00">${noLongZoneLabel}</div><div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px">${marketContext?.reason || 'No valid bullish structure is available.'} ${formatMarketContextEvidence(marketContext)}</div>${historicalDiagnostic}</div>`;
+  const triggerBlock = noActiveLongZone ? noLongZoneBlock : `${selectedZoneBlock}${normalTriggerBlock}`;
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────
   let sBg, sBorder, sText;
@@ -3259,7 +3271,9 @@ function recomputeWatchStatus() {
       <div style="font-weight:700;font-size:13px">${sText}</div>
     </div>`;
 
-  statusEl.innerHTML = `
+  statusEl.innerHTML = noActiveLongZone
+    ? `<div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${displayedPrice.toFixed(2)}　${today.date}</div>${triggerBlock}<div id="decision-journal"></div><div id="review-journal"></div><div id="execution-bridge"></div>`
+    : `
     <div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${displayedPrice.toFixed(2)}　${today.date}</div>
     ${triggerBlock}
     <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:6px">── 進場條件參考 Setup Context ──</div>
@@ -3354,7 +3368,13 @@ function recomputeWatchStatus() {
     fetchCandles: fetchJournalOutcomeCandles,
     toast
   });
-  window.ExecutionBridge?.render(document.getElementById('execution-bridge'), watchSnapshot);
+  window.ExecutionBridgeMonitor?.reconcileStoredBridge(watchSnapshot);
+  const bridgeContainer = document.getElementById('execution-bridge');
+  if (hasValidActiveLongZone) {
+    window.ExecutionBridge?.render(bridgeContainer, watchSnapshot);
+  } else if (bridgeContainer) {
+    bridgeContainer.innerHTML = '<div style="margin-top:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-size:11px;color:var(--muted)">TAR-OBI Bridge unavailable: no valid Active Long Zone.</div>';
+  }
 }
 
 async function refreshWatchData(listType, posId) {

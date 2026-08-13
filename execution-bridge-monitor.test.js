@@ -170,4 +170,19 @@ assert.notEqual(first.bridgeId, second.bridgeId);
 assert.equal(monitor.requiresReplacementConfirmation(first, '2330'), true);
 assert.equal(monitor.requiresReplacementConfirmation(first, '006208'), false);
 
+storage = storageWith(phase1Bridge());
+monitor = loadMonitor(storage);
+bridge = monitor.syncStoredBridgeContext({
+  ...liveContext,
+  currentPrice: 222,
+  extensions: {
+    marketContextV1: {
+      context: 'bullish',
+      automaticZoneEligible: true,
+      invalidationLevel: 218.9
+    }
+  }
+}, Date.parse('2026-07-27T03:02:00.000Z'));
+assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a temporary price exit must not invalidate the bridge');
+assert.equal(bridge.lifecycle.reason, null);
 console.log('ETF execution bridge monitor tests passed.');

@@ -127,7 +127,20 @@
    * @param {object} context Finished Entry Watch setup context.
    * @returns {object} The new persisted bridge object.
    */
+  function canStartForContext(context) {
+    const marketContext = context?.extensions?.marketContextV1;
+    if (!marketContext) return true;
+    const low = Number(context?.activeZone?.low);
+    const high = Number(context?.activeZone?.high);
+    return marketContext.context === 'bullish'
+      && marketContext.automaticZoneEligible === true
+      && Number.isFinite(low)
+      && Number.isFinite(high)
+      && low > 0
+      && high >= low;
+  }
   function startBridge(context) {
+    if (!canStartForContext(context)) throw new Error('No valid Active Long Zone is available for TAR-OBI monitoring.');
     const bridge = saveBridge(createBridgeObject(context));
     root.EtfDcaDecisionJournal?.recordBridgeStart?.(context, bridge);
     return bridge;
@@ -185,6 +198,7 @@
     if (!container || !root.document) return;
     if (typeof root.ExecutionBridgeMonitor?.renderPanel === 'function') {
       root.ExecutionBridgeMonitor.renderPanel(container, context, {
+        canStartForContext,
         startBridge,
         openMonitor: openTarObiMonitor,
         toast(message, type) {
@@ -233,7 +247,8 @@
     saveBridge,
     loadBridge,
     removeBridge,
-    startBridge,
+    canStartForContext,
+        startBridge,
     openTarObiMonitor,
     render
   });
