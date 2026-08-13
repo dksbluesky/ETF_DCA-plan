@@ -13,7 +13,25 @@
   function tickFor(price, type) { if (String(type).toUpperCase() === 'ETF') return price < 50 ? 0.01 : 0.05; if (price < 10) return 0.01; if (price < 50) return 0.05; if (price < 100) return 0.1; if (price < 500) return 0.5; if (price < 1000) return 1; return 5; }
   const snap = (value, tick) => +(Math.round(value / tick) * tick).toFixed(2);
   const noZone = (context, evidence, reason) => ({ context, zoneType: null, automaticZoneEligible: false, activeZone: null, invalidationLevel: null, reason, evidence, parameters: DEFAULT_PARAMETERS });
-  /** Classifies completed-candle structure and selects one retracement zone, if valid. It does not change Entry Watch C1-C4 or create a trading decision. */
+  function vRecoveryBreakoutAwaitingHigherLow(bars, options = {}) {
+    const completedDailyDate = typeof options.completedDailyDate === 'string' ? options.completedDailyDate : bars.at(-1)?.date;
+    const completedBars = bars.filter(bar => bar.date <= completedDailyDate);
+    if (completedBars.length < DEFAULT_PARAMETERS.minimumCandles) return null;
+    const swings = pivots(completedBars, DEFAULT_PARAMETERS.swingWindow);
+    const lows = swings.filter(item => item.kind === 'low');
+    const highs = swings.filter(item => item.kind === 'high');
+    const vLow = lows.at(-1);
+    const priorHigh = highs.filter(item => item.index < vLow?.index).at(-1);
+    if (!vLow || !priorHigh || priorHigh.price <= vLow.price) return null;
+    const recoveryBars = completedBars.slice(vLow.index + 1, vLow.index + 1 + DEFAULT_PARAMETERS.vRecoveryBars);
+    const recoveryHigh = recoveryBars.reduce((highest, bar) => !highest || bar.high > highest.high ? bar : highest, null);
+    const recoveryFraction = recoveryHigh ? (recoveryHigh.high - vLow.price) / (priorHigh.price - vLow.price) : 0;
+    const breakoutIndex = completedBars.findIndex((bar, index) => index > vLow.index && bar.close > priorHigh.price);
+    if (recoveryFraction < DEFAULT_PARAMETERS.vRecoveryFraction || breakoutIndex < 0) return null;
+    const postBreakoutHigherLow = lows.some(item => item.index > breakoutIndex && item.price > vLow.price);
+    if (postBreakoutHigherLow) return null;
+    return { vLow, priorHigh, recoveryHigh, breakout: completedBars[breakoutIndex] };
+  }  /** Classifies completed-candle structure and selects one retracement zone, if valid. It does not change Entry Watch C1-C4 or create a trading decision. */
   function classify(candles, options = {}) {
     const bars = (Array.isArray(candles) ? candles : []).filter(bar => finite(bar.open) !== null && finite(bar.high) !== null && finite(bar.low) !== null && finite(bar.close) !== null);
     if (bars.length < DEFAULT_PARAMETERS.minimumCandles) return noZone('unclear', { structure: ['Insufficient completed candles'], ema: [], supportResistance: [], fvg: [] }, 'Insufficient completed candles');
@@ -27,6 +45,20 @@
     const overlap = bars.slice(-6).filter((bar, index, sample) => index > 0 && bar.low <= sample[index - 1].high && bar.high >= sample[index - 1].low).length, rangeLike = overlap >= 4 && Math.abs(emaSlope) <= range * 0.08;
     const evidence = { structure: [higherHigh && higherLow ? 'Higher High + Higher Low' : lowerHigh && lowerLow ? 'Lower High + Lower Low' : 'No confirmed directional swing sequence'], ema: [`Price ${current >= ema20 ? 'above' : 'below'} EMA20`, `EMA20 ${emaSlope >= 0 ? 'rising/flat' : 'falling'}`], supportResistance: lastLow ? [`Recent swing low ${lastLow.price} (${lastLow.date})`] : [], fvg: [] };
     if (bearish) return noZone('bearish', evidence, 'LL + LH with declining EMA context');
+    const pendingVRecovery = !bullish && vRecoveryBreakoutAwaitingHigherLow(bars, options);
+    if (pendingVRecovery) {
+      return {
+        ...noZone('unclear', {
+          ...evidence,
+          structure: [
+            `V low ${pendingVRecovery.vLow.price} (${pendingVRecovery.vLow.date})`,
+            `Completed close ${pendingVRecovery.breakout.close} (${pendingVRecovery.breakout.date}) above prior swing high ${pendingVRecovery.priorHigh.price} (${pendingVRecovery.priorHigh.date})`
+          ],
+          supportResistance: [`Awaiting a confirmed Higher Low after ${pendingVRecovery.breakout.date}`]
+        }, 'V-recovery breakout — awaiting post-breakout Higher Low'),
+        noZoneSubtype: 'v_recovery_breakout_awaiting_hl'
+      };
+    }
     if (rangeLike) return noZone('range', evidence, 'Bar overlap and flat EMA indicate a trading range/transition');
     if (!bullish || !lastLow || !lastHigh) return noZone('unclear', evidence, 'No sustained bullish HH + HL structure');
     const latestHighAfterLow = highs.filter(item => item.index > lastLow.index).at(-1), pullbackDepth = latestHighAfterLow ? latestHighAfterLow.price - lastLow.price : 0, shallow = pullbackDepth > 0 && pullbackDepth <= range * DEFAULT_PARAMETERS.shallowPullbackAtr;

@@ -2423,8 +2423,20 @@ function recentConfirmedSwingDetails(candles) {
   ].sort((a, b) => a.index - b.index).map(item => `${item.label} NT$${item.price.toFixed(2)} (${item.date})`).join(' → ')}.`;
 }
 
-function renderNoActiveLongZoneCard(candles, historicalDiagnostic = '') {
-  return `<div style="padding:12px 14px;background:#fffbe6;border:2px solid var(--gold);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:#874d00">No Active Long Zone — current structure does not yet support a long setup.</div><div style="font-size:12px;font-weight:700;color:#874d00;line-height:1.5;margin-top:5px">No long Zone is selected; TAR-OBI long bridge is unavailable.</div><details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Structure details</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${recentConfirmedSwingDetails(candles)}<br>Context remains range/unclear; this is not a short signal.</div></details>${historicalDiagnostic}</div>`;
+function completedDailyDateForMarketContext(candles) {
+  const completedCandle = _watchQuote?.state === 'REGULAR' ? candles?.at(-2) : candles?.at(-1);
+  return completedCandle?.date;
+}
+
+function renderNoActiveLongZoneCard(candles, historicalDiagnostic = '', context = null) {
+  const vRecoveryBreakout = context?.noZoneSubtype === 'v_recovery_breakout_awaiting_hl';
+  const message = vRecoveryBreakout
+    ? `<div style="font-size:14px;font-weight:700;color:#874d00">V-recovery breakout — awaiting post-breakout Higher Low</div><div style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px">Price has recovered from the V low and broken above the prior swing high.</div><div style="font-size:12px;font-weight:700;color:#874d00;line-height:1.5;margin-top:5px">No Active Long Zone yet; wait for a confirmed retracement Higher Low before bridging to TAR-OBI.</div>`
+    : `<div style="font-size:14px;font-weight:700;color:#874d00">No Active Long Zone — current structure does not yet support a long setup.</div><div style="font-size:12px;font-weight:700;color:#874d00;line-height:1.5;margin-top:5px">No long Zone is selected; TAR-OBI long bridge is unavailable.</div>`;
+  const details = vRecoveryBreakout
+    ? 'Context is awaiting a post-breakout Higher Low; this is not a short signal.'
+    : 'Context remains range/unclear; this is not a short signal.';
+  return `<div style="padding:12px 14px;background:#fffbe6;border:2px solid var(--gold);border-radius:10px;margin-bottom:12px">${message}<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Structure details</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${recentConfirmedSwingDetails(candles)}<br>${details}</div></details>${historicalDiagnostic}</div>`;
 }
 function renderContextActiveZone() {
   const panel = document.getElementById('wc-context-zone-panel');
@@ -2432,7 +2444,8 @@ function renderContextActiveZone() {
   const currentPrice = Number(_watchQuote?.price) || _watchCandles[_watchCandles.length - 1]?.close;
   const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, {
     currentPrice,
-    securityType: _watchPos.type
+    securityType: _watchPos.type,
+    completedDailyDate: completedDailyDateForMarketContext(_watchCandles)
   });
   if (!context) {
     panel.textContent = 'Market context is unavailable.';
@@ -2444,7 +2457,7 @@ function renderContextActiveZone() {
     ['shallow_trend_continuation', 'C. Shallow Trend Continuation Zone', 'Usable shallow Higher-Low retest in an ongoing bullish HH + HL trend.']
   ];
   if (context.context !== 'bullish' || !context.activeZone || context.automaticZoneEligible !== true) {
-    panel.innerHTML = renderNoActiveLongZoneCard(_watchCandles);
+    panel.innerHTML = renderNoActiveLongZoneCard(_watchCandles, '', context);
     return;
   }
   const cards = definitions.map(([type, title, description]) => {
@@ -2457,7 +2470,7 @@ function renderContextActiveZone() {
 function applyContextActiveZone() {
   if (!_watchCandles || !_watchPos || !_watchListType || !_watchPosId) return;
   const currentPrice = Number(_watchQuote?.price) || _watchCandles[_watchCandles.length - 1]?.close;
-  const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, { currentPrice, securityType: _watchPos.type });
+  const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, { currentPrice, securityType: _watchPos.type, completedDailyDate: completedDailyDateForMarketContext(_watchCandles) });
   if (!context?.activeZone) {
     toast('No valid bullish Active Zone is available.', 'err');
     return;
@@ -2480,7 +2493,8 @@ function renderSuggestedWatchZones() {
   const currentPrice = Number(_watchQuote?.price) || _watchCandles?.[_watchCandles.length - 1]?.close;
   const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, {
     currentPrice,
-    securityType: _watchPos?.type
+    securityType: _watchPos?.type,
+    completedDailyDate: completedDailyDateForMarketContext(_watchCandles)
   });
   const hasValidAutomaticActiveZone = context?.context === 'bullish'
     && context?.automaticZoneEligible === true
@@ -2984,7 +2998,7 @@ function recomputeWatchStatus() {
     ? { low: zoneLow, high: zoneHigh }
     : null;
   const manualOverride = getWatchZoneMode() === 'manual';
-  const marketContext = window.EtfDcaMarketContextZone?.classify(candles, { currentPrice: displayedPrice, securityType: pos.type }) || null;
+  const marketContext = window.EtfDcaMarketContextZone?.classify(candles, { currentPrice: displayedPrice, securityType: pos.type, completedDailyDate: completedDailyDateForMarketContext(candles) }) || null;
   const selectedActiveZone = marketContext?.context === 'bullish'
     ? (manualOverride ? configuredActiveZone : marketContext.activeZone)
     : null;
@@ -3277,7 +3291,7 @@ function recomputeWatchStatus() {
   const selectedZoneTitle = ({ pullback_reversal: 'Active Long Zone A — Pullback Reversal', v_reversal_continuation: 'Active Long Zone B — V-Reversal Continuation', shallow_trend_continuation: 'Active Long Zone C — Shallow Trend Continuation' })[marketContext?.zoneType] || 'Active Long Zone';
   const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:var(--primary)">${selectedZoneTitle}</div><div style="font-size:13px;font-weight:700;margin-top:5px">Range: NT$${selectedActiveZone?.low.toFixed(2)}–NT$${selectedActiveZone?.high.toFixed(2)} · Invalidation: NT$${marketContext?.invalidationLevel?.toFixed(2) ?? 'Unavailable'}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:5px">${marketContext?.reason || formatMarketContextEvidence(marketContext)}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px">${formatMarketContextEvidence(marketContext)}</div></div>`;
   const historicalDiagnostic = `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${early ? sigLine(early) : 'No historical H1/H2 signal is available.'}</div></details>`;
-  const noLongZoneBlock = renderNoActiveLongZoneCard(_watchCandles, historicalDiagnostic);
+  const noLongZoneBlock = renderNoActiveLongZoneCard(_watchCandles, historicalDiagnostic, marketContext);
   const triggerBlock = noActiveLongZone ? noLongZoneBlock : `${selectedZoneBlock}${normalTriggerBlock}`;
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────

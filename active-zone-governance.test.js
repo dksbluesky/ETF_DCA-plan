@@ -25,6 +25,11 @@ const renderedNoZone = noZoneUi.renderNoActiveLongZoneCard(
   bearishFixture,
   '<details><summary>Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary></details>'
 );
+const renderedVRecoveryNoZone = noZoneUi.renderNoActiveLongZoneCard(
+  bearishFixture,
+  '<details><summary>Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary></details>',
+  { noZoneSubtype: 'v_recovery_breakout_awaiting_hl' }
+);
 
 assert.match(html, /const noActiveLongZone = !hasValidActiveLongZone;/);
 assert.match(html, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);
@@ -38,7 +43,11 @@ assert.match(renderedNoZone, /Recent confirmed swings: LH NT\$11\.50 \(2026-07-0
 assert.match(renderedNoZone, /Context remains range\/unclear; this is not a short signal\./);
 assert.match(renderedNoZone, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);
 assert.doesNotMatch(renderedNoZone.split('<details')[0], /Lower High \+ Lower Low|LL \+ LH|bearish/i);
-assert.match(html, /aggressiveApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !aggressive;/);
+assert.match(renderedVRecoveryNoZone, /V-recovery breakout — awaiting post-breakout Higher Low/);
+assert.match(renderedVRecoveryNoZone, /Price has recovered from the V low and broken above the prior swing high\./);
+assert.match(renderedVRecoveryNoZone, /No Active Long Zone yet; wait for a confirmed retracement Higher Low before bridging to TAR-OBI\./);
+assert.match(renderedVRecoveryNoZone, /<details[^>]*>[\s\S]*<summary[^>]*>Structure details<\/summary>/);
+assert.match(renderedVRecoveryNoZone, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);assert.match(html, /aggressiveApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !aggressive;/);
 assert.match(html, /conservativeApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !conservative;/);
 assert.match(html, /const greyUnavailableApply = element =>/);
 assert.match(html, /element\.classList\.toggle\('btn-outline', !hasValidAutomaticActiveZone\);/);
@@ -59,5 +68,8 @@ assert.equal(bridge.canStartForContext({
   activeZone: { low: 100, high: 101 },
   extensions: { marketContextV1: { context: 'bullish', automaticZoneEligible: true } }
 }), true);
-
+assert.equal(bridge.canStartForContext({
+  activeZone: null,
+  extensions: { marketContextV1: { context: 'unclear', automaticZoneEligible: false, noZoneSubtype: 'v_recovery_breakout_awaiting_hl' } }
+}), false);
 console.log('Active Zone governing-state tests passed.');
