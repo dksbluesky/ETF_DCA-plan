@@ -2486,11 +2486,22 @@ function renderSuggestedWatchZones() {
     && context?.automaticZoneEligible === true
     && Number.isFinite(context?.activeZone?.low)
     && Number.isFinite(context?.activeZone?.high);
+  const greyUnavailableApply = element => {
+    if (!element) return;
+    element.classList.toggle('btn-outline', !hasValidAutomaticActiveZone);
+    element.classList.toggle('btn-primary', hasValidAutomaticActiveZone);
+    element.style.background = hasValidAutomaticActiveZone ? '' : 'var(--surface2)';
+    element.style.color = hasValidAutomaticActiveZone ? '' : 'var(--muted)';
+    element.style.cursor = hasValidAutomaticActiveZone ? '' : 'not-allowed';
+    element.style.opacity = hasValidAutomaticActiveZone ? '' : '.72';
+  };
   if (aggressiveEl) aggressiveEl.textContent = formatWatchZone(aggressive, 'aggressive');
   if (conservativeEl) conservativeEl.textContent = formatWatchZone(conservative, 'conservative');
   if (aggressiveApplyEl) aggressiveApplyEl.disabled = !hasValidAutomaticActiveZone || !aggressive;
+  greyUnavailableApply(aggressiveApplyEl);
   renderContextActiveZone();
   if (conservativeApplyEl) conservativeApplyEl.disabled = !hasValidAutomaticActiveZone || !conservative;
+  greyUnavailableApply(conservativeApplyEl);
   if (summaryEl) {
     const levels = _watchZoneEngine?.marketLevels || [];
     summaryEl.textContent = levels.length

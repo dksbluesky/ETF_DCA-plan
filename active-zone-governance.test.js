@@ -40,6 +40,11 @@ assert.match(renderedNoZone, /Historical H1\/H2 detected — not actionable beca
 assert.doesNotMatch(renderedNoZone.split('<details')[0], /Lower High \+ Lower Low|LL \+ LH|bearish/i);
 assert.match(html, /aggressiveApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !aggressive;/);
 assert.match(html, /conservativeApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !conservative;/);
+assert.match(html, /const greyUnavailableApply = element =>/);
+assert.match(html, /element\.classList\.toggle\('btn-outline', !hasValidAutomaticActiveZone\);/);
+assert.match(html, /element\.style\.background = hasValidAutomaticActiveZone \? '' : 'var\(--surface2\)'/);
+assert.match(html, /greyUnavailableApply\(aggressiveApplyEl\);/);
+assert.match(html, /greyUnavailableApply\(conservativeApplyEl\);/);
 assert.match(html, /Active Long Zone A — Pullback Reversal/);
 assert.match(html, /Active Long Zone B — V-Reversal Continuation/);
 assert.match(html, /Active Long Zone C — Shallow Trend Continuation/);
