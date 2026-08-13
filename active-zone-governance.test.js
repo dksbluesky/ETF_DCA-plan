@@ -28,7 +28,14 @@ const renderedNoZone = noZoneUi.renderNoActiveLongZoneCard(
 const renderedVRecoveryNoZone = noZoneUi.renderNoActiveLongZoneCard(
   bearishFixture,
   '<details><summary>Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary></details>',
-  { noZoneSubtype: 'v_recovery_breakout_awaiting_hl' }
+  {
+    noZoneSubtype: 'v_recovery_breakout_awaiting_hl',
+    vRecoveryBreakout: {
+      vLow: { price: 210.2, date: '2026-07-29' },
+      priorHigh: { price: 240.1, date: '2026-07-22' },
+      breakout: { close: 244.4, date: '2026-08-13' }
+    }
+  }
 );
 
 assert.match(html, /const noActiveLongZone = !hasValidActiveLongZone;/);
@@ -47,6 +54,8 @@ assert.match(renderedVRecoveryNoZone, /V-recovery breakout — awaiting post-bre
 assert.match(renderedVRecoveryNoZone, /Price has recovered from the V low and broken above the prior swing high\./);
 assert.match(renderedVRecoveryNoZone, /No Active Long Zone yet; wait for a confirmed retracement Higher Low before bridging to TAR-OBI\./);
 assert.match(renderedVRecoveryNoZone, /<details[^>]*>[\s\S]*<summary[^>]*>Structure details<\/summary>/);
+assert.match(renderedVRecoveryNoZone, /V low NT\$210\.20 \(2026-07-29\) → completed breakout close NT\$244\.40 \(2026-08-13\) above prior swing high NT\$240\.10 \(2026-07-22\)\. Awaiting a post-breakout Higher Low\./);
+assert.doesNotMatch(renderedVRecoveryNoZone, /Recent confirmed swings:/);
 assert.match(renderedVRecoveryNoZone, /Historical H1\/H2 detected — not actionable because no valid Active Long Zone\./);assert.match(html, /aggressiveApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !aggressive;/);
 assert.match(html, /conservativeApplyEl\.disabled = !hasValidAutomaticActiveZone \|\| !conservative;/);
 assert.match(html, /const greyUnavailableApply = element =>/);
