@@ -56,7 +56,8 @@
           ],
           supportResistance: [`Awaiting a confirmed Higher Low after ${pendingVRecovery.breakout.date}`]
         }, 'V-recovery breakout — awaiting post-breakout Higher Low'),
-        noZoneSubtype: 'v_recovery_breakout_awaiting_hl'
+        noZoneSubtype: 'v_recovery_breakout_awaiting_hl',
+        vRecoveryBreakout: pendingVRecovery
       };
     }
     if (rangeLike) return noZone('range', evidence, 'Bar overlap and flat EMA indicate a trading range/transition');
