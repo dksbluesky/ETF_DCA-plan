@@ -1437,7 +1437,7 @@ function openModal(type, ctx) {
       ? Math.min(15, Math.max(10, savedStarterAllocation))
       : 15;
     const initialStarterExecuted = wc.starterExecuted === true;
-    _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchBiasLen = 50; _watchMainTab = 'status'; _watchStatusTab = 'status';
+    _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchListType = null; _watchPosId = null; _watchBiasLen = 50; _watchMainTab = 'status'; _watchStatusTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
     body = `
       <div class="wc-ref" id="wc-ref">⏳ 載入股價資料中… Loading price data…</div>
@@ -1477,6 +1477,7 @@ function openModal(type, ctx) {
         </div>
         <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:8px">── 建議觀察區間 Suggested Watch Zones ──</div>
         <div id="wc-level-summary" style="font-size:11px;color:var(--muted);line-height:1.5;margin:-3px 0 9px">市場層級計算中… Calculating Market Levels…</div>
+        <div id="wc-context-zone-panel" style="margin:0 0 12px"></div>
         <div class="form-row" style="align-items:stretch">
           <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
             <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Aggressive 積極</div>
@@ -1777,7 +1778,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status';
+let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchListType = null, _watchPosId = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status';
 const WATCH_AUTO_REFRESH_MS = 10 * 1000;
 let _watchRefreshTimer = null;
 let _watchRefreshInFlight = false;
@@ -2379,6 +2380,62 @@ function setMarketLevelTimeframeAvailability(timeframe, available, reason = '') 
     : `60 Minutes 60分鐘 — Unavailable${reason ? `: ${reason}` : ''}`;
 }
 
+function formatMarketContextEvidence(context) {
+  if (!context?.evidence) return 'Evidence unavailable.';
+  return [
+    ...(context.evidence.structure || []),
+    ...(context.evidence.ema || []),
+    ...(context.evidence.supportResistance || []),
+    ...(context.evidence.fvg || [])
+  ].filter(Boolean).join(' · ');
+}
+
+function renderContextActiveZone() {
+  const panel = document.getElementById('wc-context-zone-panel');
+  if (!panel || !_watchCandles || !_watchPos) return;
+  const currentPrice = Number(_watchQuote?.price) || _watchCandles[_watchCandles.length - 1]?.close;
+  const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, {
+    currentPrice,
+    securityType: _watchPos.type
+  });
+  if (!context) {
+    panel.textContent = 'Market context is unavailable.';
+    return;
+  }
+  const definitions = [
+    ['pullback_reversal', 'A. Pullback Reversal Zone', 'Support/FVG retracement; H1/H2 remain relevant inside the pullback.'],
+    ['v_reversal_continuation', 'B. V-Reversal Continuation Zone', 'Higher-Low retest after a fast recovery, then HH + HL confirmation.'],
+    ['shallow_trend_continuation', 'C. Shallow Trend Continuation Zone', 'Usable shallow Higher-Low retest in an ongoing bullish HH + HL trend.']
+  ];
+  if (context.context !== 'bullish' || !context.activeZone) {
+    const label = context.context === 'bearish'
+      ? 'No Active Long Zone — bearish structure'
+      : 'No Active Long Zone — range/unclear; no favourable long location';
+    panel.innerHTML = `<div style="border:2px solid var(--gold);border-radius:10px;padding:10px 12px;background:#fffbe6"><div style="font-size:12px;font-weight:700;color:#874d00">${label}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px">${context.reason}. ${formatMarketContextEvidence(context)}</div></div>`;
+    return;
+  }
+  const cards = definitions.map(([type, title, description]) => {
+    const selected = context.zoneType === type;
+    return `<div style="border:1px solid ${selected ? 'var(--primary)' : 'var(--border)'};border-radius:8px;padding:8px 10px;background:${selected ? 'var(--accent-l)' : 'var(--card)'}"><div style="font-weight:700;color:${selected ? 'var(--primary)' : 'var(--muted)'}">${selected ? '✓ Selected — ' : ''}${title}</div><div style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:3px">${description}</div>${selected ? `<div style="font-size:14px;font-weight:700;margin-top:6px">NT$${context.activeZone.low.toFixed(2)} – NT$${context.activeZone.high.toFixed(2)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px">Invalidation: NT$${context.invalidationLevel.toFixed(2)}</div>` : ''}</div>`;
+  }).join('');
+  panel.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin:2px 0 7px">── CONTEXT-LED ACTIVE ZONE ──</div><div style="display:grid;gap:7px">${cards}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px">${context.reason}. ${formatMarketContextEvidence(context)}</div><button type="button" class="btn btn-primary btn-sm" style="margin-top:8px" onclick="applyContextActiveZone()">Use Selected Active Zone</button>`;
+}
+
+function applyContextActiveZone() {
+  if (!_watchCandles || !_watchPos || !_watchListType || !_watchPosId) return;
+  const currentPrice = Number(_watchQuote?.price) || _watchCandles[_watchCandles.length - 1]?.close;
+  const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, { currentPrice, securityType: _watchPos.type });
+  if (!context?.activeZone) {
+    toast('No valid bullish Active Zone is available.', 'err');
+    return;
+  }
+  document.getElementById('wc-zonemode').value = 'manual';
+  setActiveWatchZoneInputs('manual', { zoneLow: context.activeZone.low, zoneHigh: context.activeZone.high });
+  persistWatchCriteria(_watchListType, _watchPosId);
+  recomputeZoneValidation();
+  recomputeWatchStatus();
+  toast(`${context.zoneType.replaceAll('_', ' ')} Active Zone applied.`, 'ok');
+}
 function renderSuggestedWatchZones() {
   const aggressiveEl = document.getElementById('wc-suggest-aggressive');
   const conservativeEl = document.getElementById('wc-suggest-conservative');
@@ -2390,6 +2447,7 @@ function renderSuggestedWatchZones() {
   if (aggressiveEl) aggressiveEl.textContent = formatWatchZone(aggressive, 'aggressive');
   if (conservativeEl) conservativeEl.textContent = formatWatchZone(conservative, 'conservative');
   if (aggressiveApplyEl) aggressiveApplyEl.disabled = !aggressive;
+  renderContextActiveZone();
   if (conservativeApplyEl) conservativeApplyEl.disabled = !conservative;
   if (summaryEl) {
     const levels = _watchZoneEngine?.marketLevels || [];
@@ -2505,7 +2563,7 @@ async function loadWatchStatus(listType, posId) {
     // (checkEarlySignal) has enough warm-up; EMA50 needs 50 trading days just for its first
     // value, leaving very little room left for the leg-tracker to stabilize on a tighter window.
     const candles = await fetchDailyCandlesLite(pos.ticker, 130);
-    _watchCandles = candles; _watchMarketCandles = null; _watchPos = pos;
+    _watchCandles = candles; _watchMarketCandles = null; _watchPos = pos; _watchListType = listType; _watchPosId = posId;
     const def = detectWatchDefaults(candles);
     await recalculateMarketLevelSuggestions(listType, posId, true);
     const zlEl = document.getElementById('wc-zonelow'), zhEl = document.getElementById('wc-zonehigh'), vtEl = document.getElementById('wc-volth');
