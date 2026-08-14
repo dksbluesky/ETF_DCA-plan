@@ -185,4 +185,20 @@ bridge = monitor.syncStoredBridgeContext({
 }, Date.parse('2026-07-27T03:02:00.000Z'));
 assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a temporary price exit must not invalidate the bridge');
 assert.equal(bridge.lifecycle.reason, null);
+storage = storageWith(phase1Bridge());
+monitor = loadMonitor(storage);
+bridge = monitor.syncStoredBridgeContext({
+  ...liveContext,
+  zoneMode: 'manual_override',
+  extensions: {
+    marketContextV1: {
+      context: 'unclear',
+      automaticZoneEligible: false,
+      manualOverride: true,
+      invalidationLevel: 218.9
+    }
+  }
+}, Date.parse('2026-07-27T03:03:00.000Z'));
+assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a valid manual override must not invalidate the TAR-OBI monitor');
+assert.equal(bridge.lifecycle.reason, null);
 console.log('ETF execution bridge monitor tests passed.');

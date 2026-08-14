@@ -81,4 +81,11 @@ assert.equal(bridge.canStartForContext({
   activeZone: null,
   extensions: { marketContextV1: { context: 'unclear', automaticZoneEligible: false, noZoneSubtype: 'v_recovery_breakout_awaiting_hl' } }
 }), false);
+assert.equal(bridge.canStartForContext({
+  zoneMode: 'manual_override',
+  activeZone: { low: 228.4, high: 232 },
+  extensions: { marketContextV1: { context: 'unclear', automaticZoneEligible: false, manualOverride: true } }
+}), true);
+assert.match(html, /Manual Active Zone — user override/);
+assert.match(html, /ETF_DCA automatic long-zone confirmation is unavailable\. TAR-OBI independently evaluates its own entry assessment and may show Suggested Buy — LIVE only when its conditions pass\./);
 console.log('Active Zone governing-state tests passed.');

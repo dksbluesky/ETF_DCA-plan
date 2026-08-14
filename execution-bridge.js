@@ -132,14 +132,11 @@
     if (!marketContext) return true;
     const low = Number(context?.activeZone?.low);
     const high = Number(context?.activeZone?.high);
-    return marketContext.context === 'bullish'
-      && marketContext.automaticZoneEligible === true
-      && Number.isFinite(low)
-      && Number.isFinite(high)
-      && low > 0
-      && high >= low;
-  }
-  function startBridge(context) {
+    const validZone = Number.isFinite(low) && Number.isFinite(high) && low > 0 && high >= low;
+    const automaticLongZone = marketContext.context === 'bullish' && marketContext.automaticZoneEligible === true;
+    const manualOverride = context?.zoneMode === 'manual_override' && marketContext.manualOverride === true;
+    return validZone && (automaticLongZone || manualOverride);
+  }  function startBridge(context) {
     if (!canStartForContext(context)) throw new Error('No valid Active Long Zone is available for TAR-OBI monitoring.');
     const bridge = saveBridge(createBridgeObject(context));
     root.EtfDcaDecisionJournal?.recordBridgeStart?.(context, bridge);

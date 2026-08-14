@@ -3003,15 +3003,23 @@ function recomputeWatchStatus() {
     : null;
   const manualOverride = getWatchZoneMode() === 'manual';
   const marketContext = window.EtfDcaMarketContextZone?.classify(candles, { currentPrice: displayedPrice, securityType: pos.type, completedDailyDate: completedDailyDateForMarketContext(candles) }) || null;
-  const selectedActiveZone = marketContext?.context === 'bullish'
-    ? (manualOverride ? configuredActiveZone : marketContext.activeZone)
-    : null;
-  const hasValidActiveLongZone = marketContext?.context === 'bullish'
+  const hasValidManualActiveZone = manualOverride
+    && Number.isFinite(configuredActiveZone?.low)
+    && Number.isFinite(configuredActiveZone?.high)
+    && configuredActiveZone.low > 0
+    && configuredActiveZone.high >= configuredActiveZone.low;
+  const selectedActiveZone = hasValidManualActiveZone
+    ? configuredActiveZone
+    : marketContext?.context === 'bullish'
+      ? marketContext.activeZone
+      : null;
+  const hasValidAutomaticActiveLongZone = marketContext?.context === 'bullish'
     && marketContext?.automaticZoneEligible === true
     && Number.isFinite(selectedActiveZone?.low)
     && Number.isFinite(selectedActiveZone?.high)
     && selectedActiveZone.low > 0
     && selectedActiveZone.high >= selectedActiveZone.low;
+  const hasValidActiveLongZone = hasValidAutomaticActiveLongZone || hasValidManualActiveZone;
   const noActiveLongZone = !hasValidActiveLongZone;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
@@ -3292,8 +3300,13 @@ function recomputeWatchStatus() {
       <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:${tColor}">${tTitle}</div>
       ${tDetail}
     </div>`;
-  const selectedZoneTitle = ({ pullback_reversal: 'Active Long Zone A — Pullback Reversal', v_reversal_continuation: 'Active Long Zone B — V-Reversal Continuation', shallow_trend_continuation: 'Active Long Zone C — Shallow Trend Continuation' })[marketContext?.zoneType] || 'Active Long Zone';
-  const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:var(--primary)">${selectedZoneTitle}</div><div style="font-size:13px;font-weight:700;margin-top:5px">Range: NT$${selectedActiveZone?.low.toFixed(2)}–NT$${selectedActiveZone?.high.toFixed(2)} · Invalidation: NT$${marketContext?.invalidationLevel?.toFixed(2) ?? 'Unavailable'}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:5px">${marketContext?.reason || formatMarketContextEvidence(marketContext)}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px">${formatMarketContextEvidence(marketContext)}</div></div>`;
+  const selectedZoneTitle = hasValidManualActiveZone
+    ? 'Manual Active Zone — user override'
+    : ({ pullback_reversal: 'Active Long Zone A — Pullback Reversal', v_reversal_continuation: 'Active Long Zone B — V-Reversal Continuation', shallow_trend_continuation: 'Active Long Zone C — Shallow Trend Continuation' })[marketContext?.zoneType] || 'Active Long Zone';
+  const selectedZoneExplanation = hasValidManualActiveZone
+    ? 'ETF_DCA automatic long-zone confirmation is unavailable. TAR-OBI independently evaluates its own entry assessment and may show Suggested Buy — LIVE only when its conditions pass.'
+    : marketContext?.reason || formatMarketContextEvidence(marketContext);
+  const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:var(--primary)">${selectedZoneTitle}</div><div style="font-size:13px;font-weight:700;margin-top:5px">Range: NT$${selectedActiveZone?.low.toFixed(2)}–NT$${selectedActiveZone?.high.toFixed(2)} · Invalidation: NT$${marketContext?.invalidationLevel?.toFixed(2) ?? 'Unavailable'}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:5px">${selectedZoneExplanation}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px">${formatMarketContextEvidence(marketContext)}</div></div>`;
   const historicalDiagnostic = `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${early ? sigLine(early) : 'No historical H1/H2 signal is available.'}</div></details>`;
   const noLongZoneBlock = renderNoActiveLongZoneCard(_watchCandles, historicalDiagnostic, marketContext);
   const triggerBlock = noActiveLongZone ? noLongZoneBlock : `${selectedZoneBlock}${normalTriggerBlock}`;
