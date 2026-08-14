@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.51,
+      "currentPrice": 33.98,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -95,7 +95,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 241,
+      "currentPrice": 245.25,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -199,16 +199,16 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 233.8,
-        "zoneHigh": 238.4,
+        "zoneLow": 238.8,
+        "zoneHigh": 242,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 227,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 233.8,
-        "manualZoneHigh": 238.4,
-        "starterAllocationPct": 15,
+        "manualZoneLow": 238.8,
+        "manualZoneHigh": 242,
+        "starterAllocationPct": null,
         "starterExecuted": false
       }
     },
@@ -217,7 +217,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2415,
+      "currentPrice": 2430,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -230,11 +230,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.51,
+      "currentPrice": 33.98,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 33.61,
+      "trailHigh": 33.98,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -250,11 +250,11 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.3,
+      "currentPrice": 30.43,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
-      "trailHigh": 29.31,
+      "trailHigh": 30.43,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -272,5 +272,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-12T05:02:36.189Z"
+  "lastUpdated": "2026-08-14T02:20:19.028Z"
 }
