@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.96,
+      "currentPrice": 33.87,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -95,7 +95,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 245.2,
+      "currentPrice": 243.45,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -199,15 +199,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 238.8,
-        "zoneHigh": 242,
+        "zoneLow": 237,
+        "zoneHigh": 240,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 235,
+        "stopLossManual": 234,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 238.8,
-        "manualZoneHigh": 242,
+        "manualZoneLow": 237,
+        "manualZoneHigh": 240,
         "starterAllocationPct": null,
         "starterExecuted": false
       }
@@ -217,7 +217,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2425,
+      "currentPrice": 2395,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -230,11 +230,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.96,
+      "currentPrice": 33.87,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 33.98,
+      "trailHigh": 33.87,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -250,11 +250,11 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.39,
+      "currentPrice": 30.22,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
-      "trailHigh": 30.43,
+      "trailHigh": 30.22,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -272,5 +272,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-14T02:34:04.755Z"
+  "lastUpdated": "2026-08-16T04:13:13.913Z"
 }
