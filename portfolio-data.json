@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 33.87,
+      "currentPrice": 33.75,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -95,7 +95,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 243.45,
+      "currentPrice": 244.05,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -199,15 +199,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 237.4,
-        "zoneHigh": 240,
+        "zoneLow": 241.5,
+        "zoneHigh": 243,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 234,
+        "stopLossManual": 239,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 237.4,
-        "manualZoneHigh": 240,
+        "manualZoneLow": 241.5,
+        "manualZoneHigh": 243,
         "starterAllocationPct": null,
         "starterExecuted": false
       }
@@ -217,7 +217,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2395,
+      "currentPrice": 2400,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -230,7 +230,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 33.87,
+      "currentPrice": 33.75,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -250,11 +250,11 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.22,
+      "currentPrice": 30.39,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
-      "trailHigh": 30.22,
+      "trailHigh": 30.39,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -272,5 +272,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-16T04:17:55.024Z"
+  "lastUpdated": "2026-08-17T07:16:10.664Z"
 }
