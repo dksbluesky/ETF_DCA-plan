@@ -53,3 +53,5 @@ assert.match(
   'automatic polling refreshes only the live quote and reuses the existing Entry Watch calculation'
 );
 console.log('Entry Watch live-price alignment tests passed.');
+assert.match(html, /function completedDailyCandleForReassessment\([\s\S]*?_watchQuote\?\.state === 'REGULAR' \? _watchCandles\.at\(-2\)/, 'Reassessment uses the last completed Daily candle during regular trading');
+assert.match(html, /quote\?\.state === 'CLOSED' && previousQuoteState !== 'CLOSED'[\s\S]*?recalculateMarketLevelSuggestions/, 'A completed close refreshes Daily reassessment data');

@@ -46,3 +46,5 @@ assert.match(html, /activeZone: selectedActiveZone,/, 'New bridge output uses th
 assert.match(html, /if \(!zoneHigh\)[\s\S]*?else if \(price > zoneHigh\)/, 'C1 continues to use the persisted Active Zone high');
 
 console.log('Suggested Zone tick-size tests passed.');
+assert.match(html, /suggestedZone\(aggressive, conservative, getTaiwanTickSize/, 'Manual Suggested Zone uses the existing Taiwan tick schedule');
+assert.match(html, /ManualZoneReassessment/, 'Manual reassessment uses its isolated state helper');

@@ -89,3 +89,5 @@ assert.equal(bridge.canStartForContext({
 assert.match(html, /Manual Active Zone — user override/);
 assert.match(html, /ETF_DCA automatic long-zone confirmation is unavailable\. TAR-OBI independently evaluates its own entry assessment and may show Suggested Buy — LIVE only when its conditions pass\./);
 console.log('Active Zone governing-state tests passed.');
+assert.match(html, /wc-manual-reassessment/, 'Manual reassessment is isolated from the existing Active Zone controls');
+assert.match(html, /applyManualReassessment/, 'Manual Active Zone changes require explicit Apply Manual');
