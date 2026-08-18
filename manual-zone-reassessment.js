@@ -21,7 +21,7 @@
       lastCountedPeriod: typeof state.lastCountedPeriod === 'string' ? state.lastCountedPeriod : null,
       latestSnapshot: state.latestSnapshot && typeof state.latestSnapshot === 'object' ? { ...state.latestSnapshot } : null,
       snapshots: Array.isArray(state.snapshots) ? state.snapshots.map(snapshot => ({ ...snapshot })) : [],
-      manualDraft: { low: number(draft.low), high: number(draft.high), edited: draft.edited === true },
+      manualDraft: { low: number(draft.low), high: number(draft.high), edited: draft.edited === true, editedAt: typeof draft.editedAt === 'string' ? draft.editedAt : null },
       activeManualZone: applied && number(applied.low) !== null && number(applied.high) !== null ? { low: number(applied.low), high: number(applied.high) } : null,
       manualZoneSource: state.manualZoneSource === 'MANUAL' ? 'MANUAL' : null,
       manualAppliedAt: typeof state.manualAppliedAt === 'string' ? state.manualAppliedAt : null,
@@ -44,16 +44,22 @@
   }
   function prefillDraft(state, zone) {
     const next = normalize(state);
-    return next.manualDraft.edited || !zone || ['UNAVAILABLE', 'INVALID_SUGGESTED_ZONE'].includes(zone.status) ? next : { ...next, manualDraft: { low: zone.low, high: zone.high, edited: false } };
+    return next.manualDraft.edited || !zone || ['UNAVAILABLE', 'INVALID_SUGGESTED_ZONE'].includes(zone.status) ? next : { ...next, manualDraft: { low: zone.low, high: zone.high, edited: false, editedAt: null } };
   }
-  function setDraft(state, low, high) { return { ...normalize(state), manualDraft: { low: number(low), high: number(high), edited: true } }; }
+  function setDraft(state, low, high, editedAt = new Date().toISOString()) { return { ...normalize(state), manualDraft: { low: number(low), high: number(high), edited: true, editedAt } }; }
+  function migrateLegacyAppliedDraft(state) {
+    const next = normalize(state);
+    const draft = next.manualDraft, active = next.activeManualZone;
+    const staleLegacyApplyFlag = draft.edited && !draft.editedAt && next.manualAppliedAt && active && draft.low === active.low && draft.high === active.high;
+    return staleLegacyApplyFlag ? { ...next, manualDraft: { ...draft, edited: false, editedAt: null } } : next;
+  }
   function setThreshold(state, threshold) { return { ...normalize(state), threshold: positiveInteger(threshold, DEFAULT_THRESHOLD) }; }
   function setMinOperationalTicks(state, minOperationalTicks) { return { ...normalize(state), minOperationalTicks: positiveInteger(minOperationalTicks, DEFAULT_MIN_OPERATIONAL_TICKS) }; }
   function resetCounter(state) { return { ...normalize(state), counter: 0, latestSnapshot: null, readyNotifiedPeriod: null }; }
   function applyManualZone(state, low, high, appliedAt, suggestedZone = null) {
     const next = setDraft(state, low ?? normalize(state).manualDraft.low, high ?? normalize(state).manualDraft.high);
     if (suggestedZone?.status === 'INVALID_SUGGESTED_ZONE' || next.manualDraft.low === null || next.manualDraft.high === null || next.manualDraft.high <= next.manualDraft.low) return { state: next, applied: false };
-    return { state: { ...next, manualDraft: { low: next.manualDraft.low, high: next.manualDraft.high, edited: false }, activeManualZone: { low: next.manualDraft.low, high: next.manualDraft.high }, manualZoneSource: 'MANUAL', manualAppliedAt: appliedAt || new Date().toISOString() }, applied: true };
+    return { state: { ...next, manualDraft: { low: next.manualDraft.low, high: next.manualDraft.high, edited: false, editedAt: null }, activeManualZone: { low: next.manualDraft.low, high: next.manualDraft.high }, manualZoneSource: 'MANUAL', manualAppliedAt: appliedAt || new Date().toISOString() }, applied: true };
   }
 
   function evaluateDaily(state, input = {}) {
@@ -73,5 +79,5 @@
     return { state: next, evaluated: true, active: true, readyJustReached, snapshot };
   }
   function markReadyNotified(state, period) { return { ...normalize(state), readyNotifiedPeriod: period || null }; }
-  return { DAILY_TIMEFRAME, DEFAULT_THRESHOLD, DEFAULT_MIN_OPERATIONAL_TICKS, normalize, suggestedZone, startSequence, prefillDraft, setDraft, setThreshold, setMinOperationalTicks, resetCounter, applyManualZone, evaluateDaily, markReadyNotified };
+  return { DAILY_TIMEFRAME, DEFAULT_THRESHOLD, DEFAULT_MIN_OPERATIONAL_TICKS, normalize, suggestedZone, startSequence, prefillDraft, setDraft, migrateLegacyAppliedDraft, setThreshold, setMinOperationalTicks, resetCounter, applyManualZone, evaluateDaily, markReadyNotified };
 });

@@ -2576,7 +2576,7 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
   const dailyActive = timeframe === helper.DAILY_TIMEFRAME;
   const aggressive = _watchZoneEngine?.suggestedZones?.aggressive;
   const conservative = _watchZoneEngine?.suggestedZones?.conservative;
-  let state = helper.normalize(pos.watchCriteria?.manualReassessment);
+  let state = helper.migrateLegacyAppliedDraft(pos.watchCriteria?.manualReassessment);
   const zone = helper.suggestedZone(aggressive, conservative, getTaiwanTickSize(Number(aggressive?.zoneLow) || Number(conservative?.zoneHigh) || 0, _watchPos?.type), state.minOperationalTicks);
   const completed = completedDailyCandleForReassessment();
   if (dailyActive && completed?.date && state.sequenceTimeframe !== timeframe) state = helper.startSequence(state, timeframe, completed.date);
@@ -2586,7 +2586,7 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
   } else if (!dailyActive && state.sequenceTimeframe !== timeframe) {
     state = helper.startSequence(state, timeframe, null);
   }
-  if (!hasValidAutomaticActiveZone) state = helper.prefillDraft(state, zone);
+  state = helper.prefillDraft(state, zone);
   saveManualReassessmentState(_watchListType, _watchPosId, state);
   const ready = dailyActive && state.counter >= state.threshold;
   if (ready && state.readyNotifiedPeriod !== state.lastCountedPeriod && typeof Notification === 'function' && Notification.permission === 'granted') {
