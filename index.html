@@ -3563,6 +3563,34 @@ function recomputeWatchStatus() {
     setupStatus: { label: sText, provisional: isUnconfirmedSession },
     extensions: { marketContextV1: { ...marketContext, evaluatedAt: new Date().toISOString(), manualOverride } }
   };
+  const journalManualState = window.ManualZoneReassessment?.normalize(pos.watchCriteria?.manualReassessment) || null;
+  const journalReassessmentSnapshot = journalManualState?.latestSnapshot || null;
+  const journalActiveManualZone = journalManualState?.activeManualZone || (manualOverride ? configuredActiveZone : null);
+  const journalAggressiveZone = _watchZoneEngine?.suggestedZones?.aggressive;
+  const journalConservativeZone = _watchZoneEngine?.suggestedZones?.conservative;
+  watchSnapshot.systemSuggestedZone = {
+    aggressive: { low: journalAggressiveZone?.zoneLow ?? null, high: journalAggressiveZone?.zoneHigh ?? null },
+    conservative: { low: journalConservativeZone?.zoneLow ?? null, high: journalConservativeZone?.zoneHigh ?? null }
+  };
+  watchSnapshot.manualDraft = journalManualState?.manualDraft || null;
+  watchSnapshot.activeManualZone = journalActiveManualZone ? {
+    low: journalActiveManualZone.low,
+    high: journalActiveManualZone.high,
+    source: journalManualState?.manualZoneSource || (manualOverride ? getWatchZoneMode() : null),
+    manualAppliedAt: journalManualState?.manualAppliedAt || null
+  } : null;
+  watchSnapshot.manualReassessment = {
+    completedDailyDate: journalReassessmentSnapshot?.tradingDate || null,
+    completedClose: journalReassessmentSnapshot?.closingPrice ?? null,
+    suggestedZoneLow: journalReassessmentSnapshot?.suggestedZoneLow ?? null,
+    suggestedZoneHigh: journalReassessmentSnapshot?.suggestedZoneHigh ?? null,
+    result: journalReassessmentSnapshot?.result || null,
+    counter: journalManualState?.counter ?? null,
+    threshold: journalManualState?.threshold ?? null,
+    ready: journalManualState ? (getMarketLevelTimeframe() === 'daily' && journalManualState.counter >= journalManualState.threshold) : null,
+    resetState: null,
+    resetAt: null
+  };
   watchSnapshot.gapContext = window.EtfDcaDecisionJournal?.calculateGapContext(watchSnapshot) || null;
   window.EtfDcaDecisionJournal?.recordSetupSnapshot(watchSnapshot);
   window.EtfDcaDecisionJournal?.renderPanel(document.getElementById('decision-journal'), watchSnapshot);

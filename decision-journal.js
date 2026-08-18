@@ -61,6 +61,45 @@
     };
   }
 
+  function zoneRange(value) {
+    return {
+      low: finiteNumber(value?.low),
+      high: finiteNumber(value?.high)
+    };
+  }
+
+  function manualDraftValue(value) {
+    return {
+      low: finiteNumber(value?.low),
+      high: finiteNumber(value?.high),
+      edited: typeof value?.edited === 'boolean' ? value.edited : null
+    };
+  }
+
+  function activeManualZoneValue(value) {
+    return {
+      low: finiteNumber(value?.low),
+      high: finiteNumber(value?.high),
+      source: value?.source || null,
+      manualAppliedAt: typeof value?.manualAppliedAt === 'string' ? value.manualAppliedAt : null
+    };
+  }
+
+  function manualReassessmentValue(value) {
+    return {
+      completedDailyDate: value?.completedDailyDate || null,
+      completedClose: finiteNumber(value?.completedClose),
+      suggestedZoneLow: finiteNumber(value?.suggestedZoneLow),
+      suggestedZoneHigh: finiteNumber(value?.suggestedZoneHigh),
+      result: value?.result || null,
+      counter: finiteNumber(value?.counter),
+      threshold: finiteNumber(value?.threshold),
+      ready: typeof value?.ready === 'boolean' ? value.ready : null,
+      resetState: value?.resetState || null,
+      resetAt: typeof value?.resetAt === 'string' ? value.resetAt : null
+    };
+  }
+
   /**
    * Calculates read-only opening-gap context. This function does not produce an entry signal.
    * @param {object} input Quote, zone and optional ATR values.
@@ -100,6 +139,10 @@
     return JSON.stringify({
       activeZone: snapshot.activeZone || null,
       zoneMode: snapshot.zoneMode || null,
+      systemSuggestedZone: snapshot.systemSuggestedZone || null,
+      manualDraft: snapshot.manualDraft || null,
+      activeManualZone: snapshot.activeManualZone || null,
+      manualReassessment: snapshot.manualReassessment || null,
       h1H2Status: snapshot.h1H2Status?.type || null,
       C1: conditionValue(snapshot.C1),
       C2: conditionValue(snapshot.C2),
@@ -125,6 +168,10 @@
     const events = [];
     if (JSON.stringify(previous.activeZone) !== JSON.stringify(snapshot.activeZone)
       || previous.zoneMode !== snapshot.zoneMode) events.push('ACTIVE_ZONE_CHANGED');
+    if (JSON.stringify(previous.systemSuggestedZone) !== JSON.stringify(snapshot.systemSuggestedZone)) events.push('SYSTEM_SUGGESTED_ZONE_CHANGED');
+    if (JSON.stringify(previous.manualDraft) !== JSON.stringify(snapshot.manualDraft)) events.push('MANUAL_DRAFT_CHANGED');
+    if (JSON.stringify(previous.activeManualZone) !== JSON.stringify(snapshot.activeManualZone)) events.push('ACTIVE_MANUAL_ZONE_CHANGED');
+    if (JSON.stringify(previous.manualReassessment) !== JSON.stringify(snapshot.manualReassessment)) events.push('MANUAL_REASSESSMENT_CHANGED');
     if ((previous.h1H2Status?.type || null) !== (snapshot.h1H2Status?.type || null)) events.push('H_SIGNAL_CHANGED');
     if (JSON.stringify([previous.C1, previous.C2, previous.C3, previous.C4])
       !== JSON.stringify([snapshot.C1, snapshot.C2, snapshot.C3, snapshot.C4])) events.push('CONDITIONS_CHANGED');
@@ -164,6 +211,13 @@
       marketSessionState: input.marketSessionState || null,
       zoneMode: input.zoneMode || null,
       activeZone: input.activeZone || null,
+      systemSuggestedZone: {
+        aggressive: zoneRange(input.systemSuggestedZone?.aggressive),
+        conservative: zoneRange(input.systemSuggestedZone?.conservative)
+      },
+      manualDraft: manualDraftValue(input.manualDraft),
+      activeManualZone: activeManualZoneValue(input.activeManualZone),
+      manualReassessment: manualReassessmentValue(input.manualReassessment),
       invalidationLevel: finiteNumber(input.invalidationLevel),
       h1H2Status: input.h1H2Status || null,
       C1: conditionValue(input.C1),
@@ -223,7 +277,9 @@
   function displayEvent(events) {
     const labels = {
       INITIAL_SNAPSHOT: 'Initial setup snapshot', OPENING_GAP: 'Opening gap captured',
-      ACTIVE_ZONE_CHANGED: 'Active Zone changed', H_SIGNAL_CHANGED: 'H signal changed',
+      ACTIVE_ZONE_CHANGED: 'Active Zone changed', SYSTEM_SUGGESTED_ZONE_CHANGED: 'System Suggested Zone changed',
+      MANUAL_DRAFT_CHANGED: 'Manual Draft changed', ACTIVE_MANUAL_ZONE_CHANGED: 'Active Manual Zone changed',
+      MANUAL_REASSESSMENT_CHANGED: 'Manual reassessment changed', H_SIGNAL_CHANGED: 'H signal changed',
       CONDITIONS_CHANGED: 'C1–C4 changed', SETUP_STATUS_CHANGED: 'Setup status changed',
       OFFICIAL_CLOSE: 'Official close captured', BRIDGE_STARTED: 'TAR-OBI monitor started'
     };

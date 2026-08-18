@@ -20,7 +20,12 @@ const setup = {
   currentPrice: 100, marketSessionState: 'REGULAR',
   gapContext: { direction: 'GAP_UP', percent: 2, zoneRelation: 'ABOVE_ACTIVE_ZONE' },
   C1: { met: false }, C2: { met: true }, C3: { met: false },
-  C4: { classification: 'WEAK' }, events: ['INITIAL_SNAPSHOT']
+  C4: { classification: 'WEAK' },
+  systemSuggestedZone: { aggressive: { low: 98, high: 101 }, conservative: { low: 96, high: 99 } },
+  manualDraft: { low: 98, high: 99, edited: false },
+  activeManualZone: { low: 97, high: 99, source: 'MANUAL', manualAppliedAt: '2026-08-05T00:30:00.000Z' },
+  manualReassessment: { completedDailyDate: '2026-08-04', completedClose: 100, suggestedZoneLow: 98, suggestedZoneHigh: 99, result: 'ABOVE_SUGGESTED_ZONE', counter: 1, threshold: 3, ready: false },
+  events: ['INITIAL_SNAPSHOT']
 };
 const bridge = {
   ticker: '006208', evaluatedAt: '2026-08-05T01:01:00.000Z',
@@ -56,6 +61,8 @@ const candles = [
   assert.strictEqual(result.cases.length, 1);
   assert.strictEqual(result.cases[0].assessments.length, 1);
   assert.strictEqual(result.cases[0].setup.C1.met, false, 'case freezes at the latest setup before bridge start');
+  assert.strictEqual(result.cases[0].setup.systemSuggestedZone.aggressive.low, 98, 'same-day case retains its selected setup snapshot fields');
+  assert.strictEqual(result.cases[0].setup.manualReassessment.counter, 1);
   assert.strictEqual(result.cases[0].outcome.baselinePrice, 100);
   assert.strictEqual(result.cases[0].outcome.day1.changePct, 2);
   assert.strictEqual(result.cases[0].outcome.day3.changePct, 5);
