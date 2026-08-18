@@ -18,6 +18,11 @@ let applied = R.applyManualZone(state, undefined, undefined, '2026-08-18T00:00:0
 assert.equal(applied.applied, true);
 assert.deepEqual(applied.state.activeManualZone, { low: 239.8, high: 240.4 });
 assert.equal(applied.state.manualZoneSource, 'MANUAL');
+assert.equal(applied.state.manualDraft.edited, false, 'applying separates the Active Manual Zone from the next editable draft');
+state = R.prefillDraft(applied.state, R.suggestedZone({ zoneLow: 242 }, { zoneHigh: 243 }, 0.05));
+assert.deepEqual(state.manualDraft, { low: 242, high: 243, edited: false }, 'an unapplied draft follows the latest Suggested Zone after Apply Manual');
+assert.deepEqual(state.activeManualZone, { low: 239.8, high: 240.4 }, 'a later Suggested Zone does not alter the applied Active Manual Zone');
+assert.equal(R.applyManualZone(R.setDraft(R.normalize(), 241.5, 242), undefined, undefined, undefined, R.suggestedZone({ zoneLow: 241.5 }, { zoneHigh: 241.45 }, 0.05)).applied, false, 'an invalid Suggested Zone cannot be applied');
 state = R.evaluateDaily(R.normalize(), { timeframe: 'daily', period: '2026-08-10', close: 241, zone }).state;
 assert.equal(state.counter, 0, 'first completed candle starts a baseline only');
 state = R.evaluateDaily(state, { timeframe: 'daily', period: '2026-08-11', close: 241, zone }).state;

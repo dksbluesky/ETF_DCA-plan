@@ -50,10 +50,10 @@
   function setThreshold(state, threshold) { return { ...normalize(state), threshold: positiveInteger(threshold, DEFAULT_THRESHOLD) }; }
   function setMinOperationalTicks(state, minOperationalTicks) { return { ...normalize(state), minOperationalTicks: positiveInteger(minOperationalTicks, DEFAULT_MIN_OPERATIONAL_TICKS) }; }
   function resetCounter(state) { return { ...normalize(state), counter: 0, latestSnapshot: null, readyNotifiedPeriod: null }; }
-  function applyManualZone(state, low, high, appliedAt) {
+  function applyManualZone(state, low, high, appliedAt, suggestedZone = null) {
     const next = setDraft(state, low ?? normalize(state).manualDraft.low, high ?? normalize(state).manualDraft.high);
-    if (next.manualDraft.low === null || next.manualDraft.high === null || next.manualDraft.high <= next.manualDraft.low) return { state: next, applied: false };
-    return { state: { ...next, activeManualZone: { low: next.manualDraft.low, high: next.manualDraft.high }, manualZoneSource: 'MANUAL', manualAppliedAt: appliedAt || new Date().toISOString() }, applied: true };
+    if (suggestedZone?.status === 'INVALID_SUGGESTED_ZONE' || next.manualDraft.low === null || next.manualDraft.high === null || next.manualDraft.high <= next.manualDraft.low) return { state: next, applied: false };
+    return { state: { ...next, manualDraft: { low: next.manualDraft.low, high: next.manualDraft.high, edited: false }, activeManualZone: { low: next.manualDraft.low, high: next.manualDraft.high }, manualZoneSource: 'MANUAL', manualAppliedAt: appliedAt || new Date().toISOString() }, applied: true };
   }
 
   function evaluateDaily(state, input = {}) {

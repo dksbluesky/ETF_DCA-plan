@@ -16,6 +16,7 @@
 <script src="execution-bridge.js"></script>
 <script src="market-context-zone.js"></script>
 <script src="manual-zone-reassessment.js"></script>
+<script src="manual-zone-revision.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -487,6 +488,17 @@ async function saveData() {
     if (check.ok) {
       const existing = await check.json();
       S.sha = existing.sha;
+      const remoteData = JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g, '')))));
+      const conflicts = window.ManualZoneRevision?.findNewerRemoteManualZoneConflicts(S.data, remoteData) || [];
+      if (conflicts.length) {
+        const details = conflicts.map(({ position, local, remote, reason }) => `${position.ticker || position.id}: remote NT$${remote.low.toFixed(2)}–${remote.high.toFixed(2)}${local ? `; this device NT$${local.low.toFixed(2)}–${local.high.toFixed(2)}` : '; this device has no Active Manual Zone'} (${reason === 'REMOTE_NEWER' ? 'remote revision is newer' : 'remote revision is unknown'})`).join('\n');
+        const replaceRemote = confirm(`A newer Active Manual Zone exists on another device.\n\n${details}\n\nCancel = keep the remote zone and sync first.\nOK = explicitly replace it with this device's data.`);
+        if (!replaceRemote) {
+          setSS('error', '⚠ Active Zone conflict');
+          toast('Remote Active Manual Zone was not overwritten. Sync before choosing to replace it.', 'err');
+          return;
+        }
+      }
     } else if (check.status === 401) {
       setSS('error', '✗ PAT 401');
       toast('🔑 GitHub 回傳 401 — PAT 可能已失效或權限不足。請至 GitHub → Settings → Developer settings → Personal access tokens 重新產生，需勾選 repo（或 Contents: Read & write）', 'err');
@@ -2617,7 +2629,11 @@ function resetManualReassessmentCounter() { manualReassessmentStateUpdate(state 
 function applyManualReassessment() {
   const helper = window.ManualZoneReassessment, pos = reassessmentPosition();
   if (!helper || !pos || _watchHasValidAutomaticActiveZone) return;
-  const result = helper.applyManualZone(pos.watchCriteria?.manualReassessment);
+  const currentState = helper.normalize(pos.watchCriteria?.manualReassessment);
+  const aggressive = _watchZoneEngine?.suggestedZones?.aggressive;
+  const conservative = _watchZoneEngine?.suggestedZones?.conservative;
+  const zone = helper.suggestedZone(aggressive, conservative, getTaiwanTickSize(Number(aggressive?.zoneLow) || Number(conservative?.zoneHigh) || 0, _watchPos?.type), currentState.minOperationalTicks);
+  const result = helper.applyManualZone(currentState, undefined, undefined, undefined, zone);
   if (!result.applied) return toast('Manual Price range is invalid.', 'err');
   const next = result.state;
   saveManualReassessmentState(_watchListType, _watchPosId, next);
