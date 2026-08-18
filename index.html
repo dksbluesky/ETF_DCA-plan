@@ -15,6 +15,7 @@
 <script src="execution-bridge-monitor.js"></script>
 <script src="execution-bridge.js"></script>
 <script src="market-context-zone.js"></script>
+<script src="manual-zone-reassessment.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1497,10 +1498,11 @@ function openModal(type, ctx) {
           </div>
         </div>
 
+        <section id="wc-manual-reassessment" style="margin:0 0 12px"></section>
         <input type="hidden" id="wc-zonemode" value="${initialZoneMode}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin:4px 0 12px">
           <span style="font-size:11px;color:var(--muted);line-height:1.5">建議區間只會在按下 Apply 後成為目前啟用區間。Suggestions become active only after Apply.</span>
-          <button type="button" class="btn btn-outline btn-sm" onclick="applySuggestedWatchZone('${listType}','${posId}','manual')">套用手動區間 Apply Manual</button>
+          <span style="font-size:11px;color:var(--muted)">Manual reassessment controls appear above when Automatic Apply is unavailable.</span>
         </div>
 
         <div style="border:2px solid var(--primary);border-radius:10px;padding:10px 12px;background:var(--accent-l);margin-bottom:12px">
@@ -1510,8 +1512,8 @@ function openModal(type, ctx) {
         </div>
 
         <div class="form-row">
-          <div class="form-group"><label class="form-label">啟用區間下緣 Active Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualLow : (wc.zoneLow ?? '')}"${initialZoneMode === 'manual' ? '' : ' readonly'} oninput="onWatchFieldInput('${listType}','${posId}')"></div>
-          <div class="form-group"><label class="form-label">啟用區間上緣 Active Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualHigh : (wc.zoneHigh ?? '')}"${initialZoneMode === 'manual' ? '' : ' readonly'} oninput="onWatchFieldInput('${listType}','${posId}')"></div>
+          <div class="form-group"><label class="form-label">啟用區間下緣 Active Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualLow : (wc.zoneLow ?? '')}" readonly></div>
+          <div class="form-group"><label class="form-label">啟用區間上緣 Active Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualHigh : (wc.zoneHigh ?? '')}" readonly></div>
         </div>
         <div style="font-size:11px;color:var(--muted);line-height:1.5;margin:-6px 0 10px">區間設定只決定何處開始監控，不是買入訊號。Zone Setup defines where monitoring begins; it is not a buy signal.</div>
         <div id="wc-zone-check"></div>
@@ -1782,7 +1784,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchListType = null, _watchPosId = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status';
+let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchListType = null, _watchPosId = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status', _watchHasValidAutomaticActiveZone = false;
 const WATCH_AUTO_REFRESH_MS = 10 * 1000;
 let _watchRefreshTimer = null;
 let _watchRefreshInFlight = false;
@@ -1869,9 +1871,11 @@ async function refreshWatchLivePrice(listType, posId) {
   if (!pos) return;
   _watchRefreshInFlight = true;
   try {
+    const previousQuoteState = _watchQuote?.state;
     const quote = await fetchLivePrice(pos.ticker);
     _watchQuote = quote;
     mergeWatchLiveQuote(_watchCandles, quote);
+    if (quote?.state === 'CLOSED' && previousQuoteState !== 'CLOSED') await recalculateMarketLevelSuggestions(listType, posId, true);
     recomputeWatchStatus();
   } catch (error) {
     console.warn('Watch: automatic live-price refresh failed:', error.message);
@@ -2508,6 +2512,7 @@ function renderSuggestedWatchZones() {
     && context?.automaticZoneEligible === true
     && Number.isFinite(context?.activeZone?.low)
     && Number.isFinite(context?.activeZone?.high);
+  _watchHasValidAutomaticActiveZone = hasValidAutomaticActiveZone;
   const greyUnavailableApply = element => {
     if (!element) return;
     element.classList.toggle('btn-outline', !hasValidAutomaticActiveZone);
@@ -2524,6 +2529,7 @@ function renderSuggestedWatchZones() {
   renderContextActiveZone();
   if (conservativeApplyEl) conservativeApplyEl.disabled = !hasValidAutomaticActiveZone || !conservative;
   greyUnavailableApply(conservativeApplyEl);
+  renderManualReassessment(hasValidAutomaticActiveZone);
   if (summaryEl) {
     const levels = _watchZoneEngine?.marketLevels || [];
     summaryEl.textContent = levels.length
@@ -2532,6 +2538,95 @@ function renderSuggestedWatchZones() {
   }
 }
 
+function reassessmentPosition(listType = _watchListType, posId = _watchPosId) {
+  return (listType === 'dca' ? S.data.dca : S.data.direct).find(pos => pos.id === posId) || null;
+}
+
+function saveManualReassessmentState(listType, posId, state) {
+  const pos = reassessmentPosition(listType, posId);
+  if (!pos) return;
+  pos.watchCriteria = { ...(pos.watchCriteria || {}), manualReassessment: state };
+  S.dirty = true;
+  persistLocal();
+}
+
+function completedDailyCandleForReassessment() {
+  if (!_watchCandles?.length) return null;
+  return _watchQuote?.state === 'REGULAR' ? _watchCandles.at(-2) || null : _watchCandles.at(-1) || null;
+}
+
+function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAutomaticActiveZone) {
+  const panel = document.getElementById('wc-manual-reassessment');
+  const helper = window.ManualZoneReassessment;
+  const pos = reassessmentPosition();
+  if (!panel || !helper || !pos) return;
+  const timeframe = getMarketLevelTimeframe();
+  const dailyActive = timeframe === helper.DAILY_TIMEFRAME;
+  const aggressive = _watchZoneEngine?.suggestedZones?.aggressive;
+  const conservative = _watchZoneEngine?.suggestedZones?.conservative;
+  let state = helper.normalize(pos.watchCriteria?.manualReassessment);
+  const zone = helper.suggestedZone(aggressive, conservative, getTaiwanTickSize(Number(aggressive?.zoneLow) || Number(conservative?.zoneHigh) || 0, _watchPos?.type), state.minOperationalTicks);
+  const completed = completedDailyCandleForReassessment();
+  if (dailyActive && completed?.date && state.sequenceTimeframe !== timeframe) state = helper.startSequence(state, timeframe, completed.date);
+  if (dailyActive && completed?.date) {
+    const outcome = helper.evaluateDaily(state, { timeframe, period: completed.date, close: completed.close, zone });
+    state = outcome.state;
+  } else if (!dailyActive && state.sequenceTimeframe !== timeframe) {
+    state = helper.startSequence(state, timeframe, null);
+  }
+  if (!hasValidAutomaticActiveZone) state = helper.prefillDraft(state, zone);
+  saveManualReassessmentState(_watchListType, _watchPosId, state);
+  const ready = dailyActive && state.counter >= state.threshold;
+  if (ready && state.readyNotifiedPeriod !== state.lastCountedPeriod && typeof Notification === 'function' && Notification.permission === 'granted') {
+    new Notification('ETF_DCA Reassessment Ready', { body: 'Review the suggested Manual Zone. It has not been applied automatically.' });
+    state = helper.markReadyNotified(state, state.lastCountedPeriod);
+    saveManualReassessmentState(_watchListType, _watchPosId, state);
+  }
+  const f = n => Number.isFinite(Number(n)) ? `NT$${Number(n).toFixed(2)}` : '—';
+  const latest = state.latestSnapshot;
+  const zoneLabel = zone.status === 'VALID' ? 'VALID' : zone.status === 'ZONE_TOO_NARROW' ? 'ZONE TOO NARROW' : zone.status === 'INVALID_SUGGESTED_ZONE' ? 'INVALID SUGGESTED ZONE' : 'UNAVAILABLE';
+  const actionable = dailyActive && !hasValidAutomaticActiveZone;
+  const applyDisabled = !actionable || !['VALID', 'ZONE_TOO_NARROW'].includes(zone.status) || !Number.isFinite(state.manualDraft.low) || !Number.isFinite(state.manualDraft.high) || state.manualDraft.high <= state.manualDraft.low;
+  panel.innerHTML = `<div style="border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface2)">
+    <div style="font-weight:700;margin-bottom:7px">Manual Reassessment｜手動重新評估</div>
+    <div style="font-size:12px;line-height:1.65;margin-bottom:8px"><b>Timeframe：</b>${timeframe} ${dailyActive ? '— Daily reassessment ACTIVE' : '— Daily only; reassessment NOT ACTIVE'}<br>
+      <b>Latest Suggested Manual Zone：</b>${f(zone.low)} – ${f(zone.high)}<br>
+      <b>Completed Daily Close：</b>${completed ? `${f(completed.close)} (${completed.date})` : '—'}<br>
+      <b>Zone Status：</b>${zoneLabel}<br>
+      <b>Reassessment Counter：</b>${dailyActive ? `${state.counter}/${state.threshold}` : '— (Daily only)'}</div>
+    ${ready ? '<div style="padding:8px 10px;border-radius:7px;background:var(--gold-l);color:var(--gold);font-weight:700;margin-bottom:8px">REASSESSMENT READY — review only; Manual Active Zone has not been changed.</div>' : ''}
+    <div class="form-row" style="margin-bottom:7px"><div class="form-group"><label class="form-label">Manual Price Lower (NT$)</label><input id="wc-manual-reassess-low" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.low) ? state.manualDraft.low : ''}" ${actionable ? '' : 'disabled'} oninput="onManualReassessmentDraftInput('low', this.value)"></div><div class="form-group"><label class="form-label">Manual Price Upper (NT$)</label><input id="wc-manual-reassess-high" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.high) ? state.manualDraft.high : ''}" ${actionable ? '' : 'disabled'} oninput="onManualReassessmentDraftInput('high', this.value)"></div></div>
+    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><label style="font-size:11px">Threshold <input id="wc-manual-reassess-threshold" type="number" min="1" step="1" value="${state.threshold}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentThresholdChange(this.value)"></label><label style="font-size:11px">Min ticks <input id="wc-manual-reassess-ticks" type="number" min="1" step="1" value="${state.minOperationalTicks}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentMinTicksChange(this.value)"></label><button type="button" class="btn btn-primary btn-sm" ${applyDisabled ? 'disabled' : ''} onclick="applyManualReassessment()">Apply Manual</button><button type="button" class="btn btn-outline btn-sm" ${dailyActive ? '' : 'disabled'} onclick="resetManualReassessmentCounter()">Reset Counter</button></div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px">${hasValidAutomaticActiveZone ? 'Automatic Apply is available; manual reassessment controls are view-only.' : 'Daily close above today’s Suggested Zone increments the counter; inside or below resets it. Applying is always explicit.'}</div>
+  </div>`;
+}
+
+function manualReassessmentStateUpdate(transform) {
+  const helper = window.ManualZoneReassessment, pos = reassessmentPosition();
+  if (!helper || !pos) return;
+  const state = transform(helper.normalize(pos.watchCriteria?.manualReassessment));
+  saveManualReassessmentState(_watchListType, _watchPosId, state);
+  renderManualReassessment();
+}
+function onManualReassessmentDraftInput(side, value) {
+  manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setDraft(state, side === 'low' ? value : state.manualDraft.low, side === 'high' ? value : state.manualDraft.high));
+}
+function onManualReassessmentThresholdChange(value) { manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setThreshold(state, value)); }
+function onManualReassessmentMinTicksChange(value) { manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setMinOperationalTicks(state, value)); }
+function resetManualReassessmentCounter() { manualReassessmentStateUpdate(state => window.ManualZoneReassessment.resetCounter(state)); }
+function applyManualReassessment() {
+  const helper = window.ManualZoneReassessment, pos = reassessmentPosition();
+  if (!helper || !pos || _watchHasValidAutomaticActiveZone) return;
+  const result = helper.applyManualZone(pos.watchCriteria?.manualReassessment);
+  if (!result.applied) return toast('Manual Price range is invalid.', 'err');
+  const next = result.state;
+  saveManualReassessmentState(_watchListType, _watchPosId, next);
+  setActiveWatchZoneInputs('manual', { zoneLow: next.activeManualZone.low, zoneHigh: next.activeManualZone.high });
+  const mode = document.getElementById('wc-zonemode'); if (mode) mode.value = 'manual';
+  persistWatchCriteria(_watchListType, _watchPosId);
+  recomputeZoneValidation(); recomputeWatchStatus(); renderManualReassessment();
+  toast('Manual Active Zone applied.', 'ok');
+}
 function renderActiveWatchZone() {
   const mode = getWatchZoneMode();
   const low = gf('wc-zonelow'), high = gf('wc-zonehigh');
@@ -2545,10 +2640,10 @@ function setActiveWatchZoneInputs(mode, zone) {
   const lowEl = document.getElementById('wc-zonelow');
   const highEl = document.getElementById('wc-zonehigh');
   if (!lowEl || !highEl) return;
-  lowEl.readOnly = mode !== 'manual';
-  highEl.readOnly = mode !== 'manual';
-  lowEl.style.background = mode === 'manual' ? '' : 'var(--surface2)';
-  highEl.style.background = mode === 'manual' ? '' : 'var(--surface2)';
+  lowEl.readOnly = true;
+  highEl.readOnly = true;
+  lowEl.style.background = 'var(--surface2)';
+  highEl.style.background = 'var(--surface2)';
   if (zone) {
     lowEl.value = zone.zoneLow ?? '';
     highEl.value = zone.zoneHigh ?? '';
@@ -2622,6 +2717,9 @@ async function recalculateMarketLevelSuggestions(listType, posId, refreshData = 
 }
 
 async function onMarketLevelTimeframeChange(listType, posId) {
+  const helper = window.ManualZoneReassessment;
+  const pos = reassessmentPosition(listType, posId);
+  if (helper && pos) saveManualReassessmentState(listType, posId, helper.startSequence(pos.watchCriteria?.manualReassessment, getMarketLevelTimeframe(), null));
   persistWatchCriteria(listType, posId);
   const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
   toast(ok
