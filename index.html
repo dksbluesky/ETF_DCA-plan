@@ -1884,10 +1884,12 @@ async function refreshWatchLivePrice(listType, posId) {
   _watchRefreshInFlight = true;
   try {
     const previousQuoteState = _watchQuote?.state;
+    const previousMarketDate = _watchCandles.at(-1)?.date || null;
     const quote = await fetchLivePrice(pos.ticker);
     _watchQuote = quote;
     mergeWatchLiveQuote(_watchCandles, quote);
-    if (quote?.state === 'CLOSED' && previousQuoteState !== 'CLOSED') await recalculateMarketLevelSuggestions(listType, posId, true);
+    const currentMarketDate = _watchCandles.at(-1)?.date || null;
+    if (currentMarketDate !== previousMarketDate || (quote?.state === 'CLOSED' && previousQuoteState !== 'CLOSED')) await recalculateMarketLevelSuggestions(listType, posId, true);
     recomputeWatchStatus();
   } catch (error) {
     console.warn('Watch: automatic live-price refresh failed:', error.message);
@@ -2567,6 +2569,10 @@ function completedDailyCandleForReassessment() {
   return _watchQuote?.state === 'REGULAR' ? _watchCandles.at(-2) || null : _watchCandles.at(-1) || null;
 }
 
+function currentManualSuggestionDate() {
+  return _watchCandles?.at(-1)?.date || null;
+}
+
 function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAutomaticActiveZone) {
   const panel = document.getElementById('wc-manual-reassessment');
   const helper = window.ManualZoneReassessment;
@@ -2586,7 +2592,7 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
   } else if (!dailyActive && state.sequenceTimeframe !== timeframe) {
     state = helper.startSequence(state, timeframe, null);
   }
-  state = helper.prefillDraft(state, zone);
+  state = helper.prefillDraft(state, zone, currentManualSuggestionDate());
   saveManualReassessmentState(_watchListType, _watchPosId, state);
   const ready = dailyActive && state.counter >= state.threshold;
   if (ready && state.readyNotifiedPeriod !== state.lastCountedPeriod && typeof Notification === 'function' && Notification.permission === 'granted') {
@@ -2596,18 +2602,20 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
   }
   const f = n => Number.isFinite(Number(n)) ? `NT$${Number(n).toFixed(2)}` : '—';
   const latest = state.latestSnapshot;
+  const suggestedLabel = ['VALID', 'ZONE_TOO_NARROW'].includes(zone.status) ? `${f(zone.low)} – ${f(zone.high)}` : zone.status === 'INVALID_SUGGESTED_ZONE' ? '— (manual input required)' : '—';
   const zoneLabel = zone.status === 'VALID' ? 'VALID' : zone.status === 'ZONE_TOO_NARROW' ? 'ZONE TOO NARROW' : zone.status === 'INVALID_SUGGESTED_ZONE' ? 'INVALID SUGGESTED ZONE' : 'UNAVAILABLE';
   const actionable = dailyActive && !hasValidAutomaticActiveZone;
-  const applyDisabled = !actionable || !['VALID', 'ZONE_TOO_NARROW'].includes(zone.status) || !Number.isFinite(state.manualDraft.low) || !Number.isFinite(state.manualDraft.high) || state.manualDraft.high <= state.manualDraft.low;
+  const applyDisabled = !actionable || !helper.manualZoneIsValid(state.manualDraft.low, state.manualDraft.high, zone.tickSize);
   panel.innerHTML = `<div style="border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface2)">
     <div style="font-weight:700;margin-bottom:7px">Manual Reassessment｜手動重新評估</div>
     <div style="font-size:12px;line-height:1.65;margin-bottom:8px"><b>Timeframe：</b>${timeframe} ${dailyActive ? '— Daily reassessment ACTIVE' : '— Daily only; reassessment NOT ACTIVE'}<br>
-      <b>Latest Suggested Manual Zone：</b>${f(zone.low)} – ${f(zone.high)}<br>
+      <b>Latest Suggested Manual Zone：</b>${suggestedLabel}<br>
       <b>Completed Daily Close：</b>${completed ? `${f(completed.close)} (${completed.date})` : '—'}<br>
       <b>Zone Status：</b>${zoneLabel}<br>
       <b>Reassessment Counter：</b>${dailyActive ? `${state.counter}/${state.threshold}` : '— (Daily only)'}</div>
     ${ready ? '<div style="padding:8px 10px;border-radius:7px;background:var(--gold-l);color:var(--gold);font-weight:700;margin-bottom:8px">REASSESSMENT READY — review only; Manual Active Zone has not been changed.</div>' : ''}
-    <div class="form-row" style="margin-bottom:7px"><div class="form-group"><label class="form-label">Manual Price Lower (NT$)</label><input id="wc-manual-reassess-low" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.low) ? state.manualDraft.low : ''}" ${actionable ? '' : 'disabled'} oninput="onManualReassessmentDraftInput('low', this.value)"></div><div class="form-group"><label class="form-label">Manual Price Upper (NT$)</label><input id="wc-manual-reassess-high" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.high) ? state.manualDraft.high : ''}" ${actionable ? '' : 'disabled'} oninput="onManualReassessmentDraftInput('high', this.value)"></div></div>
+    ${zone.status === 'INVALID_SUGGESTED_ZONE' ? '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Suggested Zone is invalid. Enter a Manual Price range to continue.</div>' : ''}
+    <div class="form-row" style="margin-bottom:7px"><div class="form-group"><label class="form-label">Manual Price Lower (NT$)</label><input id="wc-manual-reassess-low" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.low) ? state.manualDraft.low : ''}" onchange="onManualReassessmentDraftInput('low', this.value)"></div><div class="form-group"><label class="form-label">Manual Price Upper (NT$)</label><input id="wc-manual-reassess-high" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.high) ? state.manualDraft.high : ''}" onchange="onManualReassessmentDraftInput('high', this.value)"></div></div>
     <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><label style="font-size:11px">Threshold <input id="wc-manual-reassess-threshold" type="number" min="1" step="1" value="${state.threshold}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentThresholdChange(this.value)"></label><label style="font-size:11px">Min ticks <input id="wc-manual-reassess-ticks" type="number" min="1" step="1" value="${state.minOperationalTicks}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentMinTicksChange(this.value)"></label><button type="button" class="btn btn-primary btn-sm" ${applyDisabled ? 'disabled' : ''} onclick="applyManualReassessment()">Apply Manual</button><button type="button" class="btn btn-outline btn-sm" ${dailyActive ? '' : 'disabled'} onclick="resetManualReassessmentCounter()">Reset Counter</button></div>
     <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px">${hasValidAutomaticActiveZone ? 'Automatic Apply is available; manual reassessment controls are view-only.' : 'Daily close above today’s Suggested Zone increments the counter; inside or below resets it. Applying is always explicit.'}</div>
   </div>`;
@@ -2621,7 +2629,7 @@ function manualReassessmentStateUpdate(transform) {
   renderManualReassessment();
 }
 function onManualReassessmentDraftInput(side, value) {
-  manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setDraft(state, side === 'low' ? value : state.manualDraft.low, side === 'high' ? value : state.manualDraft.high));
+  manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setDraft(state, side === 'low' ? value : state.manualDraft.low, side === 'high' ? value : state.manualDraft.high, undefined, currentManualSuggestionDate()));
 }
 function onManualReassessmentThresholdChange(value) { manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setThreshold(state, value)); }
 function onManualReassessmentMinTicksChange(value) { manualReassessmentStateUpdate(state => window.ManualZoneReassessment.setMinOperationalTicks(state, value)); }
