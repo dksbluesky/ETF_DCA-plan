@@ -63,12 +63,18 @@ assert.match(html, /element\.classList\.toggle\('btn-outline', !hasValidAutomati
 assert.match(html, /element\.style\.background = hasValidAutomaticActiveZone \? '' : 'var\(--surface2\)'/);
 assert.match(html, /greyUnavailableApply\(aggressiveApplyEl\);/);
 assert.match(html, /greyUnavailableApply\(conservativeApplyEl\);/);
-assert.match(html, /Active Long Zone A — Pullback Reversal/);
-assert.match(html, /Active Long Zone B — V-Reversal Continuation/);
-assert.match(html, /Active Long Zone C — Shallow Trend Continuation/);
-assert.match(html, /Range: NT\$\$\{selectedActiveZone\?\.low\.toFixed\(2\)\}–NT\$\$\{selectedActiveZone\?\.high\.toFixed\(2\)\} · Invalidation: NT\$\$\{marketContext\?\.invalidationLevel\?\.toFixed\(2\) \?\? 'Unavailable'\}/);
+assert.match(html, /Automatic \/ Context-led Active Long Zone A — Pullback Reversal/);
+assert.match(html, /Automatic \/ Context-led Active Long Zone B — V-Reversal Continuation/);
+assert.match(html, /Automatic \/ Context-led Active Long Zone C — Shallow Trend Continuation/);
+assert.match(html, /Manual Active Long Zone — current authoritative zone/);
+assert.match(html, /The Manual Active Long Zone above remains the current authoritative Active Zone\./);
+assert.match(html, /Authoritative Invalidation: \$\{selectedZoneInvalidation\}/);
+assert.match(html, /const selectedZoneInvalidation = Number\.isFinite\(stopPrice\)/);
+assert.doesNotMatch(html, /Starter Allocation|wc-starter-allocation|normalizeStarterAllocation/);
+assert.match(html, /LEFT 基礎條件已滿足/);
+assert.match(html, /Temporary LEFT Starter diagnostic/);
 assert.match(monitor, /function sourceLongZoneInvalidationReason\(context\)/);
-assert.match(monitor, /lifecycleUpdate\(current, 'INVALIDATED', now, invalidationReason\)/);
+assert.match(monitor, /lifecycleUpdate\(current, 'INVALIDATED', now, invalidationReason\)/);assert.match(monitor, /TAR-OBI execution assessment is not currently active\. Start New Monitor to assess a new current setup\./);
 assert.equal(bridge.canStartForContext({
   activeZone: null,
   extensions: { marketContextV1: { context: 'range', automaticZoneEligible: false } }
@@ -86,8 +92,6 @@ assert.equal(bridge.canStartForContext({
   activeZone: { low: 228.4, high: 232 },
   extensions: { marketContextV1: { context: 'unclear', automaticZoneEligible: false, manualOverride: true } }
 }), true);
-assert.match(html, /Manual Active Zone — user override/);
-assert.match(html, /ETF_DCA automatic long-zone confirmation is unavailable\. TAR-OBI independently evaluates its own entry assessment and may show Suggested Buy — LIVE only when its conditions pass\./);
 console.log('Active Zone governing-state tests passed.');
 assert.match(html, /wc-manual-reassessment/, 'Manual reassessment is isolated from the existing Active Zone controls');
 assert.match(html, /applyManualReassessment/, 'Manual Active Zone changes require explicit Apply Manual');

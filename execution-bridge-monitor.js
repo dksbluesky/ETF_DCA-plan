@@ -910,21 +910,7 @@
     return 'Not Eligible';
   }
 
-  function starterAllocationLabel(
-    bridge,
-    result
-  ) {
-    const value =
-      result?.starterAllocationPct
-      ?? bridge?.starterAllocationPct;
 
-    const number =
-      Number(value);
-
-    return Number.isFinite(number)
-      ? `${number}%`
-      : 'Unavailable';
-  }
 
   function starterRiskLabel(
     bridge,
@@ -1231,6 +1217,8 @@
           <b data-bridge-field="status"></b>
         </div>
 
+        ${status === 'EXPIRED' ? '<div style="font-size:12px;color:#874d00;line-height:1.5;margin-bottom:8px">TAR-OBI execution assessment is not currently active. Start New Monitor to assess a new current setup.</div>' : ''}
+
         <div
           data-bridge-result
           style="
@@ -1272,13 +1260,6 @@
             <b data-bridge-field="starter-status"></b>
           </div>
 
-          <div data-bridge-starter>
-            <span style="color:var(--muted)">
-              Starter Allocation:
-            </span>
-
-            <b data-bridge-field="starter-allocation"></b>
-          </div>
 
           <div data-bridge-starter>
             <span style="color:var(--muted)">
@@ -1430,13 +1411,6 @@
       )
     );
 
-    setText(
-      'starter-allocation',
-      starterAllocationLabel(
-        sourceForStarter,
-        result
-      )
-    );
 
     setText(
       'starter-risk',

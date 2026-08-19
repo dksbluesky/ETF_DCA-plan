@@ -1449,10 +1449,7 @@ function openModal(type, ctx) {
     const initialManualLow = wc.manualZoneLow ?? (initialZoneMode === 'manual' ? wc.zoneLow : '');
     const initialManualHigh = wc.manualZoneHigh ?? (initialZoneMode === 'manual' ? wc.zoneHigh : '');
     const initialMarketLevelTimeframe = wc.marketLevelTimeframe === '4h' ? '60m' : (wc.marketLevelTimeframe || 'daily');
-    const savedStarterAllocation = Number(wc.starterAllocationPct);
-    const initialStarterAllocationPct = Number.isFinite(savedStarterAllocation)
-      ? Math.min(15, Math.max(10, savedStarterAllocation))
-      : 15;
+
     const initialStarterExecuted = wc.starterExecuted === true;
     _watchCandles = null; _watchMarketCandles = null; _watchMarketLevelError = null; _watchPos = null; _watchQuote = null; _watchZoneEngine = null; _watchListType = null; _watchPosId = null; _watchBiasLen = 50; _watchMainTab = 'status'; _watchStatusTab = 'status';
     title = `🎯 進場條件監控 Entry Watch — ${pos.ticker}`;
@@ -1537,20 +1534,6 @@ function openModal(type, ctx) {
             <option value="manual"${wc.stopLossMode === 'manual' ? ' selected' : ''}>手動輸入 Manual</option>
           </select>
           <input class="form-input" id="wc-stopmanual" type="number" step="0.01" placeholder="NT$" value="${wc.stopLossManual ?? ''}" style="margin-top:6px;${wc.stopLossMode === 'manual' ? '' : 'display:none'}" oninput="onWatchFieldInput('${listType}','${posId}')">
-        </div>
-        <div style="margin-top:12px;border:1px solid var(--gold);border-radius:10px;padding:12px;background:var(--gold-l)">
-          <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:8px">LEFT-SIDE STARTER｜左側第一筆試單</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Starter Allocation (%)｜第一筆配置比例</label>
-              <input class="form-input" id="wc-starter-allocation" type="number" min="10" max="15" step="1" value="${initialStarterAllocationPct}" oninput="onWatchFieldInput('${listType}','${posId}')">
-              <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px">僅允許 10–15%。此比例是第一筆小額部位，不是完整進場配置。<br>Limited to 10–15%. This is a starter position, not full allocation.</div>
-            </div>
-            <div class="form-group" style="font-size:11px;color:var(--muted);line-height:1.5;padding-top:25px">
-              Execution is recorded only by the explicit confirmation in Entry Watch Status after LEFT becomes eligible.
-            </div>
-          </div>
-          <div style="font-size:11px;color:#975a16;line-height:1.6">左側 Starter 只代表 ETF_DCA 允許小額第一筆。TAR、OBI、VWAP、Spread 與盤中賣壓仍由 TAR-OBI 評估，不會被視為已確認進場。</div>
         </div>
       </div>`;
     foot = `<button class="btn btn-outline" onclick="closeModal()">取消 Cancel</button>
@@ -2791,11 +2774,6 @@ function onWatchStopModeChange(listType, posId) {
 // Persist every field edit immediately (mirrors how other inputs in this app commit on
 // change) so closing the modal any way — ✕, click-outside, or the Save button — keeps the
 // user's last typed values instead of losing them back to auto-detected suggestions.
-function normalizeStarterAllocation(value, fallback = 15) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(15, Math.max(10, Math.round(number)));
-}
 
 function onWatchFieldInput(listType, posId) {
   persistWatchCriteria(listType, posId);
@@ -2809,7 +2787,6 @@ function confirmLeftStarterExecution() {
   if (typeof confirm === 'function' && !confirm('Confirm this one-time Left-Side Starter execution? This does not create a RIGHT confirmation.')) return;
   pos.watchCriteria = {
     ...(pos.watchCriteria || {}),
-    starterAllocationPct: normalizeStarterAllocation(document.getElementById('wc-starter-allocation')?.value, pos.watchCriteria?.starterAllocationPct),
     starterExecuted: true
   };
   S.dirty = true;
@@ -2824,9 +2801,7 @@ function persistWatchCriteria(listType, posId) {
   const zoneMode = getWatchZoneMode();
   const zoneLow = gf('wc-zonelow') || null;
   const zoneHigh = gf('wc-zonehigh') || null;
-  const starterAllocationElement = document.getElementById('wc-starter-allocation');
   const starterExecutedElement = document.getElementById('wc-starter-executed');
-  const starterAllocationPct = normalizeStarterAllocation(starterAllocationElement?.value, previous.starterAllocationPct);
   const starterExecuted = starterExecutedElement?.checked === true || previous.starterExecuted === true;
 
   pos.watchCriteria = {
@@ -2840,7 +2815,6 @@ function persistWatchCriteria(listType, posId) {
     volThreshold: gf('wc-volth') || null,
     stopLossMode: gv('wc-stopmode') || 'trail',
     stopLossManual: gf('wc-stopmanual') || null,
-    starterAllocationPct,
     starterExecuted
   };
   S.dirty = true;
@@ -3297,10 +3271,9 @@ function recomputeWatchStatus() {
   const structuralInvalidationAvailable = Number.isFinite(stopPrice) && stopPrice > 0;
   const aboveStructuralInvalidation = structuralInvalidationAvailable
     && displayedPrice >= stopPrice - 1e-9;
-  const starterAllocationElement = document.getElementById('wc-starter-allocation');
   const starterExecutedElement = document.getElementById('wc-starter-executed');
-  const starterAllocationPct = normalizeStarterAllocation(starterAllocationElement?.value, pos.watchCriteria?.starterAllocationPct);
   const starterExecuted = starterExecutedElement?.checked === true || pos.watchCriteria?.starterExecuted === true;
+  const starterAllocationPct = pos.watchCriteria?.starterAllocationPct ?? null;
 
   // BIAS (乖離率) — signed deviation of price from the 5EMA. Positive = price has run ahead
   // of its average cost (the larger, the more "stretched" and prone to a profit-taking
@@ -3438,12 +3411,13 @@ function recomputeWatchStatus() {
       ${tDetail}
     </div>`;
   const selectedZoneTitle = hasValidManualActiveZone
-    ? 'Manual Active Zone — user override'
-    : ({ pullback_reversal: 'Active Long Zone A — Pullback Reversal', v_reversal_continuation: 'Active Long Zone B — V-Reversal Continuation', shallow_trend_continuation: 'Active Long Zone C — Shallow Trend Continuation' })[marketContext?.zoneType] || 'Active Long Zone';
+    ? 'Manual Active Long Zone — current authoritative zone'
+    : ({ pullback_reversal: 'Automatic / Context-led Active Long Zone A — Pullback Reversal', v_reversal_continuation: 'Automatic / Context-led Active Long Zone B — V-Reversal Continuation', shallow_trend_continuation: 'Automatic / Context-led Active Long Zone C — Shallow Trend Continuation' })[marketContext?.zoneType] || 'Automatic / Context-led Active Long Zone';
   const selectedZoneExplanation = hasValidManualActiveZone
-    ? 'ETF_DCA automatic long-zone confirmation is unavailable. TAR-OBI independently evaluates its own entry assessment and may show Suggested Buy — LIVE only when its conditions pass.'
+    ? 'Automatic / Context-led Active Long Zone is currently unavailable. The Manual Active Long Zone above remains the current authoritative Active Zone.'
     : marketContext?.reason || formatMarketContextEvidence(marketContext);
-  const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:var(--primary)">${selectedZoneTitle}</div><div style="font-size:13px;font-weight:700;margin-top:5px">Range: NT$${selectedActiveZone?.low.toFixed(2)}–NT$${selectedActiveZone?.high.toFixed(2)} · Invalidation: NT$${marketContext?.invalidationLevel?.toFixed(2) ?? 'Unavailable'}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:5px">${selectedZoneExplanation}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px">${formatMarketContextEvidence(marketContext)}</div></div>`;
+  const selectedZoneInvalidation = Number.isFinite(stopPrice) ? `NT$${stopPrice.toFixed(2)}` : 'Unavailable';
+  const selectedZoneBlock = `<div style="padding:10px 12px;background:var(--accent-l);border:2px solid var(--primary);border-radius:10px;margin-bottom:12px"><div style="font-size:14px;font-weight:700;color:var(--primary)">${selectedZoneTitle}</div><div style="font-size:13px;font-weight:700;margin-top:5px">Range: NT$${selectedActiveZone?.low.toFixed(2)}–NT$${selectedActiveZone?.high.toFixed(2)} · Authoritative Invalidation: ${selectedZoneInvalidation}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:5px">${selectedZoneExplanation}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px">${formatMarketContextEvidence(marketContext)}</div></div>`;
   const historicalDiagnostic = `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">Historical H1/H2 detected — not actionable because no valid Active Long Zone.</summary><div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px">${early ? sigLine(early) : 'No historical H1/H2 signal is available.'}</div></details>`;
   const noLongZoneBlock = renderNoActiveLongZoneCard(_watchCandles, historicalDiagnostic, marketContext);
   const triggerBlock = noActiveLongZone ? noLongZoneBlock : `${selectedZoneBlock}${normalTriggerBlock}`;
@@ -3452,7 +3426,7 @@ function recomputeWatchStatus() {
   let sBg, sBorder, sText;
   if (starterEligible) {
     sBg = '#fffff0'; sBorder = '#d69e2e';
-    sText = `🟡 左側第一筆試單符合 ETF_DCA 基礎條件 Left-Side Starter Eligible — 僅限 ${starterAllocationPct}% 小額第一筆；尚未完成右側確認，TAR-OBI 將繼續評估盤中賣壓與執行品質`;
+    sText = '🟡 LEFT 基礎條件已滿足 Left-Side Starter Eligible — this identifies a possible left-side entry only; the user decides whether to buy and how much. RIGHT confirmation remains separate.';
   } else if (starterExecuted) {
     sBg = 'var(--surface2)'; sBorder = 'var(--border)';
     sText = '⬜ 本輪左側 Starter 已執行 — 不得重複建立第一筆部位 Starter already executed for this setup';
@@ -3492,6 +3466,7 @@ function recomputeWatchStatus() {
       <div style="font-weight:700;font-size:13px">${sText}</div>
     </div>`;
 
+  const leftStarterDiagnostic = `<details style="margin:7px 0;padding:7px 9px;border:1px dashed var(--border);border-radius:7px;background:var(--surface2)"><summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--muted)">Temporary LEFT Starter diagnostic</summary><div style="font:11px/1.55 ui-monospace,monospace;margin-top:6px"><div>activeLongZoneIsValid: ${leftStarter.activeLongZoneIsValid === true}</div><div>priceInsideAuthoritativeActiveZone: ${leftStarter.priceInsideAuthoritativeActiveZone === true}</div><div>c1ok: ${c1ok}</div><div>structuralInvalidationAvailable: ${leftStarter.structuralInvalidationAvailable === true}</div><div>priceAboveInvalidation: ${leftStarter.priceAboveInvalidation === true}</div><div>starterExecuted: ${starterExecuted}</div><div>rightSideSetupConfirmed: ${rightSideSetupConfirmed}</div><div>leftStarterEligible: ${starterEligible}</div><hr style="border:0;border-top:1px solid var(--border);margin:5px 0"><div>authoritativeActiveZone: ${selectedActiveZone ? `NT$${selectedActiveZone.low.toFixed(2)}–NT$${selectedActiveZone.high.toFixed(2)}` : 'Unavailable'}</div><div>price: NT$${displayedPrice.toFixed(2)}</div><div>invalidationLevel: ${Number.isFinite(stopPrice) ? `NT$${stopPrice.toFixed(2)}` : 'Unavailable'}</div><div>C1: ${c1ok} — ${c1text}</div></div></details>`;
   statusEl.innerHTML = noActiveLongZone
     ? `<div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${displayedPrice.toFixed(2)}　${today.date}</div>${triggerBlock}<div id="decision-journal"></div><div id="review-journal"></div><div id="execution-bridge"></div>`
     : `
@@ -3513,7 +3488,7 @@ function recomputeWatchStatus() {
         <div class="wc-label">左側第一筆試單 Left-Side Starter</div>
         <div class="wc-detail">${
           starterEligible
-            ? `Eligible｜符合基礎資格｜配置 ${starterAllocationPct}%｜Mode: left_side_starter`
+            ? 'Eligible｜LEFT 基礎條件已滿足｜Possible left-side entry only; no trade is implied'
             : starterExecuted
               ? 'Already executed｜本輪已執行，不可重複建立'
               : rightSideSetupConfirmed
@@ -3533,6 +3508,7 @@ function recomputeWatchStatus() {
 
       </div>
     </div>
+    ${leftStarterDiagnostic}
     ${bottomSynth}
     <div id="decision-journal"></div>
     <div id="review-journal"></div>
