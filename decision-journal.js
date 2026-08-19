@@ -139,6 +139,12 @@
     return JSON.stringify({
       activeZone: snapshot.activeZone || null,
       zoneMode: snapshot.zoneMode || null,
+      bridgeId: snapshot.bridgeId || null,
+      entryMode: snapshot.entryMode || 'pending',
+      starterEligible: snapshot.starterEligible === true,
+      starterAllocationPct: finiteNumber(snapshot.starterAllocationPct),
+      starterExecuted: snapshot.starterExecuted === true,
+      starterRisk: snapshot.starterRisk || null,
       systemSuggestedZone: snapshot.systemSuggestedZone || null,
       manualDraft: snapshot.manualDraft || null,
       activeManualZone: snapshot.activeManualZone || null,
@@ -160,9 +166,9 @@
 
   function eventTypes(previous, snapshot) {
     if (!previous) {
-      return snapshot.gapContext
-        ? ['INITIAL_SNAPSHOT', 'OPENING_GAP']
-        : ['INITIAL_SNAPSHOT'];
+      const initialEvents = snapshot.gapContext ? ['INITIAL_SNAPSHOT', 'OPENING_GAP'] : ['INITIAL_SNAPSHOT'];
+      if (snapshot.starterEligible === true) initialEvents.push('left_authorized', 'left_execution_assessment_available');
+      return initialEvents;
     }
 
     const events = [];
@@ -179,6 +185,9 @@
       !== (snapshot.setupStatus?.label || snapshot.setupStatus || null)) events.push('SETUP_STATUS_CHANGED');
     if (previous.quoteDate !== snapshot.quoteDate && snapshot.gapContext) events.push('OPENING_GAP');
     if (previous.marketSessionState !== 'CLOSED' && snapshot.marketSessionState === 'CLOSED') events.push('OFFICIAL_CLOSE');
+    if (previous.starterEligible !== true && snapshot.starterEligible === true) events.push('left_authorized', 'left_execution_assessment_available');
+    if (previous.starterEligible === true && snapshot.starterEligible !== true && previous.starterExecuted !== true && snapshot.starterExecuted !== true) events.push('left_withdrawn');
+    if (previous.starterExecuted !== true && snapshot.starterExecuted === true) events.push('left_executed');
     return events;
   }
 
@@ -210,6 +219,12 @@
       atr: finiteNumber(input.atr),
       marketSessionState: input.marketSessionState || null,
       zoneMode: input.zoneMode || null,
+      bridgeId: input.bridgeId || null,
+      entryMode: input.entryMode || 'pending',
+      starterEligible: input.starterEligible === true,
+      starterAllocationPct: finiteNumber(input.starterAllocationPct),
+      starterExecuted: input.starterExecuted === true,
+      starterRisk: input.starterRisk || null,
       activeZone: input.activeZone || null,
       systemSuggestedZone: {
         aggressive: zoneRange(input.systemSuggestedZone?.aggressive),
@@ -281,7 +296,9 @@
       MANUAL_DRAFT_CHANGED: 'Manual Draft changed', ACTIVE_MANUAL_ZONE_CHANGED: 'Active Manual Zone changed',
       MANUAL_REASSESSMENT_CHANGED: 'Manual reassessment changed', H_SIGNAL_CHANGED: 'H signal changed',
       CONDITIONS_CHANGED: 'C1–C4 changed', SETUP_STATUS_CHANGED: 'Setup status changed',
-      OFFICIAL_CLOSE: 'Official close captured', BRIDGE_STARTED: 'TAR-OBI monitor started'
+      OFFICIAL_CLOSE: 'Official close captured', BRIDGE_STARTED: 'TAR-OBI monitor started',
+      left_authorized: 'Left starter authorized', left_execution_assessment_available: 'Left execution assessment available',
+      left_withdrawn: 'Left starter withdrawn', left_executed: 'Left starter executed'
     };
     return (events || []).map(event => labels[event] || event).join(' · ');
   }

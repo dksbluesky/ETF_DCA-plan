@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const values = new Map([['p_cache', '{"existing":true}']]);
 global.localStorage = {
@@ -105,6 +107,29 @@ Object.defineProperty(global, 'navigator', {
 assert.equal(bridge.openTarObiMonitor(), 'same-tab');
 assert.equal(opened, null);
 assert.equal(assigned, bridge.TAR_OBI_URL);
+
+const leftInput = { isDcaPosition: true, activeLongZoneIsValid: true, activeZone: { low: 230.8, high: 233.35 }, currentPrice: 232, c1ok: true, invalidationLevel: 229.5, starterExecuted: false, rightSideSetupConfirmed: false };
+let left = bridge.evaluateLeftStarter(leftInput);
+assert.equal(left.starterEligible, true, 'valid authoritative Active Zone plus C1 authorizes LEFT');
+assert.equal(left.entryMode, 'left_side_starter');
+left = bridge.evaluateLeftStarter({ ...leftInput, isDcaPosition: false });
+assert.equal(left.starterEligible, true, 'LEFT eligibility is available for first-buy and already-owned positions');
+left = bridge.evaluateLeftStarter({ ...leftInput, rightSideSetupConfirmed: true });
+assert.deepEqual([left.starterEligible, left.entryMode], [false, 'confirmed'], 'RIGHT confirmation supersedes LEFT');
+left = bridge.evaluateLeftStarter({ ...leftInput, activeLongZoneIsValid: false });
+assert.equal(left.starterEligible, false, 'invalid or unavailable Active Zone blocks LEFT');
+left = bridge.evaluateLeftStarter({ ...leftInput, currentPrice: 229.4 });
+assert.equal(left.starterEligible, false, 'invalidation breach blocks LEFT');
+left = bridge.evaluateLeftStarter({ ...leftInput, starterExecuted: true });
+assert.equal(left.starterEligible, false, 'executed starter cannot be authorized again');
+left = bridge.evaluateLeftStarter({ ...leftInput, activeZone: { low: 230.8, high: 233.35 } });
+assert.equal(left.starterEligible, true, 'a valid Active Manual Zone can authorize LEFT independently of Suggested Zone state');
+left = bridge.evaluateLeftStarter({ ...leftInput, activeZone: { low: 234, high: 235 } });
+assert.equal(left.starterEligible, false, 'a Manual Zone or reassessment change that removes price from the Active Zone withdraws LEFT');
+
+const entryWatchHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+assert.match(entryWatchHtml, /function confirmLeftStarterExecution\(\)/, 'starterExecuted has an explicit user-confirmation path');
+assert.doesNotMatch(entryWatchHtml, /id=\\"wc-starter-executed\\"/, 'obsolete checkbox wiring cannot set starterExecuted implicitly');
 
 assert.throws(() => bridge.createBridgeObject({}), /requires a ticker/);
 

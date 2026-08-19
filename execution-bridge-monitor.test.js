@@ -201,4 +201,24 @@ bridge = monitor.syncStoredBridgeContext({
 }, Date.parse('2026-07-27T03:03:00.000Z'));
 assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a valid manual override must not invalidate the TAR-OBI monitor');
 assert.equal(bridge.lifecycle.reason, null);
+const originalNotification = global.Notification;
+const leftNotifications = [];
+try {
+  global.Notification = function Notification(title, options) { leftNotifications.push({ title, options }); };
+  global.Notification.permission = 'granted';
+  storage = storageWith(phase1Bridge({ entryMode: 'left_side_starter', starterEligible: true, starterExecuted: false, invalidationLevel: 234.5 }));
+  monitor = loadMonitor(storage);
+  bridge = monitor.reconcileStoredBridge(context, Date.parse('2026-07-27T03:00:00.000Z'));
+  assert.equal(leftNotifications.length, 1, 'LEFT notification emits on the current bridge false-to-true transition');
+  assert.equal(leftNotifications[0].title, 'LEFT-SIDE STARTER — execution assessment available');
+  monitor.reconcileStoredBridge(context, Date.parse('2026-07-27T03:01:00.000Z'));
+  assert.equal(leftNotifications.length, 1, 'LEFT notification does not repeat without a new false-to-true transition');
+  storage = storageWith(phase1Bridge({ entryMode: 'left_side_starter', starterEligible: true, starterExecuted: false, invalidationLevel: 234.5, monitorResult: { hardExecutionBlock: true, activeZone: { low: 235.25, high: 235.6 }, invalidationLevel: 234.5 } }));
+  monitor = loadMonitor(storage);
+  monitor.reconcileStoredBridge(context, Date.parse('2026-07-27T03:00:00.000Z'));
+  assert.equal(leftNotifications.length, 1, 'a matching TAR-OBI hard execution block suppresses LEFT notification');
+} finally {
+  global.Notification = originalNotification;
+}
+
 console.log('ETF execution bridge monitor tests passed.');

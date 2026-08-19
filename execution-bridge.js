@@ -65,10 +65,10 @@
 
       // Optional entry-mode metadata. These fields extend the v1 bridge without
       // changing existing lifecycle, monitor, notification, or trading behavior.
-      entryMode: context.entryMode === 'confirmed' ? 'confirmed' : 'pending',
-      starterEligible: false,
-      starterAllocationPct: null,
-      starterExecuted: false,
+      entryMode: context.entryMode === 'left_side_starter' ? 'left_side_starter' : (context.entryMode === 'confirmed' ? 'confirmed' : 'pending'),
+      starterEligible: context.starterEligible === true,
+      starterAllocationPct: optionalNumber(context.starterAllocationPct),
+      starterExecuted: context.starterExecuted === true,
       starterRisk: context.starterRisk && typeof context.starterRisk === 'object'
         ? { ...context.starterRisk }
         : null,
@@ -143,6 +143,34 @@
     return bridge;
   }
 
+  function evaluateLeftStarter(input = {}) {
+    const zoneLow = optionalNumber(input.activeZone?.low);
+    const zoneHigh = optionalNumber(input.activeZone?.high);
+    const price = optionalNumber(input.currentPrice);
+    const invalidationLevel = optionalNumber(input.invalidationLevel);
+    const activeLongZoneIsValid = input.activeLongZoneIsValid === true
+      && zoneLow !== null && zoneHigh !== null && zoneLow > 0 && zoneHigh >= zoneLow;
+    const priceInsideAuthoritativeActiveZone = activeLongZoneIsValid
+      && price !== null && price >= zoneLow - 1e-9 && price <= zoneHigh + 1e-9;
+    const structuralInvalidationAvailable = invalidationLevel !== null && invalidationLevel > 0;
+    const priceAboveInvalidation = structuralInvalidationAvailable
+      && price !== null && price >= invalidationLevel - 1e-9;
+    const starterEligible = activeLongZoneIsValid
+      && priceInsideAuthoritativeActiveZone
+      && input.c1ok === true
+      && structuralInvalidationAvailable
+      && priceAboveInvalidation
+      && input.starterExecuted !== true
+      && input.rightSideSetupConfirmed !== true;
+    return {
+      starterEligible,
+      entryMode: input.rightSideSetupConfirmed === true ? 'confirmed' : (starterEligible ? 'left_side_starter' : 'pending'),
+      activeLongZoneIsValid,
+      priceInsideAuthoritativeActiveZone,
+      structuralInvalidationAvailable,
+      priceAboveInvalidation
+    };
+  }
   function isMobileOrTablet() {
     const navigatorInfo = root.navigator || {};
     const userAgent = String(navigatorInfo.userAgent || '');
@@ -196,6 +224,7 @@
     if (typeof root.ExecutionBridgeMonitor?.renderPanel === 'function') {
       root.ExecutionBridgeMonitor.renderPanel(container, context, {
         canStartForContext,
+    evaluateLeftStarter,
         startBridge,
         openMonitor: openTarObiMonitor,
         toast(message, type) {
@@ -245,6 +274,7 @@
     loadBridge,
     removeBridge,
     canStartForContext,
+    evaluateLeftStarter,
         startBridge,
     openTarObiMonitor,
     render

@@ -142,10 +142,44 @@
       lastLifecycleNotifiedAt: null,
       dataUnavailableSince: null,
       lastDataUnavailableNotifiedAt: null,
+      leftStarterEligible: false,
+      leftStarterNotifiedAt: null,
       ...(existing || {})
     };
   }
 
+  function hasCurrentTarHardExecutionBlock(bridge) {
+    const result = bridge?.monitorResult;
+    if (result?.hardExecutionBlock !== true && result?.executionHardBlocked !== true) return false;
+    const zoneMatches = numericEqual(result.activeZone?.low, bridge.activeZone?.low)
+      && numericEqual(result.activeZone?.high, bridge.activeZone?.high);
+    const invalidationMatches = numericEqual(result.invalidationLevel, bridge.invalidationLevel);
+    return zoneMatches && invalidationMatches;
+  }
+
+  function reconcileLeftStarterNotification(bridge, now = Date.now()) {
+    const notificationState = defaultNotificationState(bridge?.notificationState);
+    const eligible = bridge?.entryMode === 'left_side_starter'
+      && bridge?.starterEligible === true
+      && bridge?.starterExecuted !== true;
+    const transitioned = notificationState.leftStarterEligible !== true && eligible;
+    const next = {
+      ...bridge,
+      notificationState: {
+        ...notificationState,
+        leftStarterEligible: eligible
+      }
+    };
+    if (transitioned && !hasCurrentTarHardExecutionBlock(bridge)) {
+      if (typeof root.Notification === 'function' && root.Notification.permission === 'granted') {
+        new root.Notification('LEFT-SIDE STARTER — execution assessment available', {
+          body: 'Small DCA starter only; this is not RIGHT confirmation or BUY NOW.'
+        });
+      }
+      next.notificationState.leftStarterNotifiedAt = isoTime(now);
+    }
+    return next;
+  }
   /**
    * Adds optional Phase 3 fields to a new or legacy bridge without changing setup context.
    *
@@ -421,12 +455,14 @@
       return stored;
     }
 
-    const updated =
+    const updated = reconcileLeftStarterNotification(
       mergeSourceContext(
         current,
         context,
         now
-      );
+      ),
+      now
+    );
 
     if (
       JSON.stringify(updated)
@@ -638,6 +674,8 @@
           'Bridge reached its Taiwan trading-day expiration.'
         );
     }
+
+    next = reconcileLeftStarterNotification(next, now);
 
     const changed =
       JSON.stringify(next)
@@ -1628,6 +1666,8 @@
     transitionStoredBridge,
     isTerminal,
     requiresReplacementConfirmation,
+    hasCurrentTarHardExecutionBlock,
+    reconcileLeftStarterNotification,
     renderPanel
   });
 });

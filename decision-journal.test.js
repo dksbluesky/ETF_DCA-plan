@@ -79,6 +79,14 @@ assert.strictEqual(missingFields.systemSuggestedZone.aggressive.low, null, 'miss
 assert.strictEqual(missingFields.manualDraft.low, null, 'missing historical draft values are not reconstructed');
 assert.strictEqual(missingFields.manualReassessment.counter, null, 'missing historical reassessment values are not reconstructed');
 
+const leftSnapshot = journal.recordSetupSnapshot({ ...base, ticker: '00900', bridgeId: 'left-bridge', entryMode: 'left_side_starter', starterEligible: true, starterAllocationPct: 10, starterExecuted: false, starterRisk: { level: 'ELEVATED' } });
+assert.ok(leftSnapshot.events.includes('left_authorized'));
+assert.ok(leftSnapshot.events.includes('left_execution_assessment_available'));
+const withdrawnLeft = journal.recordSetupSnapshot({ ...base, ticker: '00900', bridgeId: 'left-bridge', entryMode: 'pending', starterEligible: false, starterAllocationPct: 10, starterExecuted: false, starterRisk: { level: 'ELEVATED' } });
+assert.ok(withdrawnLeft.events.includes('left_withdrawn'));
+const executedLeft = journal.recordSetupSnapshot({ ...base, ticker: '00900', bridgeId: 'left-bridge', entryMode: 'pending', starterEligible: false, starterAllocationPct: 10, starterExecuted: true, starterRisk: { level: 'ELEVATED' } });
+assert.ok(executedLeft.events.includes('left_executed'));
+
 journal.recordBridgeStart(base, {
   ticker: '006208',
   bridgeId: 'bridge-1',
