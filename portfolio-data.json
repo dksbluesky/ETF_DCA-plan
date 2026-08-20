@@ -264,7 +264,7 @@
             "high": 238
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-08-20T00:57:05.912Z",
+          "manualAppliedAt": "2026-08-20T00:56:14.130Z",
           "readyNotifiedPeriod": null
         }
       }
@@ -274,7 +274,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2360,
+      "currentPrice": 2365,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -307,7 +307,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.41,
+      "currentPrice": 29.4,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -329,5 +329,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-20T00:57:21.009Z"
+  "lastUpdated": "2026-08-20T00:57:46.963Z"
 }
