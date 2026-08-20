@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.4,
+      "currentPrice": 32.35,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 236.9,
+      "currentPrice": 238.2,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -221,21 +221,21 @@
         "manualReassessment": {
           "threshold": 3,
           "minOperationalTicks": 2,
-          "counter": 1,
+          "counter": 0,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-08-17",
-          "lastCountedPeriod": "2026-08-18",
+          "lastCountedPeriod": "2026-08-19",
           "latestSnapshot": {
-            "tradingDate": "2026-08-18",
-            "aggressiveLow": 237.6,
-            "aggressiveHigh": 241.65,
-            "conservativeLow": 233.7,
-            "conservativeHigh": 237.75,
-            "suggestedZoneLow": 237.6,
-            "suggestedZoneHigh": 237.75,
-            "closingPrice": 240.7,
-            "result": "ABOVE_SUGGESTED_ZONE",
-            "counterAfter": 1
+            "tradingDate": "2026-08-19",
+            "aggressiveLow": 235.95,
+            "aggressiveHigh": 239.85,
+            "conservativeLow": 233.75,
+            "conservativeHigh": 237.65,
+            "suggestedZoneLow": 235.95,
+            "suggestedZoneHigh": 237.65,
+            "closingPrice": 236.75,
+            "result": "INSIDE_SUGGESTED_ZONE",
+            "counterAfter": 0
           },
           "snapshots": [
             {
@@ -249,11 +249,23 @@
               "closingPrice": 240.7,
               "result": "ABOVE_SUGGESTED_ZONE",
               "counterAfter": 1
+            },
+            {
+              "tradingDate": "2026-08-19",
+              "aggressiveLow": 235.95,
+              "aggressiveHigh": 239.85,
+              "conservativeLow": 233.75,
+              "conservativeHigh": 237.65,
+              "suggestedZoneLow": 235.95,
+              "suggestedZoneHigh": 237.65,
+              "closingPrice": 236.75,
+              "result": "INSIDE_SUGGESTED_ZONE",
+              "counterAfter": 0
             }
           ],
           "manualDraft": {
-            "low": null,
-            "high": null,
+            "low": 235.95,
+            "high": 237.65,
             "edited": false,
             "editedAt": null,
             "suggestedForDate": "2026-08-20",
@@ -287,7 +299,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 32.4,
+      "currentPrice": 32.35,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -307,7 +319,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.41,
+      "currentPrice": 29.43,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -317,10 +329,10 @@
       "watchCriteria": {
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "zoneLow": 29.01,
-        "zoneHigh": 29.32,
-        "manualZoneLow": 29.01,
-        "manualZoneHigh": 29.32,
+        "zoneLow": 28.05,
+        "zoneHigh": 28.98,
+        "manualZoneLow": 28.05,
+        "manualZoneHigh": 28.98,
         "volThreshold": 87945,
         "stopLossMode": "manual",
         "stopLossManual": 27,
@@ -336,23 +348,23 @@
           "latestSnapshot": null,
           "snapshots": [],
           "manualDraft": {
-            "low": 29.01,
-            "high": 29.32,
+            "low": null,
+            "high": null,
             "edited": false,
             "editedAt": null,
             "suggestedForDate": "2026-08-20",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 29.01,
-            "high": 29.32
+            "low": 28.05,
+            "high": 28.98
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-08-20T01:00:25.277Z",
+          "manualAppliedAt": "2026-08-20T01:34:59.109Z",
           "readyNotifiedPeriod": null
         }
       }
     }
   ],
-  "lastUpdated": "2026-08-20T01:00:32.484Z"
+  "lastUpdated": "2026-08-20T01:35:02.469Z"
 }
