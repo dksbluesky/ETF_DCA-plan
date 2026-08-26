@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.64,
+      "currentPrice": 32.73,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -207,15 +207,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 233,
-        "zoneHigh": 236,
+        "zoneLow": 235.7,
+        "zoneHigh": 239.6,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 230,
+        "stopLossManual": 232,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 233,
-        "manualZoneHigh": 236,
+        "manualZoneLow": 235.7,
+        "manualZoneHigh": 239.6,
         "starterAllocationPct": null,
         "starterExecuted": false,
         "manualReassessment": {
@@ -316,15 +316,15 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-08-25",
+            "suggestedForDate": "2026-08-26",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 233,
-            "high": 236
+            "low": 235.7,
+            "high": 239.6
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-08-25T08:01:59.699Z",
+          "manualAppliedAt": "2026-08-26T00:53:13.998Z",
           "readyNotifiedPeriod": "2026-08-24"
         }
       }
@@ -347,7 +347,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 32.64,
+      "currentPrice": 32.73,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -367,7 +367,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 28.77,
+      "currentPrice": 28.79,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -438,5 +438,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-25T08:02:18.893Z"
+  "lastUpdated": "2026-08-26T00:53:25.857Z"
 }
