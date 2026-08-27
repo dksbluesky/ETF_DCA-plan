@@ -324,8 +324,8 @@
             }
           ],
           "manualDraft": {
-            "low": 240.2,
-            "high": 241.2,
+            "low": null,
+            "high": null,
             "edited": false,
             "editedAt": null,
             "suggestedForDate": "2026-08-27",
@@ -450,5 +450,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-27T01:02:07.191Z"
+  "lastUpdated": "2026-08-27T01:03:13.440Z"
 }
