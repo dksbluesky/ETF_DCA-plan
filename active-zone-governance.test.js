@@ -107,3 +107,12 @@ assert.match(html, /manualZoneLow: zoneMode === 'manual' \? zoneLow : \(previous
 assert.match(html, /AUTOMATIC \/ CONTEXT-LED ACTIVE LONG ZONE/, 'Automatic authority is identified separately from configured watch zones');
 assert.match(html, /zoneMode === 'manual' \|\| zoneMode === 'automatic_context'/, 'Saved automatic-context mode reloads without selecting a suggested watch zone');
 assert.match(html, /NT\$\$\{shownZone\.low\.toFixed\(2\)\}/, 'Automatic Active Zone display retains its NT$ currency prefix');
+assert.match(html, /CURRENT AUTOMATIC \/ CONTEXT-LED ACTIVE LONG ZONE/, 'Configured Suggested and automatic zones are displayed separately');
+assert.match(html, /const showAutomaticCard = !isManual && !isAutomaticContext && !!automaticContext;/, 'Automatic zone card is shown only when it is authoritative and not already the primary card');
+assert.match(html, /NT\$\$\{automaticContext\.activeZone\.low\.toFixed\(2\)\} – NT\$\$\{automaticContext\.activeZone\.high\.toFixed\(2\)\}/, 'Automatic zone card displays the authoritative range with currency labels');
+assert.match(html, /CURRENT ACTIVE ZONE/, 'one Current Active Zone card is rendered');
+assert.match(html, /function openActiveZoneSelector\(\)/, 'selected-zone selector renders only the allowed alternatives');
+assert.match(html, /aggressive_override/, 'Aggressive selection is a distinct explicit authoritative override');
+assert.match(html, /conservative_override/, 'Conservative selection is a distinct explicit authoritative override');
+assert.match(html, /Use \$\{label\} for TAR-OBI Linked Monitor\?/, 'selected zone requires a bridge confirmation');
+assert.match(html, /panel\.style\.display = hasValidAutomaticActiveZone \? 'none' : '';/, 'Manual Reassessment is hidden while Automatic Zone is valid');

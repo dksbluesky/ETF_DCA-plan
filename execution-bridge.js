@@ -134,7 +134,7 @@
     const high = Number(context?.activeZone?.high);
     const validZone = Number.isFinite(low) && Number.isFinite(high) && low > 0 && high >= low;
     const automaticLongZone = marketContext.context === 'bullish' && marketContext.automaticZoneEligible === true;
-    const manualOverride = context?.zoneMode === 'manual_override' && marketContext.manualOverride === true;
+    const manualOverride = ['manual_override', 'manual', 'aggressive_override', 'conservative_override'].includes(context?.zoneMode) && marketContext.manualOverride === true;
     return validZone && (automaticLongZone || manualOverride);
   }  function startBridge(context) {
     if (!canStartForContext(context)) throw new Error('No valid Active Long Zone is available for TAR-OBI monitoring.');
