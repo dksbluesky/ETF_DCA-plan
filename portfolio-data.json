@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.78,
+      "currentPrice": 32.71,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 243.25,
+      "currentPrice": 243.15,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -207,13 +207,13 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 240.2,
-        "zoneHigh": 242.8,
+        "zoneLow": 238.65,
+        "zoneHigh": 241.15,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 240,
+        "stopLossManual": 236,
         "marketLevelTimeframe": "daily",
-        "zoneMode": "aggressive",
+        "zoneMode": "conservative_override",
         "manualZoneLow": 235.7,
         "manualZoneHigh": 239.6,
         "starterAllocationPct": null,
@@ -221,21 +221,21 @@
         "manualReassessment": {
           "threshold": 3,
           "minOperationalTicks": 2,
-          "counter": 5,
+          "counter": 6,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-08-17",
-          "lastCountedPeriod": "2026-08-26",
+          "lastCountedPeriod": "2026-08-27",
           "latestSnapshot": {
-            "tradingDate": "2026-08-26",
-            "aggressiveLow": 240.2,
-            "aggressiveHigh": 242.8,
+            "tradingDate": "2026-08-27",
+            "aggressiveLow": 240.25,
+            "aggressiveHigh": 242.75,
             "conservativeLow": 238.65,
-            "conservativeHigh": 241.2,
-            "suggestedZoneLow": 240.2,
-            "suggestedZoneHigh": 241.2,
-            "closingPrice": 242.85,
+            "conservativeHigh": 241.15,
+            "suggestedZoneLow": 240.25,
+            "suggestedZoneHigh": 241.15,
+            "closingPrice": 243.15,
             "result": "ABOVE_SUGGESTED_ZONE",
-            "counterAfter": 5
+            "counterAfter": 6
           },
           "snapshots": [
             {
@@ -321,11 +321,23 @@
               "closingPrice": 242.85,
               "result": "ABOVE_SUGGESTED_ZONE",
               "counterAfter": 5
+            },
+            {
+              "tradingDate": "2026-08-27",
+              "aggressiveLow": 240.25,
+              "aggressiveHigh": 242.75,
+              "conservativeLow": 238.65,
+              "conservativeHigh": 241.15,
+              "suggestedZoneLow": 240.25,
+              "suggestedZoneHigh": 241.15,
+              "closingPrice": 243.15,
+              "result": "ABOVE_SUGGESTED_ZONE",
+              "counterAfter": 6
             }
           ],
           "manualDraft": {
-            "low": 240.2,
-            "high": 241.2,
+            "low": 240.25,
+            "high": 241.15,
             "edited": false,
             "editedAt": null,
             "suggestedForDate": "2026-08-27",
@@ -337,7 +349,7 @@
           },
           "manualZoneSource": "MANUAL",
           "manualAppliedAt": "2026-08-26T00:53:13.998Z",
-          "readyNotifiedPeriod": "2026-08-26"
+          "readyNotifiedPeriod": "2026-08-27"
         }
       }
     },
@@ -346,7 +358,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2420,
+      "currentPrice": 2410,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -359,7 +371,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 32.78,
+      "currentPrice": 32.71,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -379,7 +391,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.51,
+      "currentPrice": 29.52,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -450,5 +462,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-27T05:07:02.106Z"
+  "lastUpdated": "2026-08-27T09:39:34.961Z"
 }
