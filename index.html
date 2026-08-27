@@ -1496,13 +1496,13 @@ function openModal(type, ctx) {
           <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
             <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Aggressive 積極</div>
             <div id="wc-suggest-aggressive" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
-            <button type="button" id="wc-apply-aggressive" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','aggressive')" disabled>套用 Apply</button>
+            <button type="button" id="wc-apply-aggressive" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','aggressive')" disabled>設定觀察區間 Set Watch Zone</button>
             <div style="font-size:11px;color:var(--muted);line-height:1.5">較早開始監控。安全邊際較低。<br>Earlier monitoring. Lower margin of safety.</div>
           </div>
           <div class="form-group" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--card)">
             <div style="font-weight:700;color:var(--primary);margin-bottom:5px">Conservative 保守</div>
             <div id="wc-suggest-conservative" style="font-size:15px;font-weight:700;margin-bottom:5px">計算中… Calculating…</div>
-            <button type="button" id="wc-apply-conservative" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','conservative')" disabled>套用 Apply</button>
+            <button type="button" id="wc-apply-conservative" class="btn btn-primary btn-sm" style="margin-bottom:7px" onclick="applySuggestedWatchZone('${listType}','${posId}','conservative')" disabled>設定觀察區間 Set Watch Zone</button>
             <div style="font-size:11px;color:var(--muted);line-height:1.5">等待更深回檔。安全邊際較高。<br>Wait for a deeper pullback. Higher margin of safety.</div>
           </div>
         </div>
@@ -1510,21 +1510,22 @@ function openModal(type, ctx) {
         <section id="wc-manual-reassessment" style="margin:0 0 12px"></section>
         <input type="hidden" id="wc-zonemode" value="${initialZoneMode}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin:4px 0 12px">
-          <span style="font-size:11px;color:var(--muted);line-height:1.5">建議區間只會在按下 Apply 後成為目前啟用區間。Suggestions become active only after Apply.</span>
+          <span style="font-size:11px;color:var(--muted);line-height:1.5">建議區間在按下 Set Watch Zone 後成為已設定的觀察區間。它不會覆蓋有效的 Automatic / Context-led Active Long Zone。Suggested zones become configured Watch Zones after Set Watch Zone; they do not override a valid Automatic / Context-led Active Long Zone.</span>
           <span style="font-size:11px;color:var(--muted)">Manual reassessment controls appear above when Automatic Apply is unavailable.</span>
         </div>
 
         <div style="border:2px solid var(--primary);border-radius:10px;padding:10px 12px;background:var(--accent-l);margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:5px">ACTIVE ZONE｜目前啟用區間</div>
+          <div id="wc-active-zone-title" style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:5px">CONFIGURED SUGGESTED WATCH ZONE｜已設定建議觀察區間</div>
           <div id="wc-active-zone" style="font-size:17px;font-weight:700;margin-bottom:3px">—</div>
-          <div style="font-size:12px"><span style="color:var(--muted)">Source 來源：</span><b id="wc-active-source">—</b></div>
+          <div style="font-size:12px"><span id="wc-active-source-label" style="color:var(--muted)">Configured source 來源：</span><b id="wc-active-source">—</b></div>
+          <button id="wc-return-automatic-context" type="button" class="btn btn-outline btn-sm" style="display:none;margin-top:8px" onclick="returnToAutomaticContext()">Return to Automatic / Context-led Active Zone</button>
         </div>
 
         <div class="form-row">
-          <div class="form-group"><label class="form-label">啟用區間下緣 Active Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualLow : (wc.zoneLow ?? '')}" readonly></div>
-          <div class="form-group"><label class="form-label">啟用區間上緣 Active Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualHigh : (wc.zoneHigh ?? '')}" readonly></div>
+          <div class="form-group"><label id="wc-zone-low-label" class="form-label">Configured Watch Zone Low (NT$)</label><input class="form-input" id="wc-zonelow" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualLow : (wc.zoneLow ?? '')}" readonly></div>
+          <div class="form-group"><label id="wc-zone-high-label" class="form-label">Configured Watch Zone High (NT$)</label><input class="form-input" id="wc-zonehigh" type="number" step="0.01" value="${initialZoneMode === 'manual' ? initialManualHigh : (wc.zoneHigh ?? '')}" readonly></div>
         </div>
-        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin:-6px 0 10px">區間設定只決定何處開始監控，不是買入訊號。Zone Setup defines where monitoring begins; it is not a buy signal.</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin:-6px 0 10px">Manual Active Long Zone is authoritative only when Source is Manual. Aggressive/Conservative are configured Suggested Watch Zones and are not buy signals. 手動區間才是權威 Active Long Zone；Aggressive/Conservative 為建議觀察區間，非買入訊號。</div>
         <div id="wc-zone-check"></div>
         <div class="form-group" style="margin-top:10px"><label class="form-label">量縮警戒值 Volume Threshold (張 lots)</label><input class="form-input" id="wc-volth" type="number" step="1" value="${wc.volThreshold ?? ''}" oninput="onWatchFieldInput('${listType}','${posId}')"></div>
         <div class="form-group">
@@ -2349,6 +2350,7 @@ function getWatchZoneMode() {
 function zoneModeLabel(mode) {
   if (mode === 'aggressive') return 'Aggressive 積極';
   if (mode === 'conservative') return 'Conservative 保守';
+  if (mode === 'automatic_context') return 'Automatic / Context-led';
   return 'Manual 手動';
 }
 
@@ -2487,6 +2489,36 @@ function applyContextActiveZone() {
   recomputeZoneValidation();
   recomputeWatchStatus();
   toast(`${context.zoneType.replaceAll('_', ' ')} Active Zone applied.`, 'ok');
+}
+
+function getAutomaticContextActiveZone() {
+  if (!_watchCandles || !_watchPos) return null;
+  const currentPrice = Number(_watchQuote?.price) || _watchCandles[_watchCandles.length - 1]?.close;
+  const context = window.EtfDcaMarketContextZone?.classify(_watchCandles, {
+    currentPrice,
+    securityType: _watchPos.type,
+    completedDailyDate: completedDailyDateForMarketContext(_watchCandles)
+  });
+  const zone = context?.activeZone;
+  return context?.context === 'bullish' && context?.automaticZoneEligible === true
+    && Number.isFinite(zone?.low) && Number.isFinite(zone?.high) && zone.low < zone.high
+    ? context
+    : null;
+}
+
+function returnToAutomaticContext() {
+  if (!_watchListType || !_watchPosId) return;
+  const context = getAutomaticContextActiveZone();
+  if (!context) {
+    toast('No valid Automatic / Context-led Active Long Zone is available.', 'err');
+    return;
+  }
+  const modeEl = document.getElementById('wc-zonemode');
+  if (modeEl) modeEl.value = 'automatic_context';
+  persistWatchCriteria(_watchListType, _watchPosId);
+  renderActiveWatchZone();
+  recomputeWatchStatus();
+  toast('Manual override cleared. Automatic / Context-led Active Long Zone is now authoritative.', 'ok');
 }
 function renderSuggestedWatchZones() {
   const aggressiveEl = document.getElementById('wc-suggest-aggressive');
@@ -2633,11 +2665,35 @@ function applyManualReassessment() {
 }
 function renderActiveWatchZone() {
   const mode = getWatchZoneMode();
+  const isManual = mode === 'manual';
+  const isAutomaticContext = mode === 'automatic_context';
+  const automaticContext = isAutomaticContext ? getAutomaticContextActiveZone() : null;
   const low = gf('wc-zonelow'), high = gf('wc-zonehigh');
   const zoneEl = document.getElementById('wc-active-zone');
+  const titleEl = document.getElementById('wc-active-zone-title');
+  const sourceLabelEl = document.getElementById('wc-active-source-label');
   const sourceEl = document.getElementById('wc-active-source');
-  if (zoneEl) zoneEl.textContent = low && high ? `NT$${low.toFixed(2)} – NT$${high.toFixed(2)}` : '尚未設定 Not set';
-  if (sourceEl) sourceEl.textContent = zoneModeLabel(mode);
+  const lowLabelEl = document.getElementById('wc-zone-low-label');
+  const highLabelEl = document.getElementById('wc-zone-high-label');
+  const returnButton = document.getElementById('wc-return-automatic-context');
+  const shownZone = automaticContext?.activeZone;
+  if (zoneEl) zoneEl.textContent = shownZone
+    ? `NT$${shownZone.low.toFixed(2)} – NT$${shownZone.high.toFixed(2)}`
+    : low && high ? `NT$${low.toFixed(2)} – NT${high.toFixed(2)}` : '尚未設定 Not set';
+  if (titleEl) titleEl.textContent = isManual
+    ? 'MANUAL ACTIVE LONG ZONE｜目前權威啟用區間'
+    : isAutomaticContext
+      ? 'AUTOMATIC / CONTEXT-LED ACTIVE LONG ZONE｜目前權威啟用區間'
+      : 'CONFIGURED SUGGESTED WATCH ZONE｜已設定建議觀察區間';
+  if (sourceLabelEl) sourceLabelEl.textContent = isManual || isAutomaticContext ? 'Source 來源：' : 'Configured source 來源：';
+  if (sourceEl) sourceEl.textContent = isManual
+    ? 'Manual Active Long Zone'
+    : isAutomaticContext
+      ? 'Automatic / Context-led Active Long Zone'
+      : `${zoneModeLabel(mode)} Suggested Watch Zone`;
+  if (lowLabelEl) lowLabelEl.textContent = isManual ? 'Manual Active Long Zone Low (NT$)' : isAutomaticContext ? 'Stored Manual Zone Low (NT$)' : 'Configured Watch Zone Low (NT$)';
+  if (highLabelEl) highLabelEl.textContent = isManual ? 'Manual Active Long Zone High (NT$)' : isAutomaticContext ? 'Stored Manual Zone High (NT$)' : 'Configured Watch Zone High (NT$)';
+  if (returnButton) returnButton.style.display = isManual && getAutomaticContextActiveZone() ? '' : 'none';
 }
 
 function setActiveWatchZoneInputs(mode, zone) {
@@ -2687,7 +2743,7 @@ function applySuggestedWatchZone(listType, posId, mode) {
   setActiveWatchZoneInputs(mode, zone);
   persistWatchCriteria(listType, posId);
   recomputeWatchStatus();
-  toast(`${zoneModeLabel(mode)} 已套用；進場狀態已重新計算 Applied; Entry Watch recalculated`, 'ok');
+  toast(`${zoneModeLabel(mode)} Suggested Watch Zone configured; Automatic / Context-led Active Long Zone remains authoritative unless a Manual Active Long Zone is applied.`, 'ok');
 }
 
 // Backward-compatible entry point for older cached markup.
@@ -2727,7 +2783,7 @@ async function onMarketLevelTimeframeChange(listType, posId) {
   persistWatchCriteria(listType, posId);
   const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
   toast(ok
-    ? '已重新計算建議區間；目前啟用區間未變更 Suggested Zones recalculated; Active Zone unchanged'
+    ? '已重新計算建議觀察區間；目前權威 Active Long Zone 未變更 Suggested Watch Zones recalculated; authoritative Active Long Zone unchanged'
     : '無法計算此週期的市場層級 Could not calculate this timeframe', ok ? 'ok' : 'err');
 }
 
@@ -2749,7 +2805,7 @@ async function loadWatchStatus(listType, posId) {
     }
     const zoneMode = getWatchZoneMode();
     const activeZoneMissing = !gf('wc-zonelow') || !gf('wc-zonehigh');
-    if (zoneMode === 'manual') {
+    if (zoneMode === 'manual' || zoneMode === 'automatic_context') {
       setActiveWatchZoneInputs('manual', null);
     } else if (activeZoneMissing) {
       setActiveWatchZoneInputs(zoneMode, _watchZoneEngine?.suggestedZones?.[zoneMode] || null);
@@ -3620,7 +3676,7 @@ async function refreshWatchSuggestions(listType, posId) {
   if (!_watchCandles) { toast('股價資料尚未載入完成 Price data still loading', 'err'); return; }
   const ok = await recalculateMarketLevelSuggestions(listType, posId, true);
   toast(ok
-    ? '已重新計算市場層級與建議觀察區間；目前啟用區間未變更 Market Levels and Suggested Zones recalculated; Active Zone unchanged'
+    ? '已重新計算市場層級與建議觀察區間；目前權威 Active Long Zone 未變更 Market Levels and Suggested Watch Zones recalculated; authoritative Active Long Zone unchanged'
     : '無法重新計算建議值 Could not recalculate suggestions', ok ? 'ok' : 'err');
 }
 

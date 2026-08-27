@@ -95,3 +95,15 @@ assert.equal(bridge.canStartForContext({
 console.log('Active Zone governing-state tests passed.');
 assert.match(html, /wc-manual-reassessment/, 'Manual reassessment is isolated from the existing Active Zone controls');
 assert.match(html, /applyManualReassessment/, 'Manual Active Zone changes require explicit Apply Manual');
+assert.match(html, /CONFIGURED SUGGESTED WATCH ZONE/, 'Aggressive and Conservative configuration is not labeled as the Active Zone');
+assert.match(html, /MANUAL ACTIVE LONG ZONE/, 'Manual mode remains clearly identified as the authoritative Active Long Zone');
+assert.match(html, /Suggested zones become configured Watch Zones after Set Watch Zone; they do not override a valid Automatic \/ Context-led Active Long Zone\./);
+assert.match(html, /Automatic \/ Context-led Active Long Zone remains authoritative unless a Manual Active Long Zone is applied\./);
+assert.match(html, /const isManual = mode === 'manual';/);
+assert.match(html, /Return to Automatic \/ Context-led Active Zone/, 'Manual override has an explicit return control');
+assert.match(html, /function returnToAutomaticContext\(\)/, 'Return control has a dedicated handler');
+assert.match(html, /modeEl\.value = 'automatic_context';/, 'Return handler restores automatic context authority');
+assert.match(html, /manualZoneLow: zoneMode === 'manual' \? zoneLow : \(previous\.manualZoneLow \?\? null\)/, 'Returning to automatic context preserves the saved Manual zone');
+assert.match(html, /AUTOMATIC \/ CONTEXT-LED ACTIVE LONG ZONE/, 'Automatic authority is identified separately from configured watch zones');
+assert.match(html, /zoneMode === 'manual' \|\| zoneMode === 'automatic_context'/, 'Saved automatic-context mode reloads without selecting a suggested watch zone');
+assert.match(html, /NT\$\$\{shownZone\.low\.toFixed\(2\)\}/, 'Automatic Active Zone display retains its NT$ currency prefix');
