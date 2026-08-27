@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 32.89,
+      "currentPrice": 32.78,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 244.4,
+      "currentPrice": 243.25,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -207,8 +207,8 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 242.4,
-        "zoneHigh": 244.95,
+        "zoneLow": 240.2,
+        "zoneHigh": 242.8,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 240,
@@ -324,8 +324,8 @@
             }
           ],
           "manualDraft": {
-            "low": null,
-            "high": null,
+            "low": 240.2,
+            "high": 241.2,
             "edited": false,
             "editedAt": null,
             "suggestedForDate": "2026-08-27",
@@ -346,7 +346,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2425,
+      "currentPrice": 2420,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -359,7 +359,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 32.89,
+      "currentPrice": 32.78,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -379,7 +379,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.65,
+      "currentPrice": 29.51,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -450,5 +450,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-27T03:45:48.495Z"
+  "lastUpdated": "2026-08-27T05:07:02.106Z"
 }
