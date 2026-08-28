@@ -47,6 +47,14 @@
     return isOnTick(manualLow) && isOnTick(manualHigh);
   }
 
+  function explicitActiveManualZone(state, tickSize = null) {
+    const next = normalize(state);
+    const appliedAt = typeof next.manualAppliedAt === 'string' ? next.manualAppliedAt.trim() : '';
+    if (next.manualZoneSource !== 'MANUAL' || !appliedAt || !Number.isFinite(Date.parse(appliedAt))) return null;
+    if (!manualZoneIsValid(next.activeManualZone?.low, next.activeManualZone?.high, tickSize)) return null;
+    return { low: next.activeManualZone.low, high: next.activeManualZone.high, manualAppliedAt: appliedAt };
+  }
+
   function startSequence(state, timeframe, baselinePeriod = null) {
     return { ...normalize(state), counter: 0, sequenceTimeframe: timeframe, trackingBaselinePeriod: baselinePeriod || null, lastCountedPeriod: null, latestSnapshot: null, snapshots: [], readyNotifiedPeriod: null };
   }
@@ -97,5 +105,5 @@
     return { state: next, evaluated: true, active: true, readyJustReached, snapshot };
   }
   function markReadyNotified(state, period) { return { ...normalize(state), readyNotifiedPeriod: period || null }; }
-  return { DAILY_TIMEFRAME, DEFAULT_THRESHOLD, DEFAULT_MIN_OPERATIONAL_TICKS, normalize, suggestedZone, manualZoneIsValid, startSequence, prefillDraft, setDraft, migrateLegacyAppliedDraft, setThreshold, setMinOperationalTicks, resetCounter, applyManualZone, evaluateDaily, markReadyNotified };
+  return { DAILY_TIMEFRAME, DEFAULT_THRESHOLD, DEFAULT_MIN_OPERATIONAL_TICKS, normalize, suggestedZone, manualZoneIsValid, explicitActiveManualZone, startSequence, prefillDraft, setDraft, migrateLegacyAppliedDraft, setThreshold, setMinOperationalTicks, resetCounter, applyManualZone, evaluateDaily, markReadyNotified };
 });

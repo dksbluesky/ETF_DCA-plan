@@ -22,6 +22,9 @@ let applied = R.applyManualZone(state, undefined, undefined, '2026-08-18T00:00:0
 assert.equal(applied.applied, true);
 assert.deepEqual(applied.state.activeManualZone, { low: 239.8, high: 240.4 });
 assert.equal(applied.state.manualZoneSource, 'MANUAL');
+assert.deepEqual(R.explicitActiveManualZone(applied.state), { low: 239.8, high: 240.4, manualAppliedAt: applied.state.manualAppliedAt });
+assert.equal(R.explicitActiveManualZone({ activeManualZone: { low: 239.8, high: 240.4 }, manualZoneSource: 'MANUAL' }), null, 'a missing applied timestamp is not an explicit Manual Reassessment Active Zone');
+assert.equal(R.explicitActiveManualZone({ activeManualZone: { low: 239.8, high: 240.4 }, manualZoneSource: 'MANUAL', manualAppliedAt: 'not-a-date' }), null, 'an invalid applied timestamp is not an explicit Manual Reassessment Active Zone');
 assert.equal(applied.state.manualDraft.edited, false, 'applying separates the Active Manual Zone from the next editable draft');
 state = R.prefillDraft(applied.state, R.suggestedZone({ zoneLow: 242 }, { zoneHigh: 243 }, 0.05));
 assert.deepEqual(state.manualDraft, { low: 242, high: 243, edited: false, editedAt: null, suggestedForDate: null, editedForDate: null }, 'an unapplied draft follows the latest Suggested Zone after Apply Manual');

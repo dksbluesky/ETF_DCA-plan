@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const Revision = require('./manual-zone-revision.js');
-const position = (id, low, high, appliedAt) => ({ id, watchCriteria: { zoneMode: 'manual', zoneLow: low, zoneHigh: high, manualReassessment: { activeManualZone: { low, high }, manualAppliedAt: appliedAt } } });
+const position = (id, low, high, appliedAt) => ({ id, watchCriteria: { zoneMode: 'manual', zoneLow: low, zoneHigh: high, manualReassessment: { activeManualZone: { low, high }, manualZoneSource: 'MANUAL', manualAppliedAt: appliedAt } } });
 const local = { dca: [position('p1', 100, 101, '2026-08-18T08:00:00.000Z')], direct: [] };
 const remoteNewer = { dca: [position('p1', 102, 103, '2026-08-18T09:00:00.000Z')], direct: [] };
 assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, remoteNewer)[0].reason, 'REMOTE_NEWER');
@@ -10,5 +10,5 @@ assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, remoteOlder).len
 const sameZoneNewer = { dca: [position('p1', 100, 101, '2026-08-18T09:00:00.000Z')], direct: [] };
 assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, sameZoneNewer).length, 0, 'the same active zone is not a replacement conflict');
 const legacyRemote = { dca: [{ id: 'p1', watchCriteria: { zoneMode: 'manual', zoneLow: 102, zoneHigh: 103 } }], direct: [] };
-assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, legacyRemote)[0].reason, 'REMOTE_REVISION_UNKNOWN', 'legacy remote manual zones are protected when ordering is unknown');
+assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, legacyRemote).length, 0, 'legacy ranges without an explicit applied-manual record are preserved but do not create a manual-zone conflict');
 console.log('Manual zone revision tests passed.');

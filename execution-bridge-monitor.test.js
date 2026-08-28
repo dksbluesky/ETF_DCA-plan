@@ -201,6 +201,15 @@ bridge = monitor.syncStoredBridgeContext({
 }, Date.parse('2026-07-27T03:03:00.000Z'));
 assert.equal(bridge.lifecycle.status, 'ACTIVE', 'a valid manual override must not invalidate the TAR-OBI monitor');
 assert.equal(bridge.lifecycle.reason, null);
+storage = storageWith(phase1Bridge());
+monitor = loadMonitor(storage);
+bridge = monitor.syncStoredBridgeContext({
+  ...liveContext,
+  zoneMode: null,
+  activeZone: null,
+  extensions: { marketContextV1: { context: 'range', automaticZoneEligible: false, manualOverride: false } }
+}, Date.parse('2026-07-27T03:04:00.000Z'));
+assert.equal(bridge.lifecycle.status, 'EXPIRED', 'an authoritative source change to no Active Long Zone expires the linked bridge through reconciliation');
 const originalNotification = global.Notification;
 const leftNotifications = [];
 try {

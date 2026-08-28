@@ -438,8 +438,8 @@
 
     const invalidationReason = sourceLongZoneInvalidationReason(context);
     if (invalidationReason) {
-      const invalidated = lifecycleUpdate(current, 'INVALIDATED', now, invalidationReason);
-      return writeIfUnchanged(raw, invalidated) ? invalidated : parseBridge(storageGet());
+      const expired = lifecycleUpdate(current, 'EXPIRED', now, invalidationReason);
+      return writeIfUnchanged(raw, expired) ? expired : parseBridge(storageGet());
     }
 
     if (!validSourceContext(context)) return stored;

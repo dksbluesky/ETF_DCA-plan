@@ -11,10 +11,12 @@
   function manualZone(position) {
     const criteria = position?.watchCriteria || {};
     const active = criteria.manualReassessment?.activeManualZone;
-    const low = number(active?.low ?? (criteria.zoneMode === 'manual' ? criteria.zoneLow : null));
-    const high = number(active?.high ?? (criteria.zoneMode === 'manual' ? criteria.zoneHigh : null));
+    const appliedAt = criteria.manualReassessment?.manualAppliedAt;
+    if (criteria.manualReassessment?.manualZoneSource !== 'MANUAL' || revisionMs(appliedAt) === null) return null;
+    const low = number(active?.low);
+    const high = number(active?.high);
     if (low === null || high === null || high <= low) return null;
-    return { low, high, revision: criteria.manualReassessment?.manualAppliedAt || null };
+    return { low, high, revision: appliedAt };
   }
   function positions(data) {
     return ['dca', 'direct'].flatMap(listType => (data?.[listType] || []).map(position => ({ key: `${listType}:${position.id}`, listType, position })));
