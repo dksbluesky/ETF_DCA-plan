@@ -294,7 +294,7 @@
     const marketContext = context?.extensions?.marketContextV1;
     // Legacy bridges without the context extension preserve their original behavior.
     if (!marketContext) return null;
-    const manualOverride = context?.zoneMode === 'manual_override' && marketContext.manualOverride === true;
+    const manualOverride = ['manual_override', 'manual', 'manual_reassessment'].includes(context?.activeZoneSource || context?.zoneMode) && marketContext.manualOverride === true;
     if (!manualOverride && (marketContext.context !== 'bullish' || marketContext.automaticZoneEligible !== true)) {
       return 'No valid bullish Active Zone remains.';
     }

@@ -1447,6 +1447,7 @@ function openModal(type, ctx) {
     if (!pos) return;
     const wc = pos.watchCriteria || {};
     const initialZoneMode = wc.zoneMode || ((wc.zoneLow || wc.zoneHigh) ? 'manual' : 'aggressive');
+    const initialActiveZoneSource = ['automatic_context', 'aggressive_override', 'conservative_override', 'manual_reassessment'].includes(wc.activeZoneSource) ? wc.activeZoneSource : '';
     const initialManualLow = wc.manualZoneLow ?? (initialZoneMode === 'manual' ? wc.zoneLow : '');
     const initialManualHigh = wc.manualZoneHigh ?? (initialZoneMode === 'manual' ? wc.zoneHigh : '');
     const initialMarketLevelTimeframe = wc.marketLevelTimeframe === '4h' ? '60m' : (wc.marketLevelTimeframe || 'daily');
@@ -1513,6 +1514,7 @@ function openModal(type, ctx) {
 
         <section id="wc-manual-reassessment" style="margin:0 0 12px"></section>
         <input type="hidden" id="wc-zonemode" value="${initialZoneMode}">
+        <input type="hidden" id="wc-active-zone-source" value="${initialActiveZoneSource}">
         <div style="display:none">
           <span style="font-size:11px;color:var(--muted);line-height:1.5">建議區間在按下 Set Watch Zone 後成為已設定的觀察區間。它不會覆蓋有效的 Automatic / Context-led Active Long Zone。Suggested zones become configured Watch Zones after Set Watch Zone; they do not override a valid Automatic / Context-led Active Long Zone.</span>
           <span style="font-size:11px;color:var(--muted)">Manual reassessment controls appear above when Automatic Apply is unavailable.</span>
@@ -2363,6 +2365,17 @@ function buildWatchZoneEngine(candles, timeframe, currentPriceOverride = null, s
 function getWatchZoneMode() {
   return gv('wc-zonemode') || 'manual';
 }
+function getActiveZoneSource() {
+  const source = gv('wc-active-zone-source');
+  return ['automatic_context', 'aggressive_override', 'conservative_override', 'manual_reassessment'].includes(source) ? source : null;
+}
+function setActiveZoneSource(source) {
+  const input = document.getElementById('wc-active-zone-source');
+  if (input) input.value = source || '';
+}
+function validZone(zone) {
+  return Number.isFinite(Number(zone?.low)) && Number.isFinite(Number(zone?.high)) && Number(zone.low) > 0 && Number(zone.high) > Number(zone.low);
+}
 
 function zoneModeLabel(mode) {
   if (mode === 'aggressive') return 'Aggressive 積極';
@@ -2500,8 +2513,9 @@ function applyContextActiveZone() {
     toast('No valid bullish Active Zone is available.', 'err');
     return;
   }
-  document.getElementById('wc-zonemode').value = 'manual';
-  setActiveWatchZoneInputs('manual', { zoneLow: context.activeZone.low, zoneHigh: context.activeZone.high });
+  document.getElementById('wc-zonemode').value = 'automatic_context';
+  setActiveZoneSource('automatic_context');
+  setActiveWatchZoneInputs('automatic_context', { zoneLow: context.activeZone.low, zoneHigh: context.activeZone.high });
   persistWatchCriteria(_watchListType, _watchPosId);
   recomputeZoneValidation();
   recomputeWatchStatus();
@@ -2532,6 +2546,7 @@ function returnToAutomaticContext() {
   }
   const modeEl = document.getElementById('wc-zonemode');
   if (modeEl) modeEl.value = 'automatic_context';
+  setActiveZoneSource('automatic_context');
   persistWatchCriteria(_watchListType, _watchPosId);
   renderActiveWatchZone();
   recomputeWatchStatus();
@@ -2540,7 +2555,7 @@ function returnToAutomaticContext() {
 function activeZoneLabel(mode, context) {
   if (mode === 'aggressive_override') return 'Manual Aggressive Override';
   if (mode === 'conservative_override') return 'Manual Conservative Override';
-  if (mode === 'manual') return 'Manual Reassessment Active Zone';
+  if (mode === 'manual' || mode === 'manual_reassessment') return 'Manual Reassessment Active Zone';
   const type = { pullback_reversal: 'A', v_reversal_continuation: 'B', shallow_trend_continuation: 'C' }[context?.zoneType] || '';
   return `Automatic Zone ${type}`;
 }
@@ -2695,6 +2710,7 @@ function applyManualReassessment() {
   saveManualReassessmentState(_watchListType, _watchPosId, next);
   setActiveWatchZoneInputs('manual', { zoneLow: next.activeManualZone.low, zoneHigh: next.activeManualZone.high });
   const mode = document.getElementById('wc-zonemode'); if (mode) mode.value = 'manual';
+  setActiveZoneSource('manual_reassessment');
   persistWatchCriteria(_watchListType, _watchPosId);
   recomputeZoneValidation(); recomputeWatchStatus(); renderManualReassessment(); showZoneBridgeChoice();
   toast('Manual Active Zone applied.', 'ok');
@@ -2907,6 +2923,7 @@ function persistWatchCriteria(listType, posId) {
     ...previous,
     marketLevelTimeframe: getMarketLevelTimeframe(),
     zoneMode,
+    activeZoneSource: getActiveZoneSource() || previous.activeZoneSource || null,
     zoneLow,
     zoneHigh,
     manualZoneLow: zoneMode === 'manual' ? zoneLow : (previous.manualZoneLow ?? null),
@@ -3211,14 +3228,17 @@ function recomputeWatchStatus() {
   const configuredActiveZone = Number.isFinite(zoneLow) && Number.isFinite(zoneHigh)
     ? { low: zoneLow, high: zoneHigh }
     : null;
-  const selectedZoneMode = getWatchZoneMode();
-  const manualOverride = ['manual', 'aggressive_override', 'conservative_override'].includes(selectedZoneMode);
   const marketContext = window.EtfDcaMarketContextZone?.classify(candles, { currentPrice: displayedPrice, securityType: pos.type, completedDailyDate: completedDailyDateForMarketContext(candles) }) || null;
-  const automaticActiveZone = marketContext?.context === 'bullish' && marketContext?.automaticZoneEligible === true ? marketContext.activeZone : null;
-  const hasValidAutomaticActiveLongZone = Number.isFinite(automaticActiveZone?.low) && Number.isFinite(automaticActiveZone?.high) && automaticActiveZone.low > 0 && automaticActiveZone.high >= automaticActiveZone.low;
-  const hasValidManualActiveZone = manualOverride && Number.isFinite(configuredActiveZone?.low) && Number.isFinite(configuredActiveZone?.high) && configuredActiveZone.low > 0 && configuredActiveZone.high >= configuredActiveZone.low;
-  const selectedActiveZone = hasValidManualActiveZone ? configuredActiveZone : automaticActiveZone;
-  const hasValidActiveLongZone = hasValidAutomaticActiveLongZone || hasValidManualActiveZone;
+  const automaticActiveZone = marketContext?.context === 'bullish' && marketContext?.automaticZoneEligible === true && validZone(marketContext.activeZone) ? marketContext.activeZone : null;
+  const hasValidAutomaticActiveLongZone = !!automaticActiveZone;
+  const explicitSource = getActiveZoneSource();
+  const legacyManual = !explicitSource && getWatchZoneMode() === 'manual';
+  const selectedActiveZoneSource = automaticActiveZone ? (['aggressive_override', 'conservative_override'].includes(explicitSource) && validZone(configuredActiveZone) ? explicitSource : 'automatic_context') : ((explicitSource === 'manual_reassessment' || legacyManual) && validZone(configuredActiveZone) ? 'manual_reassessment' : null);
+  const selectedZoneMode = selectedActiveZoneSource === 'manual_reassessment' ? 'manual' : selectedActiveZoneSource || 'automatic_context';
+  const manualOverride = selectedActiveZoneSource === 'manual_reassessment';
+  const hasValidManualActiveZone = manualOverride && validZone(configuredActiveZone);
+  const selectedActiveZone = selectedActiveZoneSource === 'automatic_context' ? automaticActiveZone : (hasValidManualActiveZone || ['aggressive_override', 'conservative_override'].includes(selectedActiveZoneSource) ? configuredActiveZone : null);
+  const hasValidActiveLongZone = validZone(selectedActiveZone);
   const noActiveLongZone = !hasValidActiveLongZone;
   const ma5 = calcWatchEMA5(candles);
   const biasPct = ma5 ? Math.abs(price - ma5) / price * 100 : null;
@@ -3678,7 +3698,8 @@ function recomputeWatchStatus() {
   };
   watchSnapshot.gapContext = window.EtfDcaDecisionJournal?.calculateGapContext(watchSnapshot) || null;
   window._watchSnapshot = watchSnapshot;
-  renderCurrentActiveZone(marketContext, selectedActiveZone, selectedZoneMode);
+  watchSnapshot.activeZoneSource = selectedActiveZoneSource;
+  renderCurrentActiveZone(marketContext, selectedActiveZone, selectedActiveZoneSource);
   window.EtfDcaDecisionJournal?.recordSetupSnapshot(watchSnapshot);
   window.EtfDcaDecisionJournal?.renderPanel(document.getElementById('decision-journal'), watchSnapshot);
   window.EtfDcaReviewJournal?.renderControls(document.getElementById('review-journal'), {
