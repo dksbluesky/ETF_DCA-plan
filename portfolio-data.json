@@ -207,14 +207,14 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 240,
+        "zoneLow": 238,
         "zoneHigh": 243,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 237,
+        "stopLossManual": 235,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 240,
+        "manualZoneLow": 238,
         "manualZoneHigh": 243,
         "starterAllocationPct": null,
         "starterExecuted": false,
@@ -328,16 +328,16 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-08-30",
+            "suggestedForDate": "2026-08-31",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 240,
+            "low": 238,
             "high": 243
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-08-30T05:47:53.342Z",
-          "readyNotifiedPeriod": "2026-08-24"
+          "manualAppliedAt": "2026-08-31T00:01:27.098Z",
+          "readyNotifiedPeriod": "2026-08-26"
         },
         "activeZoneSource": "manual_reassessment"
       }
@@ -451,5 +451,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-08-30T05:47:58.569Z"
+  "lastUpdated": "2026-08-31T00:01:36.797Z"
 }
