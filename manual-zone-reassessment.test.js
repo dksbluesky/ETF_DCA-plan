@@ -26,6 +26,9 @@ assert.deepEqual(R.explicitActiveManualZone(applied.state), { low: 239.8, high: 
 assert.equal(R.explicitActiveManualZone({ activeManualZone: { low: 239.8, high: 240.4 }, manualZoneSource: 'MANUAL' }), null, 'a missing applied timestamp is not an explicit Manual Reassessment Active Zone');
 assert.equal(R.explicitActiveManualZone({ activeManualZone: { low: 239.8, high: 240.4 }, manualZoneSource: 'MANUAL', manualAppliedAt: 'not-a-date' }), null, 'an invalid applied timestamp is not an explicit Manual Reassessment Active Zone');
 assert.equal(applied.state.manualDraft.edited, false, 'applying separates the Active Manual Zone from the next editable draft');
+const acknowledged = R.resetCounter({ ...applied.state, counter: 3, latestSnapshot: { tradingDate: '2026-08-18' }, readyNotifiedPeriod: '2026-08-18' });
+assert.equal(acknowledged.counter, 0, 'explicit manual apply can acknowledge and clear a ready reassessment counter');
+assert.deepEqual(acknowledged.activeManualZone, { low: 239.8, high: 240.4 }, 'clearing the ready counter does not alter the applied Manual Active Zone');
 state = R.prefillDraft(applied.state, R.suggestedZone({ zoneLow: 242 }, { zoneHigh: 243 }, 0.05));
 assert.deepEqual(state.manualDraft, { low: 242, high: 243, edited: false, editedAt: null, suggestedForDate: null, editedForDate: null }, 'an unapplied draft follows the latest Suggested Zone after Apply Manual');
 assert.deepEqual(state.activeManualZone, { low: 239.8, high: 240.4 }, 'a later Suggested Zone does not alter the applied Active Manual Zone');

@@ -32,7 +32,7 @@ assert.equal(automaticBWithLegacyManual.primaryAction, 'choose');
 const noActiveZone = resolveActiveZoneSelection({ marketContext: { context: 'range', automaticZoneEligible: false }, manualReassessment: { activeManualZone: { low: 228.4, high: 230.1 } } });
 assert.equal(noActiveZone.source, 'none', 'an unproven manual range does not create an active zone');
 assert.equal(noActiveZone.primaryAction, 'none');
-assert.match(html, /activeManualZone \? '<details><summary[^>]*>Reassess current manual zone/, 'applied manual reassessment panel is collapsed by default');
+assert.match(html, /activeManualZone \? `<details\$\{keepPanelExpanded \? ' open' : ''\}><summary[^>]*>Reassess current manual zone/, 'applied manual reassessment panel is collapsed by default unless a draft edit explicitly keeps it open');
 assert.match(html, /onclick="openManualReassessment\(\)">Reassess current manual zone/, 'the top card opens reassessment instead of rendering Choose Active Zone for an applied manual zone');
 assert.match(html, /document\.getElementById\('wc-zonemode'\)\.value = 'automatic_context';/, 'Automatic apply persists the existing automatic/context-led mode');
 const applyContextSource = html.match(/function applyContextActiveZone\(\)[\s\S]*?(?=function getAutomaticContextActiveZone)/)?.[0];
@@ -166,4 +166,8 @@ assert.match(html, /aggressive_override/, 'Aggressive selection is a distinct ex
 assert.match(html, /conservative_override/, 'Conservative selection is a distinct explicit authoritative override');
 assert.match(html, /Use \$\{label\} for TAR-OBI Linked Monitor\?/, 'selected zone requires a bridge confirmation');
 assert.match(html, /panel\.style\.display = hasValidAutomaticActiveZone && !activeManualZone \? 'none' : '';/, 'Manual Reassessment stays available for an applied manual zone even when Automatic is also valid');
+assert.match(html, /function renderManualReassessment\(hasValidAutomaticActiveZone = _watchHasValidAutomaticActiveZone, keepPanelExpanded = false\)/, 'Manual Reassessment rendering accepts the transient expanded state');
+assert.match(html, /<details\$\{keepPanelExpanded \? ' open' : ''\}>/, 'draft edits preserve the reassessment panel expansion');
+assert.match(html, /currentManualSuggestionDate\(\)\), true\);/, 'price-field draft updates request an expanded rerender');
+assert.match(html, /const next = helper\.resetCounter\(result\.state\);/, 'explicit manual apply clears the acknowledged ready counter');
 console.log('Active Zone governing-state tests passed.');
