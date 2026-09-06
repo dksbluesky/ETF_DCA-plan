@@ -35,5 +35,22 @@
       return [];
     });
   }
-  return { manualZone, findNewerRemoteManualZoneConflicts };
+  function preserveNewerMatchingManualZoneProvenance(localData, remoteData) {
+    const localByKey = new Map(positions(localData).map(item => [item.key, item.position]));
+    return positions(remoteData).flatMap(remoteItem => {
+      const localPosition = localByKey.get(remoteItem.key);
+      const local = manualZone(localPosition);
+      const remote = manualZone(remoteItem.position);
+      if (!local || !remote || local.low !== remote.low || local.high !== remote.high) return [];
+      if (revisionMs(remote.revision) <= revisionMs(local.revision)) return [];
+      localPosition.watchCriteria.manualReassessment = {
+        ...localPosition.watchCriteria.manualReassessment,
+        activeManualZone: { low: remote.low, high: remote.high },
+        manualZoneSource: 'MANUAL',
+        manualAppliedAt: remote.revision
+      };
+      return [{ ...remoteItem, local, remote }];
+    });
+  }
+  return { manualZone, findNewerRemoteManualZoneConflicts, preserveNewerMatchingManualZoneProvenance };
 });

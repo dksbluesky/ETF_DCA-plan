@@ -18,6 +18,9 @@ const manualWinsAutomatic = resolveActiveZoneSelection({ marketContext: automati
 assert.equal(manualWinsAutomatic.source, 'manual_reassessment', 'an explicit Manual Reassessment Active Zone wins over Automatic');
 assert.deepEqual(manualWinsAutomatic.activeZone, { low: 228.4, high: 230.1 });
 assert.equal(manualWinsAutomatic.primaryAction, 'reassess');
+const explicitReturnToAutomatic = resolveActiveZoneSelection({ marketContext: automaticB, explicitSource: 'automatic_context', manualReassessment: explicitManual });
+assert.equal(explicitReturnToAutomatic.source, 'automatic', 'an explicit Return to Automatic action changes authority without deleting Manual provenance');
+assert.deepEqual(explicitReturnToAutomatic.activeZone, automaticB.activeZone);
 
 const automaticBWithLegacyManual = resolveActiveZoneSelection({
   marketContext: automaticB,
@@ -123,7 +126,7 @@ assert.match(html, /Authoritative Invalidation: \$\{selectedZoneInvalidation\}/)
 assert.match(html, /const selectedZoneInvalidation = Number\.isFinite\(stopPrice\)/);
 assert.doesNotMatch(html, /Starter Allocation|wc-starter-allocation|normalizeStarterAllocation/);
 assert.match(html, /LEFT 基礎條件已滿足/);
-assert.match(html, /Temporary LEFT Starter diagnostic/);
+assert.doesNotMatch(html, /Temporary LEFT Starter diagnostic/, 'temporary LEFT diagnostic is absent from the production UI');
 assert.match(monitor, /function sourceLongZoneInvalidationReason\(context\)/);
 assert.match(monitor, /lifecycleUpdate\(current, 'EXPIRED', now, invalidationReason\)/);assert.match(monitor, /TAR-OBI execution assessment is not currently active\. Start New Monitor to assess a new current setup\./);
 assert.equal(bridge.canStartForContext({
@@ -153,6 +156,7 @@ assert.match(html, /const selectedIsManual = selection\.source === 'manual_reass
 assert.match(html, /Return to Automatic \/ Context-led Active Zone/, 'Manual override has an explicit return control');
 assert.match(html, /function returnToAutomaticContext\(\)/, 'Return control has a dedicated handler');
 assert.match(html, /modeEl\.value = 'automatic_context';/, 'Return handler restores automatic context authority');
+assert.match(html, /selection\?\.source === 'manual_reassessment'.*Return to Automatic Zone/, 'an applied Manual Reassessment exposes the Automatic authority transition');
 assert.match(html, /manualZoneLow: zoneMode === 'manual' \? zoneLow : \(previous\.manualZoneLow \?\? null\)/, 'Returning to automatic context preserves the saved Manual zone');
 assert.match(html, /AUTOMATIC \/ CONTEXT-LED ACTIVE LONG ZONE/, 'Automatic authority is identified separately from configured watch zones');
 assert.match(html, /zoneMode === 'manual' \|\| zoneMode === 'automatic_context'/, 'Saved automatic-context mode reloads without selecting a suggested watch zone');
@@ -170,4 +174,9 @@ assert.match(html, /function renderManualReassessment\(hasValidAutomaticActiveZo
 assert.match(html, /<details\$\{keepPanelExpanded \? ' open' : ''\}>/, 'draft edits preserve the reassessment panel expansion');
 assert.match(html, /currentManualSuggestionDate\(\)\), true\);/, 'price-field draft updates request an expanded rerender');
 assert.match(html, /const next = helper\.resetCounter\(result\.state\);/, 'explicit manual apply clears the acknowledged ready counter');
+assert.match(html, /if \(rightSideSetupConfirmed\) \{[\s\S]*?Right Side Confirmed[\s\S]*?\} else if \(starterEligible\)/, 'RIGHT confirmation has Bottom Synthesis priority over LEFT state');
+assert.match(html, /rightSideSetupConfirmed \? '✅' : starterEligible/, 'RIGHT confirmation has LEFT row icon priority');
+assert.match(html, /const baseSha = S\.sha;/, 'save keeps the last-loaded SHA for cross-device conflict detection');
+assert.match(html, /const remoteChanged = !baseSha \|\| existing\.sha !== baseSha;/, 'save detects any remote revision instead of only Manual-zone differences');
+assert.match(html, /preserveNewerMatchingManualZoneProvenance\(S\.data, remoteData\)/, 'save retains newer same-zone Manual provenance');
 console.log('Active Zone governing-state tests passed.');

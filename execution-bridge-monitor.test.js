@@ -210,6 +210,15 @@ bridge = monitor.syncStoredBridgeContext({
   extensions: { marketContextV1: { context: 'range', automaticZoneEligible: false, manualOverride: false } }
 }, Date.parse('2026-07-27T03:04:00.000Z'));
 assert.equal(bridge.lifecycle.status, 'EXPIRED', 'an authoritative source change to no Active Long Zone expires the linked bridge through reconciliation');
+storage = storageWith(phase1Bridge());
+monitor = loadMonitor(storage);
+bridge = monitor.reconcileStoredBridge({
+  ...liveContext,
+  zoneMode: null,
+  activeZone: null,
+  extensions: { marketContextV1: { context: 'range', automaticZoneEligible: false, manualOverride: false } }
+}, Date.parse('2026-07-27T03:04:00.000Z'));
+assert.equal(bridge.lifecycle.status, 'EXPIRED', 'the regular page reconciliation expires an existing bridge when no valid Active Long Zone remains');
 const originalNotification = global.Notification;
 const leftNotifications = [];
 try {

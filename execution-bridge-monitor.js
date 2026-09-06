@@ -612,8 +612,8 @@
    * Adds legacy lifecycle fields
    * and expires old bridges.
    *
-   * Setup context synchronization is handled separately
-   * and never changes lifecycle state.
+   * Valid setup context synchronization is handled separately.
+   * An authoritative no-zone source state expires the linked bridge here.
    *
    * @param {object} context Current Entry Watch setup context.
    * @param {number|Date} [now] Injectable clock for tests.
@@ -673,6 +673,11 @@
           now,
           'Bridge reached its Taiwan trading-day expiration.'
         );
+    }
+
+    if (['ACTIVE', 'PAUSED'].includes(next.lifecycle.status)) {
+      const invalidationReason = sourceLongZoneInvalidationReason(context);
+      if (invalidationReason) next = lifecycleUpdate(next, 'EXPIRED', now, invalidationReason);
     }
 
     next = reconcileLeftStarterNotification(next, now);

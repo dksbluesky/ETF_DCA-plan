@@ -129,6 +129,7 @@ assert.equal(left.starterEligible, false, 'a Manual Zone or reassessment change 
 
 const entryWatchHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 assert.match(entryWatchHtml, /function confirmLeftStarterExecution\(\)/, 'starterExecuted has an explicit user-confirmation path');
+assert.match(entryWatchHtml, /starterEligible \? '<button[^>]+onclick="confirmLeftStarterExecution\(\)"[^>]*>Record LEFT Starter executed<\/button>' : ''/, 'eligible LEFT Starter exposes the user-confirmed executed action');
 assert.doesNotMatch(entryWatchHtml, /id=\\"wc-starter-executed\\"/, 'obsolete checkbox wiring cannot set starterExecuted implicitly');
 
 assert.throws(() => bridge.createBridgeObject({}), /requires a ticker/);

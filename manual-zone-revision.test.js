@@ -9,6 +9,8 @@ const remoteOlder = { dca: [position('p1', 102, 103, '2026-08-18T07:00:00.000Z')
 assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, remoteOlder).length, 0, 'an older remote zone does not block this device');
 const sameZoneNewer = { dca: [position('p1', 100, 101, '2026-08-18T09:00:00.000Z')], direct: [] };
 assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, sameZoneNewer).length, 0, 'the same active zone is not a replacement conflict');
+assert.equal(Revision.preserveNewerMatchingManualZoneProvenance(local, sameZoneNewer).length, 1, 'newer provenance for the same Manual Active Zone is preserved');
+assert.equal(local.dca[0].watchCriteria.manualReassessment.manualAppliedAt, '2026-08-18T09:00:00.000Z');
 const legacyRemote = { dca: [{ id: 'p1', watchCriteria: { zoneMode: 'manual', zoneLow: 102, zoneHigh: 103 } }], direct: [] };
 assert.equal(Revision.findNewerRemoteManualZoneConflicts(local, legacyRemote).length, 0, 'legacy ranges without an explicit applied-manual record are preserved but do not create a manual-zone conflict');
 console.log('Manual zone revision tests passed.');

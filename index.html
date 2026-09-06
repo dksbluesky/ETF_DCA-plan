@@ -480,6 +480,7 @@ async function saveData() {
   if (!getPAT()) { toast('請先在設定中填寫 PAT Please configure PAT in Settings', 'err'); switchTab('settings'); return; }
   setSS('saving', '↑ Saving…');
   S.data.lastUpdated = new Date().toISOString();
+  const baseSha = S.sha;
   try {
     const h = { Authorization: `token ${getPAT()}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' };
     const apiUrl = `https://api.github.com/repos/${getRepo()}/contents/${getFile()}`;
@@ -488,23 +489,34 @@ async function saveData() {
     const check = await fetch(apiUrl, { headers: h });
     if (check.ok) {
       const existing = await check.json();
-      S.sha = existing.sha;
       const remoteData = JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g, '')))));
       const conflicts = window.ManualZoneRevision?.findNewerRemoteManualZoneConflicts(S.data, remoteData) || [];
-      if (conflicts.length) {
-        const details = conflicts.map(({ position, local, remote, reason }) => `${position.ticker || position.id}: remote NT$${remote.low.toFixed(2)}–${remote.high.toFixed(2)}${local ? `; this device NT$${local.low.toFixed(2)}–${local.high.toFixed(2)}` : '; this device has no Active Manual Zone'} (${reason === 'REMOTE_NEWER' ? 'remote revision is newer' : 'remote revision is unknown'})`).join('\n');
-        const replaceRemote = confirm(`A newer Active Manual Zone exists on another device.\n\n${details}\n\nCancel = keep the remote zone and sync first.\nOK = explicitly replace it with this device's data.`);
+      const remoteChanged = !baseSha || existing.sha !== baseSha;
+      if (remoteChanged || conflicts.length) {
+        const details = conflicts.length
+          ? `\n\n${conflicts.map(({ position, local, remote, reason }) => `${position.ticker || position.id}: remote NT$${remote.low.toFixed(2)}–${remote.high.toFixed(2)}${local ? `; this device NT$${local.low.toFixed(2)}–${local.high.toFixed(2)}` : '; this device has no Active Manual Zone'} (${reason === 'REMOTE_NEWER' ? 'remote revision is newer' : 'remote revision is unknown'})`).join('\n')}`
+          : '';
+        const replaceRemote = confirm(`GitHub data changed on another device after this device last loaded it.${details}\n\nCancel = keep the remote data and sync first.\nOK = explicitly replace it with this device's data.`);
         if (!replaceRemote) {
-          setSS('error', '⚠ Active Zone conflict');
-          toast('Remote Active Manual Zone was not overwritten. Sync before choosing to replace it.', 'err');
+          setSS('error', '⚠ Remote data conflict');
+          toast('Remote data was not overwritten. Sync before choosing to replace it.', 'err');
           return;
         }
       }
+      window.ManualZoneRevision?.preserveNewerMatchingManualZoneProvenance(S.data, remoteData);
+      S.sha = existing.sha;
     } else if (check.status === 401) {
       setSS('error', '✗ PAT 401');
       toast('🔑 GitHub 回傳 401 — PAT 可能已失效或權限不足。請至 GitHub → Settings → Developer settings → Personal access tokens 重新產生，需勾選 repo（或 Contents: Read & write）', 'err');
       switchTab('settings');
       return;
+    } else if (check.status === 404 && baseSha) {
+      if (!confirm('The GitHub data file was removed after this device last loaded it.\n\nCancel = do not recreate it.\nOK = explicitly recreate it with this device\'s data.')) {
+        setSS('error', '⚠ Remote file removed');
+        toast('Remote data file was not recreated.', 'err');
+        return;
+      }
+      S.sha = null;
     } else if (check.status !== 404) {
       throw new Error(`HTTP ${check.status}`);
     }
@@ -2385,7 +2397,7 @@ function resolveActiveZoneSelection({ marketContext = null, configuredActiveZone
   const explicitManualZone = explicitManualReassessmentZone(manualReassessment);
   const automaticActiveZone = marketContext?.context === 'bullish' && marketContext?.automaticZoneEligible === true && validZone(marketContext.activeZone) ? marketContext.activeZone : null;
   const automaticContext = automaticActiveZone ? marketContext : null;
-  if (explicitManualZone) {
+  if (explicitManualZone && explicitSource !== 'automatic_context') {
     return {
       source: 'manual_reassessment', activeZone: { low: explicitManualZone.low, high: explicitManualZone.high }, automaticContext,
       zoneType: automaticContext?.zoneType || null, hasValidAutomaticZone: !!automaticActiveZone,
@@ -2604,7 +2616,7 @@ function renderCurrentActiveZone(selection) {
     : selection?.primaryAction === 'choose'
       ? '<button type="button" class="btn btn-outline btn-sm" style="margin-top:8px" onclick="openActiveZoneSelector()">Choose Active Zone</button>'
       : '';
-  card.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">CURRENT ACTIVE ZONE</div><div style="font-weight:700;margin-top:5px">${valid?activeZoneLabel(mode,context):'No Active Long Zone'}</div><div style="font-size:19px;font-weight:700;margin:4px 0">${valid?`NT$${zone.low.toFixed(2)} – NT$${zone.high.toFixed(2)}`:'No Active Long Zone'}</div><div style="font-size:12px">${valid?`${Number.isFinite(context?.invalidationLevel)?`Invalidation: NT$${context.invalidationLevel.toFixed(2)} · `:''}${current}`:'Range / unclear — no favourable long location. TAR-OBI long bridge unavailable.'}</div>${action}${['aggressive_override', 'conservative_override'].includes(mode) && getAutomaticContextActiveZone() ? '<button type="button" class="btn btn-outline btn-sm" style="margin:8px 0 0 6px" onclick="returnToAutomaticContext()">Return to Automatic Zone</button>' : ''}<details style="margin-top:8px"><summary>Why / structure details</summary><div style="font-size:11px;color:var(--muted);margin-top:5px">${context?.reason||'No additional structure detail is available.'}</div></details>`;
+  card.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">CURRENT ACTIVE ZONE</div><div style="font-weight:700;margin-top:5px">${valid?activeZoneLabel(mode,context):'No Active Long Zone'}</div><div style="font-size:19px;font-weight:700;margin:4px 0">${valid?`NT$${zone.low.toFixed(2)} – NT$${zone.high.toFixed(2)}`:'No Active Long Zone'}</div><div style="font-size:12px">${valid?`${Number.isFinite(context?.invalidationLevel)?`Invalidation: NT$${context.invalidationLevel.toFixed(2)} · `:''}${current}`:'Range / unclear — no favourable long location. TAR-OBI long bridge unavailable.'}</div>${action}${context && (selection?.source === 'manual_reassessment' || ['aggressive_override', 'conservative_override'].includes(mode)) ? '<button type="button" class="btn btn-outline btn-sm" style="margin:8px 0 0 6px" onclick="returnToAutomaticContext()">Return to Automatic Zone</button>' : ''}<details style="margin-top:8px"><summary>Why / structure details</summary><div style="font-size:11px;color:var(--muted);margin-top:5px">${context?.reason||'No additional structure detail is available.'}</div></details>`;
 }
 function openActiveZoneSelector(){const e=document.getElementById('wc-active-zone-selector'),auto=getAutomaticContextActiveZone(),a=_watchZoneEngine?.suggestedZones?.aggressive,c=_watchZoneEngine?.suggestedZones?.conservative;if(!e)return;const b=(s,l,z,d)=>`<button type="button" class="btn btn-outline btn-sm" ${d?'disabled':''} onclick="selectActiveZone('${s}')">${l}${z?` — NT$${z.zoneLow??z.low}–NT$${z.zoneHigh??z.high}`:''}</button>`;e.innerHTML=`<div style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"><b>Choose Active Zone</b><div style="display:grid;gap:6px;margin-top:8px">${auto?b('automatic_context',activeZoneLabel('automatic_context',auto),auto.activeZone,false):''}${auto&&a?b('aggressive_override','Aggressive Suggested Zone',a,false):''}${auto&&c?b('conservative_override','Conservative Suggested Zone',c,false):''}${auto?'':b('manual','Manual Reassessment',null,false)}</div></div>`;e.style.display='';}
 function openManualReassessment(){const panel=document.getElementById('wc-manual-reassessment');if(!panel)return;const details=panel.querySelector('details');if(details)details.open=true;panel.scrollIntoView?.({block:'nearest'});}
@@ -2952,6 +2964,7 @@ function onWatchFieldInput(listType, posId) {
 function confirmLeftStarterExecution() {
   const pos = reassessmentPosition();
   if (!pos || pos.watchCriteria?.starterExecuted === true) return;
+  if (window._watchSnapshot?.starterEligible !== true) return toast('Left-Side Starter is not currently eligible.', 'err');
   if (typeof confirm === 'function' && !confirm('Confirm this one-time Left-Side Starter execution? This does not create a RIGHT confirmation.')) return;
   pos.watchCriteria = {
     ...(pos.watchCriteria || {}),
@@ -3589,7 +3602,10 @@ function recomputeWatchStatus() {
 
   // ── Bottom synthesis — always rendered, covers every state ──────────────
   let sBg, sBorder, sText;
-  if (starterEligible) {
+  if (rightSideSetupConfirmed) {
+    sBg = '#f6ffed'; sBorder = '#52c41a';
+    sText = '🟢 右側進場確認 Right Side Confirmed — 右側確認已取代左側 Starter 狀態 Right-side confirmation supersedes the Left-Side Starter state';
+  } else if (starterEligible) {
     sBg = '#fffff0'; sBorder = '#d69e2e';
     sText = '🟡 LEFT 基礎條件已滿足 Left-Side Starter Eligible — this identifies a possible left-side entry only; the user decides whether to buy and how much. RIGHT confirmation remains separate.';
   } else if (starterExecuted) {
@@ -3613,9 +3629,6 @@ function recomputeWatchStatus() {
   } else if (freshSignal && !early.lowVolume) {
     sBg = '#fffbe6'; sBorder = '#faad14';
     sText = `🟡 ${early.type} 訊號量未縮，繼續觀察更乾淨的量縮 ${early.type} signal — volume not dry enough, keep watching`;
-  } else if (c3ok) {
-    sBg = '#f6ffed'; sBorder = '#52c41a';
-    sText = '🟢 右側進場確認 Right Side Confirmed — 頸部突破，進場訊號成立 Neckline broken, entry signal active';
   } else if (c1ok) {
     sBg = '#fffbe6'; sBorder = '#faad14';
     sText = c2ok
@@ -3631,7 +3644,6 @@ function recomputeWatchStatus() {
       <div style="font-weight:700;font-size:13px">${sText}</div>
     </div>`;
 
-  const leftStarterDiagnostic = `<details style="margin:7px 0;padding:7px 9px;border:1px dashed var(--border);border-radius:7px;background:var(--surface2)"><summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--muted)">Temporary LEFT Starter diagnostic</summary><div style="font:11px/1.55 ui-monospace,monospace;margin-top:6px"><div>activeLongZoneIsValid: ${leftStarter.activeLongZoneIsValid === true}</div><div>priceInsideAuthoritativeActiveZone: ${leftStarter.priceInsideAuthoritativeActiveZone === true}</div><div>c1ok: ${c1ok}</div><div>structuralInvalidationAvailable: ${leftStarter.structuralInvalidationAvailable === true}</div><div>priceAboveInvalidation: ${leftStarter.priceAboveInvalidation === true}</div><div>starterExecuted: ${starterExecuted}</div><div>rightSideSetupConfirmed: ${rightSideSetupConfirmed}</div><div>leftStarterEligible: ${starterEligible}</div><hr style="border:0;border-top:1px solid var(--border);margin:5px 0"><div>authoritativeActiveZone: ${selectedActiveZone ? `NT$${selectedActiveZone.low.toFixed(2)}–NT$${selectedActiveZone.high.toFixed(2)}` : 'Unavailable'}</div><div>price: NT$${displayedPrice.toFixed(2)}</div><div>invalidationLevel: ${Number.isFinite(stopPrice) ? `NT$${stopPrice.toFixed(2)}` : 'Unavailable'}</div><div>C1: ${c1ok} — ${c1text}</div></div></details>`;
   statusEl.innerHTML = noActiveLongZone
     ? `<div style="font-weight:700;font-size:13px;margin-bottom:8px">現價 Price NT$${displayedPrice.toFixed(2)}　${today.date}</div>${triggerBlock}<div id="decision-journal"></div><div id="review-journal"></div><div id="execution-bridge"></div>`
     : `
@@ -3648,16 +3660,16 @@ function recomputeWatchStatus() {
     <div class="wc-row"><div class="wc-icon">${biasIcon}</div><div><div class="wc-label">乖離率 BIAS (vs 5EMA)</div><div class="wc-detail">${biasText}</div></div></div>
     <div class="wc-row"><div class="wc-icon">🛑</div><div><div class="wc-label">停損價 Stop Loss</div><div class="wc-detail">${stopPrice ? 'NT$' + stopPrice.toFixed(2) : '未設定 Not set'}</div></div></div>
     <div class="wc-row">
-      <div class="wc-icon">${starterEligible ? '🟡' : starterExecuted ? '🔒' : '⬜'}</div>
+      <div class="wc-icon">${rightSideSetupConfirmed ? '✅' : starterEligible ? '🟡' : starterExecuted ? '🔒' : '⬜'}</div>
       <div>
         <div class="wc-label">左側第一筆試單 Left-Side Starter</div>
         <div class="wc-detail">${
-          starterEligible
-            ? 'Eligible｜LEFT 基礎條件已滿足｜Possible left-side entry only; no trade is implied'
-            : starterExecuted
-              ? 'Already executed｜本輪已執行，不可重複建立'
-              : rightSideSetupConfirmed
-                ? 'Right-side setup already confirmed｜已完成右側確認，不再使用 Left-Side Starter'
+          rightSideSetupConfirmed
+            ? 'Right-side setup confirmed｜已完成右側確認，右側狀態優先'
+            : starterEligible
+              ? 'Eligible｜LEFT 基礎條件已滿足｜Possible left-side entry only; no trade is implied'
+              : starterExecuted
+                ? 'Already executed｜本輪已執行，不可重複建立'
                 : !activeZoneValid
                   ? 'Active Zone invalid or unavailable｜啟用區間無效或未設定'
                   : !priceInsideActiveZone
@@ -3670,10 +3682,10 @@ function recomputeWatchStatus() {
                           ? 'Price below invalidation level｜現價已低於失效價'
                           : 'Not eligible｜目前不符合條件'
         }</div>
+        ${starterEligible ? '<button type="button" class="btn btn-outline btn-sm" style="margin-top:7px" onclick="confirmLeftStarterExecution()">Record LEFT Starter executed</button>' : ''}
 
       </div>
     </div>
-    ${leftStarterDiagnostic}
     ${bottomSynth}
     <div id="decision-journal"></div>
     <div id="review-journal"></div>
