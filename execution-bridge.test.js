@@ -100,13 +100,28 @@ assert.equal(assigned, bridge.TAR_OBI_URL);
 
 opened = null;
 assigned = null;
+global.location = {
+  hostname: '127.0.0.1',
+  origin: 'http://127.0.0.1:8080',
+  assign(url) { assigned = url; }
+};
+Object.defineProperty(global, 'navigator', {
+  configurable: true,
+  value: { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 0, userAgentData: { mobile: false } }
+});
+assert.equal(bridge.resolveTarObiUrl(), 'http://127.0.0.1:8080/TAR-OBI/entry-assessment.html');
+assert.equal(bridge.openTarObiMonitor(), 'new-tab');
+assert.deepEqual(opened, ['http://127.0.0.1:8080/TAR-OBI/entry-assessment.html', '_blank']);
+
+opened = null;
+assigned = null;
 Object.defineProperty(global, 'navigator', {
   configurable: true,
   value: { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit Mobile/15E148', maxTouchPoints: 5, userAgentData: { mobile: false } }
 });
 assert.equal(bridge.openTarObiMonitor(), 'same-tab');
 assert.equal(opened, null);
-assert.equal(assigned, bridge.TAR_OBI_URL);
+assert.equal(assigned, 'http://127.0.0.1:8080/TAR-OBI/entry-assessment.html');
 
 const leftInput = { isDcaPosition: true, activeLongZoneIsValid: true, activeZone: { low: 230.8, high: 233.35 }, currentPrice: 232, c1ok: true, invalidationLevel: 229.5, starterExecuted: false, rightSideSetupConfirmed: false };
 let left = bridge.evaluateLeftStarter(leftInput);

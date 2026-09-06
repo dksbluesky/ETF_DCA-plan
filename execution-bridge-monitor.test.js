@@ -57,6 +57,7 @@ assert.equal(bridge.lifecycle.status, 'ACTIVE');
 assert.equal(bridge.lifecycle.expiresAt, '2026-07-27T05:30:00.000Z');
 assert.equal(bridge.customTopLevel.preserved, true);
 assert.equal(bridge.extensions.futureField, true);
+assert.equal(bridge.extensions.sourceContextUpdatedAt, '2026-07-27T02:00:00.000Z');
 assert.equal(storage.values.get('p_cache'), '{"portfolio":true}');
 
 const afterCloseExpiry = monitor.calculateExpiresAt('2026-07-31T06:00:00.000Z');
@@ -142,6 +143,9 @@ assert.equal(bridge.notificationState.futureNotificationField, 'preserve');
 assert.equal(bridge.notificationState.dataUnavailableSince, null);
 assert.equal(bridge.extensions.futureField, true);
 assert.ok(Number.isFinite(Date.parse(bridge.extensions.sourceContextUpdatedAt)));
+
+bridge = monitor.syncStoredBridgeContext(liveContext, Date.parse('2026-07-27T03:00:30.000Z'));
+assert.equal(bridge.extensions.sourceContextUpdatedAt, '2026-07-27T03:00:30.000Z', 'unchanged source context still refreshes the heartbeat');
 
 const validRaw = storage.getItem('etfDca.executionBridge.v1');
 assert.equal(monitor.scheduleSourceContextSync({ ...liveContext, activeZone: { low: null, high: 221.8 } }, 0), false);

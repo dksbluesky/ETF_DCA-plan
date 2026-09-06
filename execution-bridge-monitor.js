@@ -12,6 +12,7 @@
   const LIFECYCLE_STATUSES = Object.freeze(['ACTIVE', 'PAUSED', 'COMPLETED', 'EXPIRED', 'INVALIDATED']);
   const TERMINAL_STATUSES = Object.freeze(['COMPLETED', 'EXPIRED', 'INVALIDATED']);
   const SOURCE_CONTEXT_SYNC_DELAY_MS = 350;
+  const SOURCE_CONTEXT_HEARTBEAT_MS = 30 * 1000;
   const SOURCE_CONTEXT_FIELDS = Object.freeze([
     'marketTimeframe', 'marketLevelTimeframe', 'marketSessionState', 'zoneMode', 'activeZone',
     'preferredEntry', 'maximumEntryPrice', 'invalidationLevel', 'entryMode', 'starterEligible',
@@ -21,6 +22,7 @@
   let lastRender = null;
   let storageListenerBound = false;
   let sourceContextSyncTimer = null;
+  let sourceContextHeartbeatTimer = null;
 
   function storageGet() {
     try {
@@ -211,7 +213,10 @@
       monitorResult: bridge.monitorResult || null,
       notificationState: defaultNotificationState(bridge.notificationState),
       extensions: {
-        ...(bridge.extensions || {})
+        ...(bridge.extensions || {}),
+        sourceContextUpdatedAt:
+          bridge.extensions?.sourceContextUpdatedAt
+          || createdAt
       }
     };
   }
@@ -381,13 +386,9 @@
 
     const patch = sourceContextPatch(context);
 
-    if (!sourceContextChanged(bridge, patch)) {
-      return bridge;
-    }
-
     return {
       ...bridge,
-      ...patch,
+      ...(sourceContextChanged(bridge, patch) ? patch : {}),
 
       extensions: {
         ...(bridge.extensions || {}),
@@ -562,6 +563,25 @@
       ?.();
 
     return true;
+  }
+
+  function ensureSourceContextHeartbeat() {
+    if (
+      sourceContextHeartbeatTimer !== null
+      || typeof root.setInterval !== 'function'
+    ) {
+      return;
+    }
+
+    sourceContextHeartbeatTimer = root.setInterval(
+      () => {
+        if (!lastRender?.context) return;
+        syncStoredBridgeContext(lastRender.context);
+      },
+      SOURCE_CONTEXT_HEARTBEAT_MS
+    );
+
+    sourceContextHeartbeatTimer?.unref?.();
   }
 
   function lifecycleUpdate(
@@ -1025,6 +1045,7 @@
     };
 
     bindStorageListener();
+    ensureSourceContextHeartbeat();
 
     const stored =
       reconcileStoredBridge(
@@ -1636,6 +1657,7 @@
     LIFECYCLE_STATUSES,
     TERMINAL_STATUSES,
     SOURCE_CONTEXT_SYNC_DELAY_MS,
+    SOURCE_CONTEXT_HEARTBEAT_MS,
     calculateExpiresAt,
     initializeNewBridge,
     sourceMismatchReason,

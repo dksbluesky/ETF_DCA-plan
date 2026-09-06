@@ -179,12 +179,25 @@
       || (/Macintosh/i.test(userAgent) && Number(navigatorInfo.maxTouchPoints) > 1);
   }
 
+  function resolveTarObiUrl() {
+    try {
+      const hostname = String(root.location?.hostname || '').toLowerCase();
+      if (hostname === '127.0.0.1' || hostname === 'localhost') {
+        return `${root.location.origin}/TAR-OBI/entry-assessment.html`;
+      }
+    } catch (error) {
+      // Fall through to the deployed GitHub Pages URL.
+    }
+    return TAR_OBI_URL;
+  }
+
   function navigateSameTab() {
     if (!root.location) return false;
+    const targetUrl = resolveTarObiUrl();
     if (typeof root.location.assign === 'function') {
-      root.location.assign(TAR_OBI_URL);
+      root.location.assign(targetUrl);
     } else {
-      root.location.href = TAR_OBI_URL;
+      root.location.href = targetUrl;
     }
     return true;
   }
@@ -200,7 +213,7 @@
         return navigateSameTab() ? 'same-tab' : 'unavailable';
       }
       if (typeof root.open === 'function') {
-        root.open(TAR_OBI_URL, '_blank');
+        root.open(resolveTarObiUrl(), '_blank');
         return 'new-tab';
       }
       return navigateSameTab() ? 'same-tab' : 'unavailable';
@@ -269,6 +282,7 @@
     STORAGE_KEY,
     CONTRACT_VERSION,
     TAR_OBI_URL,
+    resolveTarObiUrl,
     createBridgeObject,
     saveBridge,
     loadBridge,
