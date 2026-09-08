@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.04,
+      "currentPrice": 34.14,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -81,7 +81,7 @@
         }
       ],
       "trailStop": 5,
-      "trailHigh": 34.12,
+      "trailHigh": 34.14,
       "watchCriteria": {
         "zoneLow": 32.5,
         "zoneHigh": 33.06,
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 246.3,
+      "currentPrice": 252.95,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -369,7 +369,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2405,
+      "currentPrice": 2495,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -382,11 +382,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.04,
+      "currentPrice": 34.14,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 34.04,
+      "trailHigh": 34.14,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -402,7 +402,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.55,
+      "currentPrice": 29.99,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -413,9 +413,9 @@
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
         "zoneLow": 28.46,
-        "zoneHigh": 28.77,
+        "zoneHigh": 29.2,
         "manualZoneLow": 28.46,
-        "manualZoneHigh": 28.77,
+        "manualZoneHigh": 29.2,
         "volThreshold": 87945,
         "stopLossMode": "manual",
         "stopLossManual": 27,
@@ -424,22 +424,11 @@
         "manualReassessment": {
           "threshold": 3,
           "minOperationalTicks": 2,
-          "counter": 1,
+          "counter": 0,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-08-19",
           "lastCountedPeriod": "2026-08-20",
-          "latestSnapshot": {
-            "tradingDate": "2026-08-20",
-            "aggressiveLow": 28.46,
-            "aggressiveHigh": 29.08,
-            "conservativeLow": 28.15,
-            "conservativeHigh": 28.77,
-            "suggestedZoneLow": 28.46,
-            "suggestedZoneHigh": 28.77,
-            "closingPrice": 29.25,
-            "result": "ABOVE_SUGGESTED_ZONE",
-            "counterAfter": 1
-          },
+          "latestSnapshot": null,
           "snapshots": [
             {
               "tradingDate": "2026-08-20",
@@ -455,23 +444,24 @@
             }
           ],
           "manualDraft": {
-            "low": 28.46,
-            "high": 28.77,
+            "low": null,
+            "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-08-21",
+            "suggestedForDate": "2026-09-08",
             "editedForDate": null
           },
           "activeManualZone": {
             "low": 28.46,
-            "high": 28.77
+            "high": 29.2
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-08-21T02:13:20.417Z",
+          "manualAppliedAt": "2026-09-08T02:46:57.254Z",
           "readyNotifiedPeriod": null
-        }
+        },
+        "activeZoneSource": "manual_reassessment"
       }
     }
   ],
-  "lastUpdated": "2026-09-04T04:34:45.603Z"
+  "lastUpdated": "2026-09-08T02:47:06.526Z"
 }
