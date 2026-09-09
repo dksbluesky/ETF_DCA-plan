@@ -166,7 +166,12 @@ assert.deepEqual(bridge.activeZone, { low: 235.25, high: 235.6 }, 'terminal brid
 storage = storageWith(phase1Bridge());
 monitor = loadMonitor(storage);
 bridge = monitor.reconcileStoredBridge(context, Date.parse('2026-07-27T06:00:00.000Z'));
-assert.equal(bridge.lifecycle.status, 'EXPIRED');
+assert.equal(bridge.lifecycle.status, 'ACTIVE', 'market close rolls an active monitor into the next session');
+assert.equal(bridge.lifecycle.expiresAt, '2026-07-28T05:30:00.000Z');
+assert.equal(bridge.lifecycle.previousSessionClosedAt, '2026-07-27T05:30:00.000Z');
+assert.equal(bridge.monitorResult, null, 'a prior-day TAR-OBI result is cleared at the session boundary');
+assert.equal(bridge.notificationState.entryConfirmation.status, 'NONE');
+assert.equal(bridge.notificationState.continuousValidity.status, 'NONE');
 
 const first = monitor.initializeNewBridge(phase1Bridge({ bridgeId: 'old' }));
 const second = monitor.initializeNewBridge(phase1Bridge({ bridgeId: 'new' }));

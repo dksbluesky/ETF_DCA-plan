@@ -612,6 +612,33 @@
     };
   }
 
+  function rollActiveLifecycleForward(bridge, now) {
+    const previousClose = bridge.lifecycle?.expiresAt || null;
+    return {
+      ...bridge,
+      lifecycle: {
+        ...bridge.lifecycle,
+        status: bridge.lifecycle?.status || 'ACTIVE',
+        updatedAt: isoTime(now),
+        expiresAt: calculateExpiresAt(now),
+        reason: null,
+        previousSessionClosedAt: previousClose
+      },
+      monitorResult: null,
+      notificationState: {
+        ...defaultNotificationState(bridge.notificationState),
+        dataUnavailableSince: null,
+        lastDataUnavailableNotifiedAt: null,
+        entryConfirmation: { status: 'NONE', consecutiveCount: 0, confirmedAt: null },
+        continuousValidity: {
+          status: 'NONE', startedAt: null, durationSeconds: 90,
+          elapsedSeconds: 0, liveAt: null,
+          reason: 'New trading session requires fresh confirmation.'
+        }
+      }
+    };
+  }
+
   function writeIfUnchanged(
     originalRaw,
     bridge
@@ -686,13 +713,7 @@
         next.lifecycle.expiresAt
       )
     ) {
-      next =
-        lifecycleUpdate(
-          next,
-          'EXPIRED',
-          now,
-          'Bridge reached its Taiwan trading-day expiration.'
-        );
+      next = rollActiveLifecycleForward(next, now);
     }
 
     if (['ACTIVE', 'PAUSED'].includes(next.lifecycle.status)) {
@@ -1659,6 +1680,7 @@
     SOURCE_CONTEXT_SYNC_DELAY_MS,
     SOURCE_CONTEXT_HEARTBEAT_MS,
     calculateExpiresAt,
+    rollActiveLifecycleForward,
     initializeNewBridge,
     sourceMismatchReason,
     reconcileStoredBridge,
