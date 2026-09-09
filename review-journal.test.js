@@ -72,6 +72,28 @@ const candles = [
   assert.strictEqual(result.summary.reviewReady, false);
   assert.deepStrictEqual(result.privacy.excluded.includes('Fugle API key'), true);
   assert.ok(values.has(review.OUTCOME_STORAGE_KEY));
+
+  const saturdaySetup = {
+    ...setup,
+    quoteDate: '2026-08-08',
+    evaluatedAt: '2026-08-08T01:00:00.000Z',
+    marketSessionState: 'CLOSED'
+  };
+  const sundaySetup = {
+    ...setup,
+    quoteDate: '2026-08-09',
+    evaluatedAt: '2026-08-09T01:00:00.000Z',
+    marketSessionState: 'CLOSED'
+  };
+  values.set(review.ETF_STORAGE_KEY, JSON.stringify({
+    version: 1,
+    entries: [setup, saturdaySetup, sundaySetup]
+  }));
+  values.set(review.TAR_STORAGE_KEY, JSON.stringify({ version: 1, entries: [] }));
+  const weekendFiltered = await review.buildReviewPackage({ async fetchCandles() { return candles; } });
+  assert.deepStrictEqual(weekendFiltered.cases.map(item => item.date), ['2026-08-05']);
+  assert.strictEqual(weekendFiltered.summary.setupCases, 1, 'weekend snapshots are not independent trading-session cases');
+  assert.strictEqual(weekendFiltered.rawRecords.etfDecisionJournal.length, 3, 'raw journal records remain preserved');
   console.log('review-journal tests passed');
 })().catch(error => {
   console.error(error);

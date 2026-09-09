@@ -47,11 +47,20 @@
     return entry && Object.prototype.hasOwnProperty.call(entry, 'marketSessionState');
   }
 
+  function isWeekdayDate(date) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
+    if (!match) return true;
+    const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
+    return day !== 0 && day !== 6;
+  }
+
   function groupCases(etfEntries, tarEntries) {
     const setupsByKey = new Map();
     const bridgesByKey = new Map();
     etfEntries.filter(isSetupSnapshot).forEach(entry => {
-      const key = caseKey(entry.ticker, recordDate(entry));
+      const date = recordDate(entry);
+      if (!isWeekdayDate(date)) return;
+      const key = caseKey(entry.ticker, date);
       if (!setupsByKey.has(key)) setupsByKey.set(key, []);
       setupsByKey.get(key).push(entry);
     });
