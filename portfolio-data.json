@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.14,
+      "currentPrice": 34.16,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -81,7 +81,7 @@
         }
       ],
       "trailStop": 5,
-      "trailHigh": 34.14,
+      "trailHigh": 34.16,
       "watchCriteria": {
         "zoneLow": 32.5,
         "zoneHigh": 33.06,
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 252.95,
+      "currentPrice": 249.7,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -220,7 +220,7 @@
         "zoneHigh": 244.5,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 233,
+        "stopLossManual": 235,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
         "manualZoneLow": 238,
@@ -350,7 +350,7 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-04",
+            "suggestedForDate": "2026-09-10",
             "editedForDate": null
           },
           "activeManualZone": {
@@ -369,7 +369,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2495,
+      "currentPrice": 2430,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -382,11 +382,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.14,
+      "currentPrice": 34.16,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 34.14,
+      "trailHigh": 34.16,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -402,7 +402,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.99,
+      "currentPrice": 29.91,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -463,5 +463,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-08T02:47:06.526Z"
+  "lastUpdated": "2026-09-10T00:52:11.227Z"
 }
