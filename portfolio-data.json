@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.04,
+      "currentPrice": 34.23,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -81,7 +81,7 @@
         }
       ],
       "trailStop": 5,
-      "trailHigh": 34.16,
+      "trailHigh": 34.23,
       "watchCriteria": {
         "zoneLow": 32.5,
         "zoneHigh": 33.06,
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 244.25,
+      "currentPrice": 244.2,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -225,15 +225,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 238,
-        "zoneHigh": 244.5,
+        "zoneLow": 238.7,
+        "zoneHigh": 242.95,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 235,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 238,
-        "manualZoneHigh": 244.5,
+        "manualZoneLow": 238.7,
+        "manualZoneHigh": 242.95,
         "starterAllocationPct": null,
         "starterExecuted": false,
         "manualReassessment": {
@@ -359,15 +359,15 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-10",
+            "suggestedForDate": "2026-09-15",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 238,
-            "high": 244.5
+            "low": 238.7,
+            "high": 242.95
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-09-04T04:34:40.946Z",
+          "manualAppliedAt": "2026-09-15T00:49:52.342Z",
           "readyNotifiedPeriod": null
         },
         "activeZoneSource": "manual_reassessment"
@@ -378,7 +378,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2390,
+      "currentPrice": 2405,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -391,11 +391,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.04,
+      "currentPrice": 34.23,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 34.16,
+      "trailHigh": 34.23,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -411,7 +411,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.22,
+      "currentPrice": 29.35,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -472,5 +472,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-14T02:13:01.060Z"
+  "lastUpdated": "2026-09-15T00:50:29.956Z"
 }
