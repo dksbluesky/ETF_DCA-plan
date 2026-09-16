@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.23,
+      "currentPrice": 34.33,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -81,7 +81,7 @@
         }
       ],
       "trailStop": 5,
-      "trailHigh": 34.23,
+      "trailHigh": 34.33,
       "watchCriteria": {
         "zoneLow": 32.5,
         "zoneHigh": 33.06,
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 244.2,
+      "currentPrice": 244.7,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -378,7 +378,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2405,
+      "currentPrice": 2380,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -391,11 +391,11 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.23,
+      "currentPrice": 34.33,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
-      "trailHigh": 34.23,
+      "trailHigh": 34.33,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -411,7 +411,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.35,
+      "currentPrice": 28.36,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -421,9 +421,9 @@
       "watchCriteria": {
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "zoneLow": 28.46,
+        "zoneLow": 28.38,
         "zoneHigh": 29.2,
-        "manualZoneLow": 28.46,
+        "manualZoneLow": 28.38,
         "manualZoneHigh": 29.2,
         "volThreshold": 87945,
         "stopLossMode": "manual",
@@ -457,20 +457,20 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-08",
+            "suggestedForDate": "2026-09-16",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 28.46,
+            "low": 28.38,
             "high": 29.2
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-09-08T02:46:57.254Z",
+          "manualAppliedAt": "2026-09-16T01:30:10.442Z",
           "readyNotifiedPeriod": null
         },
         "activeZoneSource": "manual_reassessment"
       }
     }
   ],
-  "lastUpdated": "2026-09-15T00:50:33.144Z"
+  "lastUpdated": "2026-09-16T01:30:12.865Z"
 }
