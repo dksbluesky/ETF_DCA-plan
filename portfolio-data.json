@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.92,
+      "currentPrice": 34.8,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 251.5,
+      "currentPrice": 251.2,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -229,9 +229,9 @@
         "zoneHigh": 242.95,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 235,
+        "stopLossManual": 237.9,
         "marketLevelTimeframe": "daily",
-        "zoneMode": "manual",
+        "zoneMode": "automatic_context",
         "manualZoneLow": 238.7,
         "manualZoneHigh": 242.95,
         "starterAllocationPct": null,
@@ -239,11 +239,22 @@
         "manualReassessment": {
           "threshold": 3,
           "minOperationalTicks": 2,
-          "counter": 0,
+          "counter": 1,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-08-17",
-          "lastCountedPeriod": "2026-08-31",
-          "latestSnapshot": null,
+          "lastCountedPeriod": "2026-09-18",
+          "latestSnapshot": {
+            "tradingDate": "2026-09-18",
+            "aggressiveLow": 248.65,
+            "aggressiveHigh": 251.3,
+            "conservativeLow": 246.1,
+            "conservativeHigh": 248.75,
+            "suggestedZoneLow": 248.65,
+            "suggestedZoneHigh": 248.75,
+            "closingPrice": 251.2,
+            "result": "ABOVE_SUGGESTED_ZONE",
+            "counterAfter": 1
+          },
           "snapshots": [
             {
               "tradingDate": "2026-08-18",
@@ -352,14 +363,38 @@
               "closingPrice": 242.9,
               "result": "ABOVE_SUGGESTED_ZONE",
               "counterAfter": 1
+            },
+            {
+              "tradingDate": "2026-09-17",
+              "aggressiveLow": 248.65,
+              "aggressiveHigh": 251.3,
+              "conservativeLow": 246.1,
+              "conservativeHigh": 248.75,
+              "suggestedZoneLow": 248.65,
+              "suggestedZoneHigh": 248.75,
+              "closingPrice": 247.4,
+              "result": "BELOW_SUGGESTED_ZONE",
+              "counterAfter": 0
+            },
+            {
+              "tradingDate": "2026-09-18",
+              "aggressiveLow": 248.65,
+              "aggressiveHigh": 251.3,
+              "conservativeLow": 246.1,
+              "conservativeHigh": 248.75,
+              "suggestedZoneLow": 248.65,
+              "suggestedZoneHigh": 248.75,
+              "closingPrice": 251.2,
+              "result": "ABOVE_SUGGESTED_ZONE",
+              "counterAfter": 1
             }
           ],
           "manualDraft": {
-            "low": null,
-            "high": null,
+            "low": 248.65,
+            "high": 248.75,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-15",
+            "suggestedForDate": "2026-09-18",
             "editedForDate": null
           },
           "activeManualZone": {
@@ -370,7 +405,7 @@
           "manualAppliedAt": "2026-09-15T00:49:52.342Z",
           "readyNotifiedPeriod": null
         },
-        "activeZoneSource": "manual_reassessment"
+        "activeZoneSource": "automatic_context"
       }
     },
     {
@@ -391,7 +426,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.92,
+      "currentPrice": 34.8,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -411,7 +446,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 29.03,
+      "currentPrice": 29.07,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -509,5 +544,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-18T05:06:52.655Z"
+  "lastUpdated": "2026-09-18T05:32:04.366Z"
 }
