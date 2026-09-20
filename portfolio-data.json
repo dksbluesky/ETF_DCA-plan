@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.8,
+      "currentPrice": 34.83,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -413,7 +413,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2455,
+      "currentPrice": 2460,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -426,7 +426,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 34.8,
+      "currentPrice": 34.83,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -542,7 +542,44 @@
         },
         "activeZoneSource": "manual_reassessment"
       }
+    },
+    {
+      "id": "016238ed-d30d-4c9e-9cf9-d49fc41427f6",
+      "ticker": "00935",
+      "name": "野村台灣新科技50",
+      "type": "ETF",
+      "currentPrice": 58.55,
+      "annualYield": 6.34,
+      "dividendTracking": true,
+      "trailStop": 2,
+      "trailHigh": 58.55,
+      "transactions": [],
+      "dividends": [],
+      "watchCriteria": {
+        "manualReassessment": {
+          "threshold": 3,
+          "minOperationalTicks": 2,
+          "counter": 0,
+          "sequenceTimeframe": "daily",
+          "trackingBaselinePeriod": "2026-09-20",
+          "lastCountedPeriod": null,
+          "latestSnapshot": null,
+          "snapshots": [],
+          "manualDraft": {
+            "low": 57.8,
+            "high": 58.3,
+            "edited": false,
+            "editedAt": null,
+            "suggestedForDate": "2026-09-20",
+            "editedForDate": null
+          },
+          "activeManualZone": null,
+          "manualZoneSource": null,
+          "manualAppliedAt": null,
+          "readyNotifiedPeriod": null
+        }
+      }
     }
   ],
-  "lastUpdated": "2026-09-18T05:32:04.366Z"
+  "lastUpdated": "2026-09-20T13:14:30.254Z"
 }
