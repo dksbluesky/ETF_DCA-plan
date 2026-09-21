@@ -438,7 +438,29 @@
         "zoneHigh": 32.6,
         "volThreshold": 24206,
         "stopLossMode": "manual",
-        "stopLossManual": 30
+        "stopLossManual": 30,
+        "manualReassessment": {
+          "threshold": 3,
+          "minOperationalTicks": 2,
+          "counter": 0,
+          "sequenceTimeframe": "daily",
+          "trackingBaselinePeriod": "2026-09-18",
+          "lastCountedPeriod": null,
+          "latestSnapshot": null,
+          "snapshots": [],
+          "manualDraft": {
+            "low": null,
+            "high": null,
+            "edited": false,
+            "editedAt": null,
+            "suggestedForDate": "2026-09-21",
+            "editedForDate": null
+          },
+          "activeManualZone": null,
+          "manualZoneSource": null,
+          "manualAppliedAt": null,
+          "readyNotifiedPeriod": null
+        }
       }
     },
     {
@@ -581,5 +603,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-21T00:49:51.344Z"
+  "lastUpdated": "2026-09-21T00:52:16.292Z"
 }
