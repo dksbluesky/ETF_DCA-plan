@@ -21,6 +21,31 @@ assert.equal(manualWinsAutomatic.primaryAction, 'reassess');
 const explicitReturnToAutomatic = resolveActiveZoneSelection({ marketContext: automaticB, explicitSource: 'automatic_context', manualReassessment: explicitManual });
 assert.equal(explicitReturnToAutomatic.source, 'automatic', 'an explicit Return to Automatic action changes authority without deleting Manual provenance');
 assert.deepEqual(explicitReturnToAutomatic.activeZone, automaticB.activeZone);
+const explicitConservativeOverride = resolveActiveZoneSelection({
+  marketContext: automaticB,
+  configuredActiveZone: { low: 248.65, high: 251.2 },
+  explicitSource: 'conservative_override',
+  manualReassessment: explicitManual
+});
+assert.equal(explicitConservativeOverride.source, 'automatic', 'an explicit Conservative selection overrides the applied Manual zone');
+assert.equal(explicitConservativeOverride.zoneMode, 'conservative_override');
+assert.deepEqual(explicitConservativeOverride.activeZone, { low: 248.65, high: 251.2 });
+const explicitAggressiveOverride = resolveActiveZoneSelection({
+  marketContext: automaticB,
+  configuredActiveZone: { low: 252.85, high: 255.4 },
+  explicitSource: 'aggressive_override',
+  manualReassessment: explicitManual
+});
+assert.equal(explicitAggressiveOverride.zoneMode, 'aggressive_override', 'an explicit Aggressive selection overrides the applied Manual zone');
+assert.deepEqual(explicitAggressiveOverride.activeZone, { low: 252.85, high: 255.4 });
+const invalidSuggestedOverride = resolveActiveZoneSelection({
+  marketContext: automaticB,
+  configuredActiveZone: { low: 251.2, high: 248.65 },
+  explicitSource: 'conservative_override',
+  manualReassessment: explicitManual
+});
+assert.equal(invalidSuggestedOverride.source, 'manual_reassessment', 'an invalid Suggested override cannot displace the applied Manual zone');
+assert.deepEqual(invalidSuggestedOverride.activeZone, { low: 228.4, high: 230.1 });
 
 const automaticBWithLegacyManual = resolveActiveZoneSelection({
   marketContext: automaticB,

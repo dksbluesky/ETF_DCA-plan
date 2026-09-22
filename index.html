@@ -2397,7 +2397,8 @@ function resolveActiveZoneSelection({ marketContext = null, configuredActiveZone
   const explicitManualZone = explicitManualReassessmentZone(manualReassessment);
   const automaticActiveZone = marketContext?.context === 'bullish' && marketContext?.automaticZoneEligible === true && validZone(marketContext.activeZone) ? marketContext.activeZone : null;
   const automaticContext = automaticActiveZone ? marketContext : null;
-  if (explicitManualZone && explicitSource !== 'automatic_context') {
+  const validSuggestedOverride = !!automaticActiveZone && ['aggressive_override', 'conservative_override'].includes(explicitSource) && validZone(configuredActiveZone);
+  if (explicitManualZone && explicitSource !== 'automatic_context' && !validSuggestedOverride) {
     return {
       source: 'manual_reassessment', activeZone: { low: explicitManualZone.low, high: explicitManualZone.high }, automaticContext,
       zoneType: automaticContext?.zoneType || null, hasValidAutomaticZone: !!automaticActiveZone,
@@ -2406,7 +2407,7 @@ function resolveActiveZoneSelection({ marketContext = null, configuredActiveZone
     };
   }
   if (automaticActiveZone) {
-    const zoneMode = ['aggressive_override', 'conservative_override'].includes(explicitSource) && validZone(configuredActiveZone) ? explicitSource : 'automatic_context';
+    const zoneMode = validSuggestedOverride ? explicitSource : 'automatic_context';
     return {
       source: 'automatic', activeZone: zoneMode === 'automatic_context' ? automaticActiveZone : configuredActiveZone, automaticContext,
       zoneType: automaticContext.zoneType || null, hasValidAutomaticZone: true,

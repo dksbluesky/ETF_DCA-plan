@@ -261,6 +261,32 @@ async function main() {
     console.log('PASS Manual Reassessment renders a reachable Return to Automatic action.');
     console.log('PASS Temporary LEFT diagnostic is absent from the production DOM.');
 
+    const conservative = await evaluate(`(() => {
+      openActiveZoneSelector();
+      const button = [...document.querySelectorAll('#wc-active-zone-selector button')]
+        .find(item => item.textContent.includes('Conservative Suggested Zone'));
+      button.click();
+      const position = S.data.dca.find(item => item.id === 'acceptance-position');
+      const preserved = position.watchCriteria.manualReassessment;
+      return {
+        source: position.watchCriteria.activeZoneSource,
+        mode: position.watchCriteria.zoneMode,
+        cardText: document.getElementById('wc-current-active-zone-card').textContent,
+        zoneLow: position.watchCriteria.zoneLow,
+        zoneHigh: position.watchCriteria.zoneHigh,
+        manualAppliedAt: preserved.manualAppliedAt,
+        manualLow: preserved.activeManualZone.low,
+        manualHigh: preserved.activeManualZone.high
+      };
+    })()`);
+    assert.equal(conservative.source, 'conservative_override');
+    assert.equal(conservative.mode, 'conservative_override');
+    assert.match(conservative.cardText, /Manual Conservative Override/);
+    assert.deepEqual([conservative.zoneLow, conservative.zoneHigh], [101, 102]);
+    assert.deepEqual([conservative.manualLow, conservative.manualHigh, conservative.manualAppliedAt], [100, 102, '2026-09-06T01:00:00.000Z']);
+    const conservativeScreenshot = await screenshot('02-conservative-overrides-manual.png');
+    console.log('PASS Clicking Conservative changes authority and preserves Manual provenance.');
+
     const automatic = await evaluate(`(() => {
       document.querySelector('#wc-current-active-zone-card button[onclick="returnToAutomaticContext()"]').click();
       const position = S.data.dca.find(item => item.id === 'acceptance-position');
@@ -344,6 +370,7 @@ async function main() {
     console.log('PASS Existing ACTIVE bridge becomes EXPIRED when no valid Active Long Zone remains.');
 
     console.log(`SCREENSHOT ${manualScreenshot}`);
+    console.log(`SCREENSHOT ${conservativeScreenshot}`);
     console.log(`SCREENSHOT ${automaticScreenshot}`);
     console.log(`SCREENSHOT ${leftScreenshot}`);
     console.log(`SCREENSHOT ${executedScreenshot}`);
