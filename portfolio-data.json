@@ -390,12 +390,12 @@
             }
           ],
           "manualDraft": {
-            "low": null,
-            "high": null,
-            "edited": false,
-            "editedAt": null,
+            "low": 248.65,
+            "high": 251.2,
+            "edited": true,
+            "editedAt": "2026-09-22T00:54:48.953Z",
             "suggestedForDate": "2026-09-22",
-            "editedForDate": null
+            "editedForDate": "2026-09-22"
           },
           "activeManualZone": {
             "low": 238.7,
@@ -603,5 +603,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-22T00:51:34.552Z"
+  "lastUpdated": "2026-09-22T00:54:48.963Z"
 }
