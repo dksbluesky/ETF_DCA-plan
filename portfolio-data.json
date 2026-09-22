@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 258.6,
+      "currentPrice": 258.1,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -442,7 +442,7 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-21",
+            "suggestedForDate": "2026-09-22",
             "editedForDate": null
           },
           "activeManualZone": null,
@@ -573,24 +573,59 @@
           "counter": 0,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-09-20",
-          "lastCountedPeriod": null,
-          "latestSnapshot": null,
-          "snapshots": [],
+          "lastCountedPeriod": "2026-09-21",
+          "latestSnapshot": {
+            "tradingDate": "2026-09-21",
+            "aggressiveLow": 61.15,
+            "aggressiveHigh": 62.15,
+            "conservativeLow": 60.25,
+            "conservativeHigh": 61.3,
+            "suggestedZoneLow": 61.15,
+            "suggestedZoneHigh": 61.3,
+            "closingPrice": 59.9,
+            "result": "BELOW_SUGGESTED_ZONE",
+            "counterAfter": 0
+          },
+          "snapshots": [
+            {
+              "tradingDate": "2026-09-21",
+              "aggressiveLow": 61.15,
+              "aggressiveHigh": 62.15,
+              "conservativeLow": 60.25,
+              "conservativeHigh": 61.3,
+              "suggestedZoneLow": 61.15,
+              "suggestedZoneHigh": 61.3,
+              "closingPrice": 59.9,
+              "result": "BELOW_SUGGESTED_ZONE",
+              "counterAfter": 0
+            }
+          ],
           "manualDraft": {
-            "low": 57.8,
-            "high": 58.3,
+            "low": 61.15,
+            "high": 61.3,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-20",
+            "suggestedForDate": "2026-09-22",
             "editedForDate": null
           },
           "activeManualZone": null,
           "manualZoneSource": null,
           "manualAppliedAt": null,
           "readyNotifiedPeriod": null
-        }
+        },
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "conservative_override",
+        "activeZoneSource": "conservative_override",
+        "zoneLow": 60.25,
+        "zoneHigh": 61.3,
+        "manualZoneLow": null,
+        "manualZoneHigh": null,
+        "volThreshold": 5771,
+        "stopLossMode": "trail",
+        "stopLossManual": null,
+        "starterExecuted": false
       }
     }
   ],
-  "lastUpdated": "2026-09-22T01:16:28.458Z"
+  "lastUpdated": "2026-09-22T01:42:48.744Z"
 }
