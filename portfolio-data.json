@@ -553,7 +553,20 @@
         },
         "activeZoneSource": "manual_reassessment"
       }
+    },
+    {
+      "id": "07e639ad-3505-40d6-9358-ff7937bb2437",
+      "ticker": "00992A",
+      "name": "主動群益科技創新",
+      "type": "ETF",
+      "currentPrice": 18.69,
+      "annualYield": 5.2,
+      "dividendTracking": true,
+      "trailStop": 2,
+      "trailHigh": 18.69,
+      "transactions": [],
+      "dividends": []
     }
   ],
-  "lastUpdated": "2026-09-23T06:37:25.074Z"
+  "lastUpdated": "2026-09-23T06:39:53.789Z"
 }
