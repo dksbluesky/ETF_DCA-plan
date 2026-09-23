@@ -4093,6 +4093,7 @@ function switchBias(len, btn) {
 async function loadCandleChart(ticker, days) {
   const container = document.getElementById('chart-container');
   if (_lwChart) { _lwChart.remove(); _lwChart = null; _lwSeries = null; }
+  container.style.position = 'relative';
   container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px">載入中 Loading…</div>';
 
   const fugleKey = getFugleKey();
@@ -4232,10 +4233,9 @@ async function loadCandleChart(ticker, days) {
     if (e50Data.length) setLeg('leg-e50', e50Data);
 
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
+    const visibleHLSignals = calcHLSignals(allCandles, _biasEmaLen).filter(s => s.time >= displayFrom);
     const hlMarkers = [];
-    for (const s of calcHLSignals(allCandles, _biasEmaLen).filter(s => s.time >= displayFrom)) {
-      if (s.hReset) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#e53e3e', shape: 'circle', text: '🔄', size: 1 });
-      if (s.lReset) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'circle', text: '🔄', size: 1 });
+    for (const s of visibleHLSignals) {
       if (s.h1) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#00bcd4', shape: 'arrowUp',   text: 'H1', size: 1 });
       if (s.h2) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'arrowUp',   text: 'H2', size: 2 });
       if (s.l1) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#ed8936', shape: 'arrowDown', text: 'L1', size: 1 });
@@ -4243,7 +4243,38 @@ async function loadCandleChart(ticker, days) {
     }
     _lwSeries.setMarkers(hlMarkers);
 
+    // Reset badges need a custom overlay because Lightweight Charts renders marker text
+    // beside its shape rather than inside it.
+    const resetLayer = document.createElement('div');
+    resetLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4';
+    container.appendChild(resetLayer);
+    const resetBadges = visibleHLSignals.filter(s => s.hReset || s.lReset).map(signal => {
+      const badge = document.createElement('span');
+      const bullish = signal.hReset;
+      badge.textContent = '↻';
+      badge.title = bullish ? 'Bullish high reset' : 'Bearish low reset';
+      badge.style.cssText = `position:absolute;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${bullish ? '#e53e3e' : '#38a169'};color:#fff;font-size:13px;font-weight:700;line-height:18px;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #fff`;
+      resetLayer.appendChild(badge);
+      return { signal, badge, bullish, candle: allCandles[signal.index] };
+    });
+    const positionResetBadges = () => {
+      for (const item of resetBadges) {
+        const x = _lwChart?.timeScale().timeToCoordinate(item.signal.time);
+        const price = item.bullish ? item.candle?.high : item.candle?.low;
+        const y = Number.isFinite(price) ? _lwSeries?.priceToCoordinate(price) : null;
+        if (x === null || y === null || x === undefined || y === undefined) {
+          item.badge.style.display = 'none';
+          continue;
+        }
+        item.badge.style.display = 'flex';
+        item.badge.style.left = `${x}px`;
+        item.badge.style.top = `${y + (item.bullish ? -14 : 14)}px`;
+      }
+    };
+
     _lwChart.timeScale().fitContent();
+    _lwChart.timeScale().subscribeVisibleTimeRangeChange(positionResetBadges);
+    requestAnimationFrame(positionResetBadges);
 
     const updLeg = (id, pt, arr) => { const el = document.getElementById(id); if (el) el.textContent = pt ? pt.value.toFixed(2) : (arr.length ? arr[arr.length-1].value.toFixed(2) : '—'); };
     _lwChart.subscribeCrosshairMove(param => {
@@ -4266,7 +4297,12 @@ async function loadCandleChart(ticker, days) {
     });
 
     // Responsive resize
-    const ro = new ResizeObserver(() => { if (_lwChart) _lwChart.applyOptions({ width: container.clientWidth }); });
+    const ro = new ResizeObserver(() => {
+      if (_lwChart) {
+        _lwChart.applyOptions({ width: container.clientWidth });
+        requestAnimationFrame(positionResetBadges);
+      }
+    });
     ro.observe(container);
 
   } catch(e) {
