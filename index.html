@@ -371,8 +371,8 @@ tr:hover td{background:var(--bg)}
       <div style="font-size:10.5px;color:var(--muted);line-height:1.8">
         <div>🔴 <b>Bull bias</b> (close &gt; EMA20): track pullback legs (lower high + lower low) → <span style="color:#00bcd4">H1</span> on first recovery, <span style="color:#38a169">H2</span> on second</div>
         <div>🟢 <b>Bear bias</b> (close &lt; EMA20): track rally legs (higher low + higher high) → <span style="color:#ed8936">L1</span> on first resumption, <span style="color:#e53e3e">L2</span> on second</div>
-        <div>🔄 New trend high/low resets the leg count</div>
-        <div>⚡ Signal fires on the recovery/resumption bar, not the pullback bar</div>
+        <div>🔄 <b>H Reset / L Reset</b> marks a new trend high/low and resets the leg count</div>
+        <div>⚡ <b>H1/H2/L1/L2</b> marks the recovery/resumption bar, not the pullback bar</div>
       </div>
     </div>
   </div>
@@ -3987,7 +3987,7 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
     if (ema[i] === null) continue;
     const bull = c.close > ema[i];
     const bear = c.close < ema[i];
-    let h1 = false, h2 = false, l1 = false, l2 = false;
+    let h1 = false, h2 = false, l1 = false, l2 = false, hReset = false, lReset = false;
 
     // Track trend extremes (Pine: hiHigh/loLow updated each confirmed bar)
     if (bull) { if (hiHigh === null || c.high > hiHigh) { hiHigh = c.high; newHi = true; } else newHi = false; }
@@ -4003,7 +4003,7 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
     // ── Bull: H1 / H2 ──
     if (bull) {
       // New swing high resets leg count (Pine: if newHi → legCount:=0, legDir:=0, waitLeg:=false)
-      if (newHi) { legCount = 0; legDir = 0; waitLeg = false; }
+      if (newHi) { hReset = true; legCount = 0; legDir = 0; waitLeg = false; }
       // Down leg: lower high + lower low vs previous bar
       if (c.high < p.high && c.low < p.low && legDir !== -1) {
         legCount = legCount === 0 ? 1 : 2;
@@ -4027,7 +4027,7 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
     // ── Bear: L1 / L2 ──
     if (bear) {
       // New swing low resets leg count
-      if (newLo) { legCount = 0; legDir = 0; waitLeg = false; }
+      if (newLo) { lReset = true; legCount = 0; legDir = 0; waitLeg = false; }
       // Up leg: higher low + higher high vs previous bar
       if (c.low > p.low && c.high > p.high && legDir !== 1) {
         legCount = legCount === 0 ? 1 : 2;
@@ -4048,7 +4048,8 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
     }
 
     prevBull = bull; prevBear = bear;
-    if (h1 || h2 || l1 || l2) signals.push({ time: c.time, index: i, h1, h2, l1, l2 });
+    if (h1 || h2 || l1 || l2 || hReset || lReset)
+      signals.push({ time: c.time, index: i, h1, h2, l1, l2, hReset, lReset });
   }
   return signals;
 }
@@ -4056,7 +4057,7 @@ function calcHLSignals(candles, emaLen = 20, strongOnly = false) {
 function openChartModal(ticker, name) {
   _chartTicker = ticker;
   _biasEmaLen = 50;
-  _chartDays = 90;
+  _chartDays = 30;
   document.getElementById('chart-hd-title').textContent = `${ticker}  ${name || ''}`;
   document.getElementById('chart-ohlcv').textContent = '滑鼠移至K線查看詳情 Hover for OHLCV details';
   document.getElementById('chart-overlay').classList.add('open');
@@ -4065,7 +4066,7 @@ function openChartModal(ticker, name) {
   // Reset bias buttons — default to B:50
   document.getElementById('bias-btn-20').classList.remove('active');
   document.getElementById('bias-btn-50').classList.add('active');
-  loadCandleChart(ticker, 90);
+  loadCandleChart(ticker, 30);
 }
 
 function closeChartModal() {
@@ -4101,22 +4102,38 @@ async function loadCandleChart(ticker, days) {
   }
   const to = new Date().toISOString().split('T')[0];
   const displayFrom = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-  // Try fetching with warmup window first; fall back to smaller range if API rejects
-  // Fugle free plan supports up to ~180 days; try progressively shorter windows
+  // Try fetching with warmup window first; fall back to smaller range if API rejects.
+  // Requests longer than the API-safe window are split, merged and de-duplicated.
   const warmupDays = [180, 90, 60, 0];  // extra days to prepend for EMA seeding
   try {
     let raw = null;
     for (const extra of warmupDays) {
       const fetchFrom = new Date(Date.now() - (days + extra) * 86400000).toISOString().split('T')[0];
-      const r = await fetch(
-        `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${fetchFrom}&to=${to}`,
-        { headers: { 'X-API-KEY': fugleKey } }
-      );
-      if (r.status === 401) throw new Error('401');  // bad/expired key — no point retrying
-      if (r.status === 400) { console.warn(`Fugle 400: extra=${extra}, from=${fetchFrom} — trying shorter range`); continue; }
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const d = await r.json();
-      raw = (d.data || []).sort((a, b) => a.date.localeCompare(b.date));
+      const merged = new Map();
+      let chunkFrom = new Date(`${fetchFrom}T00:00:00Z`);
+      const finalTo = new Date(`${to}T00:00:00Z`);
+      let rejected = false;
+      while (chunkFrom <= finalTo) {
+        const chunkTo = new Date(Math.min(finalTo.getTime(), chunkFrom.getTime() + 170 * 86400000));
+        const fromText = chunkFrom.toISOString().split('T')[0];
+        const toText = chunkTo.toISOString().split('T')[0];
+        const r = await fetch(
+          `https://api.fugle.tw/marketdata/v1.0/stock/historical/candles/${ticker}?timeframe=D&from=${fromText}&to=${toText}`,
+          { headers: { 'X-API-KEY': fugleKey } }
+        );
+        if (r.status === 401) throw new Error('401');  // bad/expired key — no point retrying
+        if (r.status === 400 || r.status === 411) {
+          console.warn(`Fugle ${r.status}: extra=${extra}, from=${fromText}, to=${toText} — trying shorter warmup`);
+          rejected = true;
+          break;
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json();
+        for (const candle of (d.data || [])) merged.set(candle.date, candle);
+        chunkFrom = new Date(chunkTo.getTime() + 86400000);
+      }
+      if (rejected) continue;
+      raw = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date));
       console.log(`Fugle OK: ${ticker}, extra=${extra}, from=${fetchFrom}, bars=${raw.length}`);
       break;
     }
@@ -4217,6 +4234,8 @@ async function loadCandleChart(ticker, days) {
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
     const hlMarkers = [];
     for (const s of calcHLSignals(allCandles, _biasEmaLen).filter(s => s.time >= displayFrom)) {
+      if (s.hReset) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#3182ce', shape: 'circle', text: 'H Reset', size: 1 });
+      if (s.lReset) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#805ad5', shape: 'circle', text: 'L Reset', size: 1 });
       if (s.h1) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#00bcd4', shape: 'arrowUp',   text: 'H1', size: 1 });
       if (s.h2) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'arrowUp',   text: 'H2', size: 2 });
       if (s.l1) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#ed8936', shape: 'arrowDown', text: 'L1', size: 1 });
