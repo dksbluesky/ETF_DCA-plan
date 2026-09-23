@@ -555,18 +555,18 @@
       }
     },
     {
-      "id": "07e639ad-3505-40d6-9358-ff7937bb2437",
-      "ticker": "00992A",
-      "name": "主動群益科技創新",
+      "id": "5b79596e-3d1a-4838-8974-7896bc974229",
+      "ticker": "00985A",
+      "name": "主動野村台灣50",
       "type": "ETF",
-      "currentPrice": 18.69,
-      "annualYield": 5.2,
-      "dividendTracking": true,
-      "trailStop": 2,
-      "trailHigh": 18.69,
+      "currentPrice": 23.44,
+      "annualYield": 0,
+      "dividendTracking": false,
+      "trailStop": 3,
+      "trailHigh": 23.44,
       "transactions": [],
       "dividends": []
     }
   ],
-  "lastUpdated": "2026-09-23T06:39:53.789Z"
+  "lastUpdated": "2026-09-23T12:52:48.350Z"
 }
