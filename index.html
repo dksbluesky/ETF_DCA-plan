@@ -4264,12 +4264,13 @@ async function loadCandleChart(ticker, days) {
         const x = _lwChart?.timeScale().timeToCoordinate(item.signal.time);
         const price = item.bullish ? item.candle?.high : item.candle?.low;
         const y = Number.isFinite(price) ? _lwSeries?.priceToCoordinate(price) : null;
-        if (x === null || y === null || x === undefined || y === undefined) {
+        if (x === null || y === null || x === undefined || y === undefined ||
+            x < badgeRadius || x > plotWidth - badgeRadius) {
           item.badge.style.display = 'none';
           continue;
         }
         item.badge.style.display = 'flex';
-        item.badge.style.left = `${Math.max(badgeRadius, Math.min(x, plotWidth - badgeRadius))}px`;
+        item.badge.style.left = `${x}px`;
         item.badge.style.top = `${y + (item.bullish ? -14 : 14)}px`;
       }
     };
