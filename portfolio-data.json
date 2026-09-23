@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 35.41,
+      "currentPrice": 35.09,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 258.1,
+      "currentPrice": 257,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -415,7 +415,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 35.41,
+      "currentPrice": 35.09,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -457,7 +457,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.5,
+      "currentPrice": 30.65,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -553,79 +553,7 @@
         },
         "activeZoneSource": "manual_reassessment"
       }
-    },
-    {
-      "id": "016238ed-d30d-4c9e-9cf9-d49fc41427f6",
-      "ticker": "00935",
-      "name": "野村台灣新科技50",
-      "type": "ETF",
-      "currentPrice": 62.05,
-      "annualYield": 6.34,
-      "dividendTracking": true,
-      "trailStop": 2,
-      "trailHigh": 62.05,
-      "transactions": [],
-      "dividends": [],
-      "watchCriteria": {
-        "manualReassessment": {
-          "threshold": 3,
-          "minOperationalTicks": 2,
-          "counter": 0,
-          "sequenceTimeframe": "daily",
-          "trackingBaselinePeriod": "2026-09-20",
-          "lastCountedPeriod": "2026-09-21",
-          "latestSnapshot": {
-            "tradingDate": "2026-09-21",
-            "aggressiveLow": 61.15,
-            "aggressiveHigh": 62.15,
-            "conservativeLow": 60.25,
-            "conservativeHigh": 61.3,
-            "suggestedZoneLow": 61.15,
-            "suggestedZoneHigh": 61.3,
-            "closingPrice": 59.9,
-            "result": "BELOW_SUGGESTED_ZONE",
-            "counterAfter": 0
-          },
-          "snapshots": [
-            {
-              "tradingDate": "2026-09-21",
-              "aggressiveLow": 61.15,
-              "aggressiveHigh": 62.15,
-              "conservativeLow": 60.25,
-              "conservativeHigh": 61.3,
-              "suggestedZoneLow": 61.15,
-              "suggestedZoneHigh": 61.3,
-              "closingPrice": 59.9,
-              "result": "BELOW_SUGGESTED_ZONE",
-              "counterAfter": 0
-            }
-          ],
-          "manualDraft": {
-            "low": 61.15,
-            "high": 61.3,
-            "edited": false,
-            "editedAt": null,
-            "suggestedForDate": "2026-09-22",
-            "editedForDate": null
-          },
-          "activeManualZone": null,
-          "manualZoneSource": null,
-          "manualAppliedAt": null,
-          "readyNotifiedPeriod": null
-        },
-        "marketLevelTimeframe": "daily",
-        "zoneMode": "conservative_override",
-        "activeZoneSource": "conservative_override",
-        "zoneLow": 60.25,
-        "zoneHigh": 61.3,
-        "manualZoneLow": null,
-        "manualZoneHigh": null,
-        "volThreshold": 5771,
-        "stopLossMode": "trail",
-        "stopLossManual": null,
-        "starterExecuted": false
-      }
     }
   ],
-  "lastUpdated": "2026-09-22T01:42:48.744Z"
+  "lastUpdated": "2026-09-23T06:37:25.074Z"
 }
