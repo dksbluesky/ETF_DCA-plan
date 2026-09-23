@@ -4258,6 +4258,8 @@ async function loadCandleChart(ticker, days) {
       return { signal, badge, bullish, candle: allCandles[signal.index] };
     });
     const positionResetBadges = () => {
+      const plotWidth = _lwChart?.timeScale().width?.() ?? container.clientWidth;
+      const badgeRadius = 9;
       for (const item of resetBadges) {
         const x = _lwChart?.timeScale().timeToCoordinate(item.signal.time);
         const price = item.bullish ? item.candle?.high : item.candle?.low;
@@ -4267,7 +4269,7 @@ async function loadCandleChart(ticker, days) {
           continue;
         }
         item.badge.style.display = 'flex';
-        item.badge.style.left = `${x}px`;
+        item.badge.style.left = `${Math.max(badgeRadius, Math.min(x, plotWidth - badgeRadius))}px`;
         item.badge.style.top = `${y + (item.bullish ? -14 : 14)}px`;
       }
     };
