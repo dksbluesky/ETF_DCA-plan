@@ -372,7 +372,7 @@ tr:hover td{background:var(--bg)}
         <div>🔴 <b>Bull bias</b> (close &gt; EMA20): track pullback legs (lower high + lower low) → <span style="color:#00bcd4">H1</span> on first recovery, <span style="color:#38a169">H2</span> on second</div>
         <div>🟢 <b>Bear bias</b> (close &lt; EMA20): track rally legs (higher low + higher high) → <span style="color:#ed8936">L1</span> on first resumption, <span style="color:#e53e3e">L2</span> on second</div>
         <div>🔄 <b>H Reset / L Reset</b> marks a new trend high/low and resets the leg count</div>
-        <div>⚡ <b>H1/H2/L1/L2</b> marks the recovery/resumption bar, not the pullback bar</div>
+        <div>⚡ <b>H1/H2</b> marks bullish recovery; <b>L1/L2</b> marks bearish resumption</div>
       </div>
     </div>
   </div>
@@ -4234,8 +4234,8 @@ async function loadCandleChart(ticker, days) {
     // H1 / H2 / L1 / L2 markers — computed on full warm-up dataset, filtered to display window
     const hlMarkers = [];
     for (const s of calcHLSignals(allCandles, _biasEmaLen).filter(s => s.time >= displayFrom)) {
-      if (s.hReset) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#3182ce', shape: 'circle', text: 'H Reset', size: 1 });
-      if (s.lReset) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#805ad5', shape: 'circle', text: 'L Reset', size: 1 });
+      if (s.hReset) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#e53e3e', shape: 'circle', text: '🔄', size: 1 });
+      if (s.lReset) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'circle', text: '🔄', size: 1 });
       if (s.h1) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#00bcd4', shape: 'arrowUp',   text: 'H1', size: 1 });
       if (s.h2) hlMarkers.push({ time: s.time, position: 'belowBar', color: '#38a169', shape: 'arrowUp',   text: 'H2', size: 2 });
       if (s.l1) hlMarkers.push({ time: s.time, position: 'aboveBar', color: '#ed8936', shape: 'arrowDown', text: 'L1', size: 1 });
