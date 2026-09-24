@@ -454,7 +454,18 @@
           "manualZoneSource": null,
           "manualAppliedAt": null,
           "readyNotifiedPeriod": null
-        }
+        },
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "aggressive_override",
+        "activeZoneSource": "aggressive_override",
+        "zoneLow": 2460,
+        "zoneHigh": 2490,
+        "manualZoneLow": null,
+        "manualZoneHigh": null,
+        "volThreshold": 22604,
+        "stopLossMode": "trail",
+        "stopLossManual": null,
+        "starterExecuted": false
       }
     },
     {
@@ -645,5 +656,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-24T01:28:17.779Z"
+  "lastUpdated": "2026-09-24T01:29:04.655Z"
 }
