@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 35.09,
+      "currentPrice": 35.07,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,7 +103,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 257,
+      "currentPrice": 256.6,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -402,7 +402,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2500,
+      "currentPrice": 2475,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -415,7 +415,7 @@
       "ticker": "00878",
       "name": "國泰高股息",
       "type": "ETF",
-      "currentPrice": 35.09,
+      "currentPrice": 35.07,
       "annualYield": 7.9,
       "dividendTracking": true,
       "trailStop": 5,
@@ -423,8 +423,8 @@
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
-        "zoneLow": 31.8,
-        "zoneHigh": 32.6,
+        "zoneLow": 34.47,
+        "zoneHigh": 34.75,
         "volThreshold": 24206,
         "stopLossMode": "manual",
         "stopLossManual": 30,
@@ -442,14 +442,20 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-22",
+            "suggestedForDate": "2026-09-24",
             "editedForDate": null
           },
           "activeManualZone": null,
           "manualZoneSource": null,
           "manualAppliedAt": null,
           "readyNotifiedPeriod": null
-        }
+        },
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "aggressive_override",
+        "activeZoneSource": "aggressive_override",
+        "manualZoneLow": null,
+        "manualZoneHigh": null,
+        "starterExecuted": false
       }
     },
     {
@@ -457,7 +463,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.65,
+      "currentPrice": 30.49,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -559,14 +565,38 @@
       "ticker": "00985A",
       "name": "主動野村台灣50",
       "type": "ETF",
-      "currentPrice": 23.44,
+      "currentPrice": 23.2,
       "annualYield": 0,
       "dividendTracking": false,
       "trailStop": 3,
       "trailHigh": 23.44,
       "transactions": [],
-      "dividends": []
+      "dividends": [],
+      "watchCriteria": {
+        "manualReassessment": {
+          "threshold": 3,
+          "minOperationalTicks": 2,
+          "counter": 0,
+          "sequenceTimeframe": "daily",
+          "trackingBaselinePeriod": "2026-09-23",
+          "lastCountedPeriod": null,
+          "latestSnapshot": null,
+          "snapshots": [],
+          "manualDraft": {
+            "low": null,
+            "high": null,
+            "edited": false,
+            "editedAt": null,
+            "suggestedForDate": "2026-09-24",
+            "editedForDate": null
+          },
+          "activeManualZone": null,
+          "manualZoneSource": null,
+          "manualAppliedAt": null,
+          "readyNotifiedPeriod": null
+        }
+      }
     }
   ],
-  "lastUpdated": "2026-09-23T12:52:48.350Z"
+  "lastUpdated": "2026-09-24T00:57:24.503Z"
 }
