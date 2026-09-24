@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.89,
+      "currentPrice": 34.87,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -126,7 +126,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 256,
+      "currentPrice": 256.1,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -431,14 +431,38 @@
       "trailStop": 5,
       "trailHigh": 2510,
       "transactions": [],
-      "dividends": []
+      "dividends": [],
+      "watchCriteria": {
+        "manualReassessment": {
+          "threshold": 3,
+          "minOperationalTicks": 2,
+          "counter": 0,
+          "sequenceTimeframe": "daily",
+          "trackingBaselinePeriod": "2026-09-23",
+          "lastCountedPeriod": null,
+          "latestSnapshot": null,
+          "snapshots": [],
+          "manualDraft": {
+            "low": null,
+            "high": null,
+            "edited": false,
+            "editedAt": null,
+            "suggestedForDate": "2026-09-24",
+            "editedForDate": null
+          },
+          "activeManualZone": null,
+          "manualZoneSource": null,
+          "manualAppliedAt": null,
+          "readyNotifiedPeriod": null
+        }
+      }
     },
     {
       "id": "3a83fbc0-805d-494d-87de-b2814afb9e4f",
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.63,
+      "currentPrice": 30.64,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -521,7 +545,7 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-16",
+            "suggestedForDate": "2026-09-24",
             "editedForDate": null
           },
           "activeManualZone": {
@@ -540,7 +564,7 @@
       "ticker": "00985A",
       "name": "主動野村台灣50",
       "type": "ETF",
-      "currentPrice": 23.39,
+      "currentPrice": 23.4,
       "annualYield": 0,
       "dividendTracking": false,
       "trailStop": 3,
@@ -571,7 +595,55 @@
           "readyNotifiedPeriod": null
         }
       }
+    },
+    {
+      "id": "af368eec-32dc-470a-bd47-cbc9ee787ed6",
+      "ticker": "00878",
+      "name": "國泰永續高股息",
+      "type": "ETF",
+      "currentPrice": 34.81,
+      "annualYield": 7.9,
+      "dividendTracking": true,
+      "trailStop": 5,
+      "trailHigh": 34.81,
+      "transactions": [],
+      "dividends": [],
+      "watchCriteria": {
+        "manualReassessment": {
+          "threshold": 3,
+          "minOperationalTicks": 2,
+          "counter": 0,
+          "sequenceTimeframe": "daily",
+          "trackingBaselinePeriod": "2026-09-23",
+          "lastCountedPeriod": null,
+          "latestSnapshot": null,
+          "snapshots": [],
+          "manualDraft": {
+            "low": null,
+            "high": null,
+            "edited": false,
+            "editedAt": null,
+            "suggestedForDate": "2026-09-24",
+            "editedForDate": null
+          },
+          "activeManualZone": null,
+          "manualZoneSource": null,
+          "manualAppliedAt": null,
+          "readyNotifiedPeriod": null
+        },
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "aggressive_override",
+        "activeZoneSource": "aggressive_override",
+        "zoneLow": 34.47,
+        "zoneHigh": 34.75,
+        "manualZoneLow": null,
+        "manualZoneHigh": null,
+        "volThreshold": 12380,
+        "stopLossMode": "trail",
+        "stopLossManual": null,
+        "starterExecuted": false
+      }
     }
   ],
-  "lastUpdated": "2026-09-24T01:20:53.354Z"
+  "lastUpdated": "2026-09-24T01:28:17.779Z"
 }
