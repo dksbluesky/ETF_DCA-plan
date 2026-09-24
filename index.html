@@ -1808,7 +1808,7 @@ async function fetchLivePrice(ticker) {
 }
 
 // ── Entry Watch Criteria ────────────────────────────────────────────────────
-let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchListType = null, _watchPosId = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status', _watchHasValidAutomaticActiveZone = false;
+let _watchCandles = null, _watchMarketCandles = null, _watchMarketLevelError = null, _watchPos = null, _watchQuote = null, _watchZoneEngine = null, _watchListType = null, _watchPosId = null, _watchBiasLen = 50, _watchMainTab = 'status', _watchStatusTab = 'status', _watchHasValidAutomaticActiveZone = false, _watchManualReassessmentSelected = false;
 const WATCH_AUTO_REFRESH_MS = 10 * 1000;
 let _watchRefreshTimer = null;
 let _watchRefreshInFlight = false;
@@ -2619,7 +2619,8 @@ function renderCurrentActiveZone(selection) {
       : '';
   card.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">CURRENT ACTIVE ZONE</div><div style="font-weight:700;margin-top:5px">${valid?activeZoneLabel(mode,context):'No Active Long Zone'}</div><div style="font-size:19px;font-weight:700;margin:4px 0">${valid?`NT$${zone.low.toFixed(2)} – NT$${zone.high.toFixed(2)}`:'No Active Long Zone'}</div><div style="font-size:12px">${valid?`${Number.isFinite(context?.invalidationLevel)?`Invalidation: NT$${context.invalidationLevel.toFixed(2)} · `:''}${current}`:'Range / unclear — no favourable long location. TAR-OBI long bridge unavailable.'}</div>${action}${context && (selection?.source === 'manual_reassessment' || ['aggressive_override', 'conservative_override'].includes(mode)) ? '<button type="button" class="btn btn-outline btn-sm" style="margin:8px 0 0 6px" onclick="returnToAutomaticContext()">Return to Automatic Zone</button>' : ''}<details style="margin-top:8px"><summary>Why / structure details</summary><div style="font-size:11px;color:var(--muted);margin-top:5px">${context?.reason||'No additional structure detail is available.'}</div></details>`;
 }
-function openActiveZoneSelector(){const e=document.getElementById('wc-active-zone-selector'),auto=getAutomaticContextActiveZone(),a=_watchZoneEngine?.suggestedZones?.aggressive,c=_watchZoneEngine?.suggestedZones?.conservative;if(!e)return;const b=(s,l,z,d)=>`<button type="button" class="btn btn-outline btn-sm" ${d?'disabled':''} onclick="selectActiveZone('${s}')">${l}${z?` — NT$${z.zoneLow??z.low}–NT$${z.zoneHigh??z.high}`:''}</button>`;e.innerHTML=`<div style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"><b>Choose Active Zone</b><div style="display:grid;gap:6px;margin-top:8px">${auto?b('automatic_context',activeZoneLabel('automatic_context',auto),auto.activeZone,false):''}${auto&&a?b('aggressive_override','Aggressive Suggested Zone',a,false):''}${auto&&c?b('conservative_override','Conservative Suggested Zone',c,false):''}${auto?'':b('manual','Manual Reassessment',null,false)}</div></div>`;e.style.display='';}
+function openActiveZoneSelector(){const e=document.getElementById('wc-active-zone-selector'),auto=getAutomaticContextActiveZone(),a=_watchZoneEngine?.suggestedZones?.aggressive,c=_watchZoneEngine?.suggestedZones?.conservative;if(!e)return;const b=(s,l,z,d)=>`<button type="button" class="btn btn-outline btn-sm" ${d?'disabled':''} onclick="selectActiveZone('${s}')">${l}${z?` — NT$${z.zoneLow??z.low}–NT$${z.zoneHigh??z.high}`:''}</button>`;e.innerHTML=`<div style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"><b>Choose Active Zone</b><div style="display:grid;gap:6px;margin-top:8px">${auto?b('automatic_context',activeZoneLabel('automatic_context',auto),auto.activeZone,false):''}${auto&&a?b('aggressive_override','Aggressive Suggested Zone',a,false):''}${auto&&c?b('conservative_override','Conservative Suggested Zone',c,false):''}<button type="button" class="btn btn-outline btn-sm" onclick="chooseManualReassessment()">Manual Reassessment</button></div></div>`;e.style.display='';}
+function chooseManualReassessment(){_watchManualReassessmentSelected=true;const selector=document.getElementById('wc-active-zone-selector');if(selector)selector.style.display='none';renderManualReassessment(undefined,true);openManualReassessment();}
 function openManualReassessment(){const panel=document.getElementById('wc-manual-reassessment');if(!panel)return;const details=panel.querySelector('details');if(details)details.open=true;panel.scrollIntoView?.({block:'nearest'});}
 function selectActiveZone(mode){const auto=getAutomaticContextActiveZone(),z=mode==='aggressive_override'?_watchZoneEngine?.suggestedZones?.aggressive:mode==='conservative_override'?_watchZoneEngine?.suggestedZones?.conservative:mode==='automatic_context'?auto?.activeZone:null;if(!z)return;document.getElementById('wc-zonemode').value=mode;setActiveZoneSource(mode);if(mode!=='automatic_context')setActiveWatchZoneInputs(mode,{zoneLow:z.zoneLow??z.low,zoneHigh:z.zoneHigh??z.high});persistWatchCriteria(_watchListType,_watchPosId);document.getElementById('wc-active-zone-selector').style.display='none';recomputeWatchStatus();showZoneBridgeChoice();}
 function showZoneBridgeChoice(){const e=document.getElementById('wc-active-zone-bridge-choice'),s=window._watchSnapshot;if(!e||!s?.activeZone)return;const label=activeZoneLabel(s.zoneMode,getAutomaticContextActiveZone());e.innerHTML=`<div style="padding:10px;border:1px solid var(--primary);border-radius:8px;background:var(--accent-l)"><b>Use ${label} for TAR-OBI Linked Monitor?</b><div style="margin-top:8px"><button type="button" class="btn btn-primary btn-sm" onclick="startSelectedZoneBridge()">Start TAR-OBI Bridge</button><button type="button" class="btn btn-outline btn-sm" style="margin-left:6px" onclick="document.getElementById('wc-active-zone-bridge-choice').style.display='none'">Not now</button></div></div>`;e.style.display='';}
@@ -2721,8 +2722,8 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
   const activeManualZone = helper.explicitActiveManualZone(state);
   const suggestedLabel = ['VALID', 'ZONE_TOO_NARROW'].includes(zone.status) ? `${f(zone.low)} – ${f(zone.high)}` : zone.status === 'INVALID_SUGGESTED_ZONE' && !activeManualZone ? '— (manual input required)' : '—';
   const zoneLabel = zone.status === 'VALID' ? 'VALID' : zone.status === 'ZONE_TOO_NARROW' ? 'ZONE TOO NARROW' : zone.status === 'INVALID_SUGGESTED_ZONE' ? 'INVALID SUGGESTED ZONE' : 'UNAVAILABLE';
-  panel.style.display = hasValidAutomaticActiveZone && !activeManualZone ? 'none' : '';
-  const actionable = dailyActive && (!hasValidAutomaticActiveZone || !!activeManualZone);
+  panel.style.display = hasValidAutomaticActiveZone && !activeManualZone && !_watchManualReassessmentSelected ? 'none' : '';
+  const actionable = dailyActive && (!hasValidAutomaticActiveZone || !!activeManualZone || _watchManualReassessmentSelected);
   const applyDisabled = !actionable || !helper.manualZoneIsValid(state.manualDraft.low, state.manualDraft.high, zone.tickSize);
   panel.innerHTML = `<div style="border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface2)">
     <div style="font-weight:700;margin-bottom:7px">Manual Reassessment｜手動重新評估</div>
@@ -2737,7 +2738,7 @@ function renderManualReassessment(hasValidAutomaticActiveZone = _watchHasValidAu
     <div class="form-row" style="margin-bottom:7px"><div class="form-group"><label class="form-label">Manual Price Lower (NT$)</label><input id="wc-manual-reassess-low" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.low) ? state.manualDraft.low : ''}" onchange="onManualReassessmentDraftInput('low', this.value)"></div><div class="form-group"><label class="form-label">Manual Price Upper (NT$)</label><input id="wc-manual-reassess-high" class="form-input" type="number" step="0.01" value="${Number.isFinite(state.manualDraft.high) ? state.manualDraft.high : ''}" onchange="onManualReassessmentDraftInput('high', this.value)"></div></div>
     <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><label style="font-size:11px">Threshold <input id="wc-manual-reassess-threshold" type="number" min="1" step="1" value="${state.threshold}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentThresholdChange(this.value)"></label><label style="font-size:11px">Min ticks <input id="wc-manual-reassess-ticks" type="number" min="1" step="1" value="${state.minOperationalTicks}" ${dailyActive ? '' : 'disabled'} onchange="onManualReassessmentMinTicksChange(this.value)"></label><button type="button" class="btn btn-primary btn-sm" ${applyDisabled ? 'disabled' : ''} onclick="applyManualReassessment()">${activeManualZone ? 'Reassess current manual zone' : 'Apply Manual'}</button><button type="button" class="btn btn-outline btn-sm" ${dailyActive ? '' : 'disabled'} onclick="resetManualReassessmentCounter()">Reset Counter</button></div>
     ${activeManualZone ? '</div></details>' : ''}
-    <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px">${hasValidAutomaticActiveZone ? 'Automatic Apply is available; manual reassessment controls are view-only.' : 'Daily close above today’s Suggested Zone increments the counter; inside or below resets it. Applying is always explicit.'}</div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:7px">${hasValidAutomaticActiveZone && !_watchManualReassessmentSelected && !activeManualZone ? 'Automatic Apply is available; manual reassessment controls are view-only.' : 'Daily close above today’s Suggested Zone increments the counter; inside or below resets it. Applying is always explicit.'}</div>
   </div>`;
 }
 
@@ -2758,7 +2759,7 @@ function applyManualReassessment() {
   const helper = window.ManualZoneReassessment, pos = reassessmentPosition();
   if (!helper || !pos) return;
   const currentState = helper.normalize(pos.watchCriteria?.manualReassessment);
-  if (_watchHasValidAutomaticActiveZone && !helper.explicitActiveManualZone(currentState)) return;
+  if (_watchHasValidAutomaticActiveZone && !helper.explicitActiveManualZone(currentState) && !_watchManualReassessmentSelected) return;
   const aggressive = _watchZoneEngine?.suggestedZones?.aggressive;
   const conservative = _watchZoneEngine?.suggestedZones?.conservative;
   const zone = helper.suggestedZone(aggressive, conservative, getTaiwanTickSize(Number(aggressive?.zoneLow) || Number(conservative?.zoneHigh) || 0, _watchPos?.type), currentState.minOperationalTicks);
@@ -2769,6 +2770,7 @@ function applyManualReassessment() {
   setActiveWatchZoneInputs('manual', { zoneLow: next.activeManualZone.low, zoneHigh: next.activeManualZone.high });
   const mode = document.getElementById('wc-zonemode'); if (mode) mode.value = 'manual';
   setActiveZoneSource('manual_reassessment');
+  _watchManualReassessmentSelected = false;
   persistWatchCriteria(_watchListType, _watchPosId);
   recomputeZoneValidation(); recomputeWatchStatus(); renderManualReassessment(); showZoneBridgeChoice();
   toast('Manual Active Zone applied.', 'ok');
@@ -2916,6 +2918,7 @@ async function loadWatchStatus(listType, posId) {
   const pos = (listType === 'dca' ? S.data.dca : S.data.direct).find(p => p.id === posId);
   const refEl = document.getElementById('wc-ref');
   if (!pos) return;
+  _watchManualReassessmentSelected = false;
   try {
     // 130 calendar days ≈ 85-90 trading days — needed so the EMA50-based H1/H2 fast signal
     // (checkEarlySignal) has enough warm-up; EMA50 needs 50 trading days just for its first

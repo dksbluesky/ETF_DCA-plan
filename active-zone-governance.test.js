@@ -191,10 +191,14 @@ assert.match(html, /const showAutomaticCard = false;/, 'only the resolver-backed
 assert.match(html, /NT\$\$\{automaticContext\.activeZone\.low\.toFixed\(2\)\} – NT\$\$\{automaticContext\.activeZone\.high\.toFixed\(2\)\}/, 'Automatic zone card displays the authoritative range with currency labels');
 assert.match(html, /CURRENT ACTIVE ZONE/, 'one Current Active Zone card is rendered');
 assert.match(html, /function openActiveZoneSelector\(\)/, 'selected-zone selector renders only the allowed alternatives');
+assert.match(html, /onclick="chooseManualReassessment\(\)">Manual Reassessment<\/button>/, 'Manual Reassessment is always offered as an explicit Active Zone choice');
+assert.match(html, /function chooseManualReassessment\(\)\{_watchManualReassessmentSelected=true;/, 'choosing Manual Reassessment reveals its controls without applying a zone');
+assert.match(html, /!hasValidAutomaticActiveZone \|\| !!activeManualZone \|\| _watchManualReassessmentSelected/, 'an explicit Manual Reassessment choice enables Apply Manual even when Automatic is valid');
+assert.match(html, /setActiveZoneSource\('manual_reassessment'\);\s*_watchManualReassessmentSelected = false;/, 'Manual authority changes only inside the explicit Apply Manual handler');
 assert.match(html, /aggressive_override/, 'Aggressive selection is a distinct explicit authoritative override');
 assert.match(html, /conservative_override/, 'Conservative selection is a distinct explicit authoritative override');
 assert.match(html, /Use \$\{label\} for TAR-OBI Linked Monitor\?/, 'selected zone requires a bridge confirmation');
-assert.match(html, /panel\.style\.display = hasValidAutomaticActiveZone && !activeManualZone \? 'none' : '';/, 'Manual Reassessment stays available for an applied manual zone even when Automatic is also valid');
+assert.match(html, /panel\.style\.display = hasValidAutomaticActiveZone && !activeManualZone && !_watchManualReassessmentSelected \? 'none' : '';/, 'Manual Reassessment stays available after explicit selection or for an applied manual zone even when Automatic is also valid');
 assert.match(html, /function renderManualReassessment\(hasValidAutomaticActiveZone = _watchHasValidAutomaticActiveZone, keepPanelExpanded = false\)/, 'Manual Reassessment rendering accepts the transient expanded state');
 assert.match(html, /<details\$\{keepPanelExpanded \? ' open' : ''\}>/, 'draft edits preserve the reassessment panel expansion');
 assert.match(html, /currentManualSuggestionDate\(\)\), true\);/, 'price-field draft updates request an expanded rerender');
