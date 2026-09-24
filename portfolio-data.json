@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 35.05,
+      "currentPrice": 34.89,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -126,7 +126,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 256.65,
+      "currentPrice": 256,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -252,7 +252,7 @@
         "zoneHigh": 253.35,
         "volThreshold": 2600,
         "stopLossMode": "manual",
-        "stopLossManual": 237.9,
+        "stopLossManual": 248,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
         "manualZoneLow": 251.2,
@@ -438,7 +438,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.42,
+      "currentPrice": 30.63,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -540,7 +540,7 @@
       "ticker": "00985A",
       "name": "主動野村台灣50",
       "type": "ETF",
-      "currentPrice": 23.33,
+      "currentPrice": 23.39,
       "annualYield": 0,
       "dividendTracking": false,
       "trailStop": 3,
@@ -573,5 +573,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-24T01:20:07.357Z"
+  "lastUpdated": "2026-09-24T01:20:50.058Z"
 }
