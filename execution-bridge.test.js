@@ -123,6 +123,14 @@ assert.equal(bridge.openTarObiMonitor(), 'same-tab');
 assert.equal(opened, null);
 assert.equal(assigned, 'http://127.0.0.1:8080/TAR-OBI/entry-assessment.html');
 
+global.location = {
+  hostname: '192.168.1.25',
+  protocol: 'http:',
+  origin: 'http://192.168.1.25:8080',
+  assign(url) { assigned = url; }
+};
+assert.equal(bridge.resolveTarObiUrl(), 'http://192.168.1.25:8080/TAR-OBI/entry-assessment.html', 'Mac LAN service keeps ETF and TAR on the same origin');
+
 const leftInput = { isDcaPosition: true, activeLongZoneIsValid: true, activeZone: { low: 230.8, high: 233.35 }, currentPrice: 232, c1ok: true, invalidationLevel: 229.5, starterExecuted: false, rightSideSetupConfirmed: false };
 let left = bridge.evaluateLeftStarter(leftInput);
 assert.equal(left.starterEligible, true, 'valid authoritative Active Zone plus C1 authorizes LEFT');

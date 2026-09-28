@@ -182,7 +182,8 @@
   function resolveTarObiUrl() {
     try {
       const hostname = String(root.location?.hostname || '').toLowerCase();
-      if (hostname === '127.0.0.1' || hostname === 'localhost') {
+      const protocol = String(root.location?.protocol || '').toLowerCase();
+      if (hostname === '127.0.0.1' || hostname === 'localhost' || protocol === 'http:') {
         return `${root.location.origin}/TAR-OBI/entry-assessment.html`;
       }
     } catch (error) {
