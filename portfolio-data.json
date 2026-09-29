@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.88,
+      "currentPrice": 35.01,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -60,6 +60,11 @@
           "pricePerShare": 33.48,
           "type": "lumpsum",
           "notes": ""
+        },
+        {
+          "id": "b4162584-d9f1-4107-a745-90294e5e1ed1",
+          "date": "2026-09-24",
+          "type": "skipped"
         }
       ],
       "dividends": [
@@ -126,7 +131,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 256.85,
+      "currentPrice": 255.6,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -425,7 +430,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2440,
+      "currentPrice": 2480,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -473,7 +478,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 30.85,
+      "currentPrice": 30.28,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -575,7 +580,7 @@
       "ticker": "00985A",
       "name": "主動野村台灣50",
       "type": "ETF",
-      "currentPrice": 23.48,
+      "currentPrice": 23.34,
       "annualYield": 0,
       "dividendTracking": false,
       "trailStop": 3,
@@ -608,5 +613,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-09-29T00:36:19.848Z"
+  "lastUpdated": "2026-09-29T03:42:59.548Z"
 }
