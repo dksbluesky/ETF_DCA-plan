@@ -65,6 +65,15 @@
           "id": "b4162584-d9f1-4107-a745-90294e5e1ed1",
           "date": "2026-09-24",
           "type": "skipped"
+        },
+        {
+          "id": "18b0bf1f-7f22-443b-9270-5d67b18a510e",
+          "date": "2026-10-01",
+          "amount": 39951,
+          "shares": 1150,
+          "pricePerShare": 34.74,
+          "type": "lumpsum",
+          "notes": "補9月"
         }
       ],
       "dividends": [
@@ -613,5 +622,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-10-01T00:36:36.966Z"
+  "lastUpdated": "2026-10-01T01:20:24.964Z"
 }
