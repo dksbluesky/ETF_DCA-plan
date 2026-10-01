@@ -1903,6 +1903,8 @@ async function refreshWatchLivePrice(listType, posId) {
     const currentMarketDate = _watchCandles.at(-1)?.date || null;
     if (currentMarketDate !== previousMarketDate || (quote?.state === 'CLOSED' && previousQuoteState !== 'CLOSED')) await recalculateMarketLevelSuggestions(listType, posId, true);
     recomputeWatchStatus();
+    const watchSnapshot = window._watchSnapshot;
+    if (watchSnapshot) window.ExecutionBridgeMonitor?.scheduleSourceContextSync?.(watchSnapshot);
   } catch (error) {
     console.warn('Watch: automatic live-price refresh failed:', error.message);
   } finally {
