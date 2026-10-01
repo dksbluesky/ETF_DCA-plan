@@ -253,15 +253,15 @@
       "trailStop": 2.5,
       "trailHigh": 259,
       "watchCriteria": {
-        "zoneLow": 251.15,
-        "zoneHigh": 253.5,
+        "zoneLow": 251,
+        "zoneHigh": 253.55,
         "volThreshold": 2600,
         "stopLossMode": "manual",
         "stopLossManual": 248,
         "marketLevelTimeframe": "daily",
-        "zoneMode": "automatic_context",
-        "manualZoneLow": 251.15,
-        "manualZoneHigh": 253.5,
+        "zoneMode": "manual",
+        "manualZoneLow": 251,
+        "manualZoneHigh": 253.55,
         "starterAllocationPct": null,
         "starterExecuted": false,
         "manualReassessment": {
@@ -407,22 +407,22 @@
             }
           ],
           "manualDraft": {
-            "low": 251,
-            "high": 253.55,
-            "edited": true,
-            "editedAt": "2026-10-01T00:35:52.447Z",
+            "low": null,
+            "high": null,
+            "edited": false,
+            "editedAt": null,
             "suggestedForDate": "2026-10-01",
-            "editedForDate": "2026-10-01"
+            "editedForDate": null
           },
           "activeManualZone": {
-            "low": 251.15,
-            "high": 253.5
+            "low": 251,
+            "high": 253.55
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-09-29T00:36:00.058Z",
+          "manualAppliedAt": "2026-10-01T00:36:31.371Z",
           "readyNotifiedPeriod": null
         },
-        "activeZoneSource": "automatic_context"
+        "activeZoneSource": "manual_reassessment"
       }
     },
     {
@@ -430,7 +430,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2475,
+      "currentPrice": 2470,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -613,5 +613,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-10-01T00:36:01.722Z"
+  "lastUpdated": "2026-10-01T00:36:34.655Z"
 }
