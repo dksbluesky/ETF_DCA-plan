@@ -600,27 +600,62 @@
         "manualReassessment": {
           "threshold": 3,
           "minOperationalTicks": 2,
-          "counter": 0,
+          "counter": 1,
           "sequenceTimeframe": "daily",
           "trackingBaselinePeriod": "2026-09-23",
-          "lastCountedPeriod": null,
-          "latestSnapshot": null,
-          "snapshots": [],
+          "lastCountedPeriod": "2026-10-01",
+          "latestSnapshot": {
+            "tradingDate": "2026-10-01",
+            "aggressiveLow": 61,
+            "aggressiveHigh": 61.95,
+            "conservativeLow": 60.35,
+            "conservativeHigh": 61.35,
+            "suggestedZoneLow": 61,
+            "suggestedZoneHigh": 61.35,
+            "closingPrice": 61.55,
+            "result": "ABOVE_SUGGESTED_ZONE",
+            "counterAfter": 1
+          },
+          "snapshots": [
+            {
+              "tradingDate": "2026-10-01",
+              "aggressiveLow": 61,
+              "aggressiveHigh": 61.95,
+              "conservativeLow": 60.35,
+              "conservativeHigh": 61.35,
+              "suggestedZoneLow": 61,
+              "suggestedZoneHigh": 61.35,
+              "closingPrice": 61.55,
+              "result": "ABOVE_SUGGESTED_ZONE",
+              "counterAfter": 1
+            }
+          ],
           "manualDraft": {
-            "low": 23.18,
-            "high": 23.26,
+            "low": 61,
+            "high": 61.35,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-24",
+            "suggestedForDate": "2026-10-02",
             "editedForDate": null
           },
           "activeManualZone": null,
           "manualZoneSource": null,
           "manualAppliedAt": null,
           "readyNotifiedPeriod": null
-        }
+        },
+        "marketLevelTimeframe": "daily",
+        "zoneMode": "conservative_override",
+        "activeZoneSource": "conservative_override",
+        "zoneLow": 60.35,
+        "zoneHigh": 61.35,
+        "manualZoneLow": null,
+        "manualZoneHigh": null,
+        "volThreshold": 5771,
+        "stopLossMode": "manual",
+        "stopLossManual": 60,
+        "starterExecuted": false
       }
     }
   ],
-  "lastUpdated": "2026-10-02T02:16:14.026Z"
+  "lastUpdated": "2026-10-02T02:17:40.824Z"
 }
