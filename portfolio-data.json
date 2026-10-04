@@ -264,7 +264,7 @@
       "watchCriteria": {
         "zoneLow": 251.7,
         "zoneHigh": 254.5,
-        "volThreshold": 2600,
+        "volThreshold": 2300,
         "stopLossMode": "manual",
         "stopLossManual": 248,
         "marketLevelTimeframe": "daily",
@@ -657,5 +657,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-10-04T03:40:51.502Z"
+  "lastUpdated": "2026-10-04T03:42:08.331Z"
 }
