@@ -2774,7 +2774,9 @@ function applyManualReassessment() {
   setActiveZoneSource('manual_reassessment');
   _watchManualReassessmentSelected = false;
   persistWatchCriteria(_watchListType, _watchPosId);
-  recomputeZoneValidation(); recomputeWatchStatus(); renderManualReassessment(); showZoneBridgeChoice();
+  recomputeZoneValidation(); recomputeWatchStatus();
+  if (window._watchSnapshot) window.ExecutionBridgeMonitor?.scheduleSourceContextSync?.(window._watchSnapshot, 0);
+  renderManualReassessment(); showZoneBridgeChoice();
   toast('Manual Active Zone applied.', 'ok');
 }
 function renderActiveWatchZone() {

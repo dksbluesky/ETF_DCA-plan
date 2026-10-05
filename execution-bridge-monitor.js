@@ -13,6 +13,8 @@
   const TERMINAL_STATUSES = Object.freeze(['COMPLETED', 'EXPIRED', 'INVALIDATED']);
   const SOURCE_CONTEXT_SYNC_DELAY_MS = 350;
   const SOURCE_CONTEXT_HEARTBEAT_MS = 30 * 1000;
+  const BACKGROUND_MONITOR_URL_KEY = 'tarObi.backgroundMonitor.url.v1';
+  const BACKGROUND_MONITOR_TOKEN_KEY = 'tarObi.backgroundMonitor.token.v1';
   const SOURCE_CONTEXT_FIELDS = Object.freeze([
     'marketTimeframe', 'marketLevelTimeframe', 'marketSessionState', 'zoneMode', 'activeZone',
     'preferredEntry', 'maximumEntryPrice', 'invalidationLevel', 'entryMode', 'starterEligible',
@@ -38,6 +40,38 @@
       return true;
     } catch (error) {
       return false;
+    }
+  }
+
+  function backgroundMonitorConfig() {
+    const rawUrl = root.localStorage?.getItem(BACKGROUND_MONITOR_URL_KEY) || '';
+    const token = root.localStorage?.getItem(BACKGROUND_MONITOR_TOKEN_KEY) || '';
+    const normalized = String(rawUrl).replace(/\s+/g, '').replace(/\/+$/, '');
+    const url = normalized && !/^https?:\/\//i.test(normalized) ? `http://${normalized}` : normalized;
+    return url && token ? { url, token } : null;
+  }
+
+  async function syncBackgroundMonitor(bridge) {
+    const config = backgroundMonitorConfig();
+    if (!config || !bridge?.bridgeId || typeof root.fetch !== 'function') return null;
+    try {
+      const response = await root.fetch(
+        `${config.url}/api/monitors/${encodeURIComponent(bridge.bridgeId)}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${config.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(bridge),
+          cache: 'no-store'
+        }
+      );
+      if (!response.ok) throw new Error(`Background monitor HTTP ${response.status}`);
+      return response.json();
+    } catch (error) {
+      root.console?.warn?.('[Execution Bridge Sync]', error);
+      return null;
     }
   }
 
@@ -478,6 +512,7 @@
         updated
       )
     ) {
+      void syncBackgroundMonitor(updated);
       return updated;
     }
 
@@ -1679,6 +1714,8 @@
     TERMINAL_STATUSES,
     SOURCE_CONTEXT_SYNC_DELAY_MS,
     SOURCE_CONTEXT_HEARTBEAT_MS,
+    BACKGROUND_MONITOR_URL_KEY,
+    BACKGROUND_MONITOR_TOKEN_KEY,
     calculateExpiresAt,
     rollActiveLifecycleForward,
     initializeNewBridge,
@@ -1686,6 +1723,7 @@
     reconcileStoredBridge,
     syncStoredBridgeContext,
     scheduleSourceContextSync,
+    syncBackgroundMonitor,
     transitionStoredBridge,
     isTerminal,
     requiresReplacementConfirmation,

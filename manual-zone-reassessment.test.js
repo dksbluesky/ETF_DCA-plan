@@ -51,6 +51,7 @@ assert.deepEqual(R.prefillDraft(state, todaySuggestedZone, '2026-08-19').manualD
 state = R.prefillDraft(yesterdayDraft, invalidSuggestedZone, '2026-08-19');
 assert.deepEqual(state.manualDraft, { low: null, high: null, edited: false, editedAt: null, suggestedForDate: '2026-08-19', editedForDate: null }, 'an invalid Suggested Zone clears stale draft values instead of presenting a reversed recommendation');
 const entryWatchHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+assert.match(entryWatchHtml, /applyManualReassessment\(\)[\s\S]*scheduleSourceContextSync\?\.\(window\._watchSnapshot, 0\)/, 'applying a manual reassessment immediately schedules bridge and Always-On synchronization');
 assert.match(entryWatchHtml, /wc-manual-reassess-low[^\r\n]*onchange=/, 'Manual Lower commits after the mobile edit completes, not on every typed character');
 assert.match(entryWatchHtml, /wc-manual-reassess-high[^\r\n]*onchange=/, 'Manual Upper commits after the mobile edit completes, not on every typed character');
 assert.doesNotMatch(entryWatchHtml, /wc-manual-reassess-(?:low|high)[^\r\n]*oninput=/, 'Manual decimal typing does not trigger a panel rerender per character');assert.match(entryWatchHtml, /const suggestedLabel = \['VALID', 'ZONE_TOO_NARROW'\]\.includes\(zone\.status\)/, 'Entry Watch displays a Suggested Zone only when its endpoints are valid');

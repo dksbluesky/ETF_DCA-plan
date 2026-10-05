@@ -249,3 +249,49 @@ try {
 }
 
 console.log('ETF execution bridge monitor tests passed.');
+
+(async () => {
+  const reassessment = require('./manual-zone-reassessment.js');
+  const serviceStorage = storageWith(phase1Bridge(), {
+    'tarObi.backgroundMonitor.url.v1': 'monitor.example/',
+    'tarObi.backgroundMonitor.token.v1': 'secret'
+  });
+  const serviceMonitor = loadMonitor(serviceStorage);
+  const originalFetch = global.fetch;
+  let request = null;
+  try {
+    global.fetch = async (url, options) => {
+      request = { url, options };
+      return { ok: true, status: 200, json: async () => ({ bridge: phase1Bridge() }) };
+    };
+    const applied = reassessment.applyManualZone(
+      reassessment.setDraft(reassessment.normalize(), 236, 237),
+      undefined, undefined, '2026-07-27T03:00:00.000Z'
+    );
+    assert.equal(applied.applied, true, 'manual reassessment succeeds offline');
+    assert.equal(applied.state.manualAppliedAt, '2026-07-27T03:00:00.000Z');
+    const updated = serviceMonitor.syncStoredBridgeContext({
+      ...liveContext,
+      zoneMode: 'manual',
+      activeZone: applied.state.activeManualZone,
+      extensions: { marketContextV1: { context: 'unclear', automaticZoneEligible: false, manualOverride: true } }
+    }, Date.parse('2026-07-27T03:00:00.000Z'));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(updated.activeZone, { low: 236, high: 237 });
+    assert.deepEqual(JSON.parse(serviceStorage.getItem('etfDca.executionBridge.v1')).activeZone, updated.activeZone,
+      'the reassessed bridge is persisted locally');
+    assert.equal(request.url, 'http://monitor.example/api/monitors/bridge-1');
+    assert.equal(request.options.method, 'PUT');
+    assert.equal(request.options.headers.Authorization, 'Bearer secret');
+    assert.equal(JSON.parse(request.options.body).bridgeId, 'bridge-1');
+    assert.deepEqual(JSON.parse(request.options.body).activeZone, updated.activeZone,
+      'the actual reassessed context is published to the Always-On service');
+    assert.equal(JSON.parse(request.options.body).extensions.sourceContextUpdatedAt, '2026-07-27T03:00:00.000Z');
+  } finally {
+    global.fetch = originalFetch;
+  }
+  console.log('ETF background monitor synchronization test passed.');
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
