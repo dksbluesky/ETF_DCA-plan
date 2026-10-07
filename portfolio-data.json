@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 35.12,
+      "currentPrice": 35.19,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -140,7 +140,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 265.5,
+      "currentPrice": 265.15,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -260,17 +260,17 @@
       ],
       "dividends": [],
       "trailStop": 2.5,
-      "trailHigh": 265.5,
+      "trailHigh": 265.45,
       "watchCriteria": {
-        "zoneLow": 263.8,
-        "zoneHigh": 264.5,
+        "zoneLow": 260.1,
+        "zoneHigh": 261.5,
         "volThreshold": 2300,
         "stopLossMode": "manual",
-        "stopLossManual": 248,
+        "stopLossManual": 260,
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
-        "manualZoneLow": 263.8,
-        "manualZoneHigh": 264.5,
+        "manualZoneLow": 260.1,
+        "manualZoneHigh": 261.5,
         "starterAllocationPct": null,
         "starterExecuted": false,
         "manualReassessment": {
@@ -420,15 +420,15 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-10-06",
+            "suggestedForDate": "2026-10-07",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 263.8,
-            "high": 264.5
+            "low": 260.1,
+            "high": 261.5
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-10-06T01:35:50.378Z",
+          "manualAppliedAt": "2026-10-07T02:21:58.671Z",
           "readyNotifiedPeriod": null
         },
         "activeZoneSource": "manual_reassessment"
@@ -487,11 +487,11 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 32.85,
+      "currentPrice": 32.54,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
-      "trailHigh": 32.85,
+      "trailHigh": 32.73,
       "transactions": [
         {
           "id": "88a47d8d-5f21-4599-92ee-bbf027448d5d",
@@ -589,11 +589,11 @@
       "ticker": "00935",
       "name": "野村台灣新科技50",
       "type": "ETF",
-      "currentPrice": 63.75,
+      "currentPrice": 62.9,
       "annualYield": 6.24,
       "dividendTracking": true,
       "trailStop": 3,
-      "trailHigh": 63.75,
+      "trailHigh": 63.6,
       "transactions": [],
       "dividends": [],
       "watchCriteria": {
@@ -657,5 +657,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-10-06T01:35:53.192Z"
+  "lastUpdated": "2026-10-07T02:22:03.365Z"
 }
