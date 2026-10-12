@@ -69,5 +69,20 @@
     evidence.supportResistance.push(`Selected Higher Low support ${lastLow.price} (${lastLow.date})`);
     return { context: 'bullish', zoneType, automaticZoneEligible: true, activeZone: { low: snap(Math.min(lastLow.price - halfWidth, fvg?.low ?? Infinity), tick), high: snap(Math.max(lastLow.price + halfWidth, fvg?.high ?? -Infinity), tick) }, invalidationLevel: snap(lastLow.price - Math.max(range * 0.75, tick * 3), tick), reason: zoneType === 'v_reversal_continuation' ? 'V recovery followed by confirmed HH + HL; zone is the Higher Low retest.' : zoneType === 'shallow_trend_continuation' ? 'Bullish HH + HL with a usable shallow Higher Low retest.' : 'Bullish pullback/reversal support zone.', evidence, parameters: DEFAULT_PARAMETERS };
   }
-  return Object.freeze({ DEFAULT_PARAMETERS, classify });
+  function resistanceCandidates(candles, completedDailyDate) {
+    if (!completedDailyDate) return { asOf: null, levels: [] };
+    const completed = (Array.isArray(candles) ? candles : []).filter(bar =>
+      typeof bar.date === 'string' && bar.date <= completedDailyDate
+      && finite(bar.high) !== null && finite(bar.low) !== null);
+    const recent = completed.slice(-15);
+    const recentHighs = pivots(completed, DEFAULT_PARAMETERS.swingWindow)
+      .filter(point => point.kind === 'high' && recent.some(bar => bar.date === point.date));
+    const tolerance = Math.max(0.01, (atr(recent) || 0) * 0.2);
+    const highs = recentHighs.map(point => ({
+      price: point.price, date: point.date, kind: 'CONFIRMED_PIVOT',
+      repeatedPivotCount: recentHighs.filter(other => Math.abs(other.price - point.price) <= tolerance).length
+    }));
+    return { asOf: completed.at(-1)?.date || null, levels: highs.slice(-12) };
+  }
+  return Object.freeze({ DEFAULT_PARAMETERS, classify, resistanceCandidates });
 });

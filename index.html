@@ -3699,6 +3699,13 @@ function recomputeWatchStatus() {
     <div id="review-journal"></div>
     <div id="execution-bridge"></div>
   `;
+  const rrDailyAsOf = completedDailyDateForMarketContext(candles);
+  const rrCompletedDaily = candles.filter(bar => bar.date <= rrDailyAsOf);
+  const rrDailyContext = window.EtfDcaMarketContextZone?.classify?.(rrCompletedDaily, {
+    currentPrice: rrCompletedDaily.at(-1)?.close,
+    securityType: pos.type,
+    completedDailyDate: rrDailyAsOf
+  });
   const watchSnapshot = {
     ticker: pos.ticker,
     evaluatedAt: new Date().toISOString(),
@@ -3743,7 +3750,14 @@ function recomputeWatchStatus() {
       confirmed: !isUnconfirmedSession
     },
     setupStatus: { label: sText, provisional: isUnconfirmedSession },
-    extensions: { marketContextV1: { ...marketContext, evaluatedAt: new Date().toISOString(), manualOverride } }
+    extensions: {
+      marketContextV1: { ...marketContext, evaluatedAt: new Date().toISOString(), manualOverride },
+      structuralRrV1: {
+        dailyResistance: window.EtfDcaMarketContextZone?.resistanceCandidates?.(rrCompletedDaily, rrDailyAsOf) || { asOf: null, levels: [] },
+        etfBroadInvalidation: rrDailyContext?.invalidationLevel ?? null,
+        manualOrTrailingInvalidation: stopPrice
+      }
+    }
   };
   const journalManualState = window.ManualZoneReassessment?.normalize(pos.watchCriteria?.manualReassessment) || null;
   const journalReassessmentSnapshot = journalManualState?.latestSnapshot || null;

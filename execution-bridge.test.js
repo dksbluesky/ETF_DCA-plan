@@ -52,6 +52,12 @@ assert.equal(created.preferredEntry, null);
 assert.equal(created.maximumEntryPrice, null);
 assert.equal(created.invalidationLevel, 9.9);
 assert.deepEqual(created.extensions, {});
+const shadowContext = bridge.createBridgeObject({
+  ...context,
+  extensions: { structuralRrV1: { dailyResistance: { asOf: '2026-10-09', levels: [] }, etfBroadInvalidation: 9.5, manualOrTrailingInvalidation: 9.9 } }
+});
+assert.equal(shadowContext.extensions.structuralRrV1.etfBroadInvalidation, 9.5);
+assert.equal(shadowContext.invalidationLevel, 9.9, 'existing invalidation remains independent');
 
 bridge.saveBridge(created);
 assert.deepEqual(bridge.loadBridge(), created);

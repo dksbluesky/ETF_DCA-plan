@@ -35,4 +35,8 @@ assert.equal(vRecoveryResult.vRecoveryBreakout.breakout.close, 244.4);
 const intradayHighOnly = [...real006208VRecovery, { date: '2026-08-14', open: 244.4, high: 250, low: 243.5, close: 249, volume: 0 }];
 const intradayResult = api.classify(intradayHighOnly, { currentPrice: 249, securityType: 'ETF', completedDailyDate: '2026-08-11' });
 assert.notEqual(intradayResult.noZoneSubtype, 'v_recovery_breakout_awaiting_hl');
+const resistance = api.resistanceCandidates(intradayHighOnly, '2026-08-13');
+assert.equal(resistance.asOf, '2026-08-13');
+assert.ok(resistance.levels.every(level => level.date <= '2026-08-13'));
+assert.ok(!resistance.levels.some(level => level.date === '2026-08-14'));
 console.log('market-context-zone tests passed');
