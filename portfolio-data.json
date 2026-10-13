@@ -256,6 +256,15 @@
           "costPerShare": 244.25,
           "totalCost": 244250,
           "notes": ""
+        },
+        {
+          "id": "d6a93059-9753-4d08-8309-4666fdc59529",
+          "type": "buy",
+          "date": "2026-10-13",
+          "shares": 1000,
+          "costPerShare": 258.5,
+          "totalCost": 258500,
+          "notes": ""
         }
       ],
       "dividends": [],
@@ -657,5 +666,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-10-13T01:23:44.534Z"
+  "lastUpdated": "2026-10-13T01:33:08.184Z"
 }
