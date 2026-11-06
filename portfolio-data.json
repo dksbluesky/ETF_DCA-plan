@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 34.66,
+      "currentPrice": 32.09,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -154,7 +154,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 238,
+      "currentPrice": 214.5,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -486,7 +486,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2335,
+      "currentPrice": 2150,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -518,21 +518,24 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-09-24",
+            "suggestedForDate": "2026-11-06",
             "editedForDate": null
           },
-          "activeManualZone": null,
-          "manualZoneSource": null,
-          "manualAppliedAt": null,
+          "activeManualZone": {
+            "low": 2160,
+            "high": 2240
+          },
+          "manualZoneSource": "MANUAL",
+          "manualAppliedAt": "2026-11-06T02:57:59.987Z",
           "readyNotifiedPeriod": null
         },
         "marketLevelTimeframe": "daily",
-        "zoneMode": "aggressive_override",
-        "activeZoneSource": "aggressive_override",
-        "zoneLow": 2460,
-        "zoneHigh": 2490,
-        "manualZoneLow": null,
-        "manualZoneHigh": null,
+        "zoneMode": "manual",
+        "activeZoneSource": "manual_reassessment",
+        "zoneLow": 2160,
+        "zoneHigh": 2240,
+        "manualZoneLow": 2160,
+        "manualZoneHigh": 2240,
         "volThreshold": 22604,
         "stopLossMode": "trail",
         "stopLossManual": null,
@@ -544,7 +547,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 26.33,
+      "currentPrice": 21.91,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -646,7 +649,7 @@
       "ticker": "00935",
       "name": "野村台灣新科技50",
       "type": "ETF",
-      "currentPrice": 52.85,
+      "currentPrice": 44.96,
       "annualYield": 6.24,
       "dividendTracking": true,
       "trailStop": 3,
@@ -714,5 +717,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-11-02T01:46:45.294Z"
+  "lastUpdated": "2026-11-06T02:58:06.415Z"
 }
