@@ -154,7 +154,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 228,
+      "currentPrice": 237.9,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -278,6 +278,15 @@
           "shares": 1000,
           "costPerShare": 258.5,
           "totalCost": 258500,
+          "notes": ""
+        },
+        {
+          "id": "98794594-36ca-4121-90c4-64f51824f950",
+          "type": "buy",
+          "date": "2026-11-13",
+          "shares": 100,
+          "costPerShare": 237.85,
+          "totalCost": 23785,
           "notes": ""
         }
       ],
@@ -486,7 +495,7 @@
       "ticker": "2330",
       "name": "TSMC",
       "type": "Stock",
-      "currentPrice": 2335,
+      "currentPrice": 2375,
       "annualYield": 1.5,
       "dividendTracking": true,
       "trailStop": 5,
@@ -547,7 +556,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 24.32,
+      "currentPrice": 25.24,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -649,7 +658,7 @@
       "ticker": "00935",
       "name": "野村台灣新科技50",
       "type": "ETF",
-      "currentPrice": 49.68,
+      "currentPrice": 51.85,
       "annualYield": 6.24,
       "dividendTracking": true,
       "trailStop": 3,
@@ -717,5 +726,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-11-10T00:51:35.590Z"
+  "lastUpdated": "2026-11-13T02:29:26.628Z"
 }
