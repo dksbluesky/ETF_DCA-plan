@@ -7,7 +7,7 @@
       "type": "ETF",
       "deductionDay": 25,
       "monthlyAmount": 40000,
-      "currentPrice": 31.18,
+      "currentPrice": 31,
       "annualYield": 7.9,
       "dividendTracking": true,
       "entries": [
@@ -103,9 +103,17 @@
           "id": "9f2f446e-ff9c-4b9f-ad00-1b4244483a63",
           "date": "2026-09-11",
           "amount": 8404.21,
-          "notes": "Q2,Y26",
+          "notes": "Q2/2026",
           "perShare": 1.01,
           "sharesAtPayout": 8321
+        },
+        {
+          "id": "d1b44284-56af-4600-8431-1afb65f66c7a",
+          "date": "2026-11-17",
+          "amount": 13213.75,
+          "notes": "Q3/2026",
+          "perShare": 1.25,
+          "sharesAtPayout": 10571
         }
       ],
       "trailStop": 5,
@@ -154,7 +162,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 216.95,
+      "currentPrice": 214.2,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -568,7 +576,7 @@
       "ticker": "00981A",
       "name": "主動統一台股增長",
       "type": "ETF",
-      "currentPrice": 22.5,
+      "currentPrice": 21.6,
       "annualYield": 4,
       "dividendTracking": true,
       "trailStop": 3,
@@ -670,7 +678,7 @@
       "ticker": "00935",
       "name": "野村台灣新科技50",
       "type": "ETF",
-      "currentPrice": 46.75,
+      "currentPrice": 45.6,
       "annualYield": 6.24,
       "dividendTracking": true,
       "trailStop": 3,
@@ -738,5 +746,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-11-17T00:22:33.595Z"
+  "lastUpdated": "2026-11-17T02:05:20.154Z"
 }
