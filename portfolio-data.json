@@ -162,7 +162,7 @@
       "ticker": "006208",
       "name": "富邦台50",
       "type": "ETF",
-      "currentPrice": 207.35,
+      "currentPrice": 207,
       "annualYield": 3.23,
       "dividendTracking": true,
       "transactions": [
@@ -547,24 +547,24 @@
             "high": null,
             "edited": false,
             "editedAt": null,
-            "suggestedForDate": "2026-11-17",
+            "suggestedForDate": "2026-11-19",
             "editedForDate": null
           },
           "activeManualZone": {
-            "low": 2190,
-            "high": 2215
+            "low": 2155,
+            "high": 2200
           },
           "manualZoneSource": "MANUAL",
-          "manualAppliedAt": "2026-11-17T00:22:24.267Z",
+          "manualAppliedAt": "2026-11-19T01:53:45.375Z",
           "readyNotifiedPeriod": null
         },
         "marketLevelTimeframe": "daily",
         "zoneMode": "manual",
         "activeZoneSource": "manual_reassessment",
-        "zoneLow": 2190,
-        "zoneHigh": 2215,
-        "manualZoneLow": 2190,
-        "manualZoneHigh": 2215,
+        "zoneLow": 2155,
+        "zoneHigh": 2200,
+        "manualZoneLow": 2155,
+        "manualZoneHigh": 2200,
         "volThreshold": 16000,
         "stopLossMode": "trail",
         "stopLossManual": null,
@@ -746,5 +746,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-11-19T01:52:12.883Z"
+  "lastUpdated": "2026-11-19T01:53:47.123Z"
 }
