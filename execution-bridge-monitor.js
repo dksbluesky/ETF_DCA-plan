@@ -6,6 +6,7 @@
   'use strict';
 
   const STORAGE_KEY = 'etfDca.executionBridge.v1';
+  const TAR_DISMISSED_KEY = 'tarObi.executionBridge.dismissedBridgeId.v1';
   const CONTRACT_VERSION = '1.0';
   const MARKET_CLOSE_HOUR = 13;
   const MARKET_CLOSE_MINUTE = 30;
@@ -32,6 +33,11 @@
     } catch (error) {
       return null;
     }
+  }
+
+  function dismissedBridgeId() {
+    try { return root.localStorage?.getItem(TAR_DISMISSED_KEY) || null; }
+    catch (_error) { return null; }
   }
 
   function storageSet(value) {
@@ -459,6 +465,8 @@
         stored,
         now
       );
+
+    if (dismissedBridgeId() === current.bridgeId) return stored;
 
     if (
       ![
@@ -1119,7 +1127,7 @@
         .trim()
         .toUpperCase();
 
-    const current =
+    const currentCandidate =
       stored
       && String(
         stored.ticker
@@ -1127,6 +1135,10 @@
         === ticker
         ? stored
         : null;
+
+    const dismissedCurrent = currentCandidate
+      && dismissedBridgeId() === currentCandidate.bridgeId;
+    const current = dismissedCurrent ? null : currentCandidate;
 
     const status =
       current?.lifecycle?.status
@@ -1180,6 +1192,7 @@
     const otherActive =
       stored
       && !current
+      && !dismissedCurrent
       && [
         'ACTIVE',
         'PAUSED'
@@ -1199,7 +1212,7 @@
           class="btn btn-outline btn-sm"
           data-bridge-action="start"
         >
-          Start TAR-OBI Monitor
+          ${dismissedCurrent ? 'Restart TAR-OBI Monitor' : 'Start TAR-OBI Monitor'}
         </button>
       `;
     } else if (
@@ -1300,6 +1313,7 @@
         </div>
 
         ${status === 'EXPIRED' ? '<div style="font-size:12px;color:#874d00;line-height:1.5;margin-bottom:8px">TAR-OBI execution assessment is not currently active. Start New Monitor to assess a new current setup.</div>' : ''}
+        ${dismissedCurrent ? '<div style="font-size:12px;color:#874d00;line-height:1.5;margin-bottom:8px">The previous Bridge was disabled by TAR-OBI Sync. Restart to link the current ETF_DCA setup.</div>' : ''}
 
         <div
           data-bridge-result
@@ -1576,60 +1590,42 @@
         } will replace it.`;
     }
 
+    const startFreshMonitor = () => {
+      const latest =
+        reconcileStoredBridge(
+          context
+        );
+
+      if (
+        requiresReplacementConfirmation(
+          latest,
+          ticker
+        )
+      ) {
+        const confirmed =
+          typeof root.confirm
+            === 'function'
+          && root.confirm(
+            `Replace the active ${latest.ticker} TAR-OBI monitor with ${ticker}?`
+          );
+
+        if (!confirmed) return;
+      }
+
+      try {
+        actions.startBridge?.(context);
+        renderPanel(container, context, actions);
+        actions.openMonitor?.();
+      } catch (error) {
+        actions.toast?.(error.message, 'err');
+      }
+    };
+
     container
       .querySelector(
         '[data-bridge-action="start"]'
       )
-      ?.addEventListener(
-        'click',
-        () => {
-          const latest =
-            reconcileStoredBridge(
-              context
-            );
-
-          if (
-            requiresReplacementConfirmation(
-              latest,
-              ticker
-            )
-          ) {
-            const confirmed =
-              typeof root.confirm
-                === 'function'
-              && root.confirm(
-                `Replace the active ${latest.ticker} TAR-OBI monitor with ${ticker}?`
-              );
-
-            if (!confirmed) {
-              return;
-            }
-          }
-
-          try {
-            actions
-              .startBridge
-              ?.(context);
-
-            renderPanel(
-              container,
-              context,
-              actions
-            );
-
-            actions
-              .openMonitor
-              ?.();
-          } catch (error) {
-            actions
-              .toast
-              ?.(
-                error.message,
-                'err'
-              );
-          }
-        }
-      );
+      ?.addEventListener('click', startFreshMonitor);
 
     container
       .querySelector(
@@ -1638,6 +1634,10 @@
       ?.addEventListener(
         'click',
         () => {
+          if (current?.bridgeId && dismissedBridgeId() === current.bridgeId) {
+            startFreshMonitor();
+            return;
+          }
           actions
             .openMonitor
             ?.();
