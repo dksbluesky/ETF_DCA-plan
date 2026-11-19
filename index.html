@@ -12,6 +12,7 @@
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="decision-journal.js"></script>
 <script src="review-journal.js"></script>
+<script src="execution-bridge-cloud.js"></script>
 <script src="execution-bridge-monitor.js"></script>
 <script src="execution-bridge.js"></script>
 <script src="market-context-zone.js"></script>
@@ -4412,6 +4413,7 @@ window.debugHL = async function(ticker, days = 90) {
 })();
 renderAll();
 loadData();
+window.EtfDcaCloudBridge?.mountSettings(document.getElementById('tab-settings'));
 
 // PWA registration is isolated from portfolio logic and never blocks startup.
 if ('serviceWorker' in navigator) {

@@ -693,9 +693,11 @@
       return false;
     }
 
-    return storageSet(
+    const written = storageSet(
       JSON.stringify(bridge)
     );
+    if (written) void root.EtfDcaCloudBridge?.publishSource?.(bridge);
+    return written;
   }
 
   /**
@@ -1613,9 +1615,16 @@
       }
 
       try {
-        actions.startBridge?.(context);
+        const started = actions.startBridge?.(context);
         renderPanel(container, context, actions);
-        actions.openMonitor?.();
+        if (root.EtfDcaCloudBridge?.enabled?.()) {
+          void root.EtfDcaCloudBridge.publishSource(started).then(published => {
+            if (!published) actions.toast?.('Cloud Bridge sync failed. The standalone TAR-OBI app may still show its old monitor.', 'err');
+            actions.openMonitor?.();
+          });
+        } else {
+          actions.openMonitor?.();
+        }
       } catch (error) {
         actions.toast?.(error.message, 'err');
       }
@@ -1705,6 +1714,10 @@
       );
   }
 
+  function refreshPanel() {
+    if (lastRender) renderPanel(lastRender.container, lastRender.context, lastRender.actions);
+  }
+
   return Object.freeze({
     STORAGE_KEY,
     CONTRACT_VERSION,
@@ -1729,6 +1742,7 @@
     requiresReplacementConfirmation,
     hasCurrentTarHardExecutionBlock,
     reconcileLeftStarterNotification,
-    renderPanel
+    renderPanel,
+    refreshPanel
   });
 });

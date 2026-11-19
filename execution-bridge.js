@@ -272,7 +272,14 @@
         if (typeof root.toast === 'function') {
           root.toast('Execution handoff prepared. Opening TAR-OBI.', 'ok');
         }
-        openTarObiMonitor();
+        if (root.EtfDcaCloudBridge?.enabled?.()) {
+          void root.EtfDcaCloudBridge.publishSource(bridge).then(published => {
+            if (!published) root.toast?.('Cloud Bridge sync failed. The standalone TAR-OBI app may still show its old monitor.', 'err');
+            openTarObiMonitor();
+          });
+        } else {
+          openTarObiMonitor();
+        }
       } catch (error) {
         if (typeof root.toast === 'function') root.toast(error.message, 'err');
       }
