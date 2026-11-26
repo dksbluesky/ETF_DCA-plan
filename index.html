@@ -2607,7 +2607,7 @@ function activeZoneLabel(mode, context) {
   const type = { pullback_reversal: 'A', v_reversal_continuation: 'B', shallow_trend_continuation: 'C' }[context?.zoneType] || '';
   return `Automatic Zone ${type}`;
 }
-function renderCurrentActiveZone(selection) {
+function renderCurrentActiveZone(selection, dailyContext = null) {
   const card=document.getElementById('wc-current-active-zone-card'); if(!card)return;
   const context = selection?.automaticContext;
   const zone = selection?.activeZone;
@@ -2620,7 +2620,12 @@ function renderCurrentActiveZone(selection) {
     : selection?.primaryAction === 'choose'
       ? '<button type="button" class="btn btn-outline btn-sm" style="margin-top:8px" onclick="openActiveZoneSelector()">Choose Active Zone</button>'
       : '';
-  card.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">CURRENT ACTIVE ZONE</div><div style="font-weight:700;margin-top:5px">${valid?activeZoneLabel(mode,context):'No Active Long Zone'}</div><div style="font-size:19px;font-weight:700;margin:4px 0">${valid?`NT$${zone.low.toFixed(2)} – NT$${zone.high.toFixed(2)}`:'No Active Long Zone'}</div><div style="font-size:12px">${valid?`${Number.isFinite(context?.invalidationLevel)?`Invalidation: NT$${context.invalidationLevel.toFixed(2)} · `:''}${current}`:'Range / unclear — no favourable long location. TAR-OBI long bridge unavailable.'}</div>${action}${context && (selection?.source === 'manual_reassessment' || ['aggressive_override', 'conservative_override'].includes(mode)) ? '<button type="button" class="btn btn-outline btn-sm" style="margin:8px 0 0 6px" onclick="returnToAutomaticContext()">Return to Automatic Zone</button>' : ''}<details style="margin-top:8px"><summary>Why / structure details</summary><div style="font-size:11px;color:var(--muted);margin-top:5px">${context?.reason||'No additional structure detail is available.'}</div></details>`;
+  const structureDetail = ({
+    bearish: '已完成日K為偏空結構，沒有可用的日線上漲結構失效價；手動 Active Zone 仍照常保留。',
+    range: '已完成日K為盤整結構，尚無可用的日線上漲結構失效價；手動 Active Zone 仍照常保留。',
+    unclear: '已完成日K尚未確認上漲結構，因此沒有自動日線失效價；手動 Active Zone 仍照常保留。'
+  })[dailyContext?.context] || dailyContext?.reason || context?.reason || '日線結構資料未提供。';
+  card.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">CURRENT ACTIVE ZONE</div><div style="font-weight:700;margin-top:5px">${valid?activeZoneLabel(mode,context):'No Active Long Zone'}</div><div style="font-size:19px;font-weight:700;margin:4px 0">${valid?`NT$${zone.low.toFixed(2)} – NT$${zone.high.toFixed(2)}`:'No Active Long Zone'}</div><div style="font-size:12px">${valid?`${Number.isFinite(context?.invalidationLevel)?`Invalidation: NT$${context.invalidationLevel.toFixed(2)} · `:''}${current}`:'Range / unclear — no favourable long location. TAR-OBI long bridge unavailable.'}</div>${action}${context && (selection?.source === 'manual_reassessment' || ['aggressive_override', 'conservative_override'].includes(mode)) ? '<button type="button" class="btn btn-outline btn-sm" style="margin:8px 0 0 6px" onclick="returnToAutomaticContext()">Return to Automatic Zone</button>' : ''}<details style="margin-top:8px"><summary>Why / structure details</summary><div style="font-size:11px;color:var(--muted);margin-top:5px">${structureDetail}</div></details>`;
 }
 function openActiveZoneSelector(){const e=document.getElementById('wc-active-zone-selector'),auto=getAutomaticContextActiveZone(),a=_watchZoneEngine?.suggestedZones?.aggressive,c=_watchZoneEngine?.suggestedZones?.conservative;if(!e)return;const b=(s,l,z,d)=>`<button type="button" class="btn btn-outline btn-sm" ${d?'disabled':''} onclick="selectActiveZone('${s}')">${l}${z?` — NT$${z.zoneLow??z.low}–NT$${z.zoneHigh??z.high}`:''}</button>`;e.innerHTML=`<div style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"><b>Choose Active Zone</b><div style="display:grid;gap:6px;margin-top:8px">${auto?b('automatic_context',activeZoneLabel('automatic_context',auto),auto.activeZone,false):''}${auto&&a?b('aggressive_override','Aggressive Suggested Zone',a,false):''}${auto&&c?b('conservative_override','Conservative Suggested Zone',c,false):''}<button type="button" class="btn btn-outline btn-sm" onclick="chooseManualReassessment()">Manual Reassessment</button></div></div>`;e.style.display='';}
 function chooseManualReassessment(){_watchManualReassessmentSelected=true;const selector=document.getElementById('wc-active-zone-selector');if(selector)selector.style.display='none';renderManualReassessment(undefined,true);openManualReassessment();}
@@ -3756,6 +3761,7 @@ function recomputeWatchStatus() {
       structuralRrV1: {
         dailyResistance: window.EtfDcaMarketContextZone?.resistanceCandidates?.(rrCompletedDaily, rrDailyAsOf) || { asOf: null, levels: [] },
         etfBroadInvalidation: rrDailyContext?.invalidationLevel ?? null,
+        dailyContext: { asOf: rrDailyAsOf ?? null, context: rrDailyContext?.context ?? 'unavailable', reason: rrDailyContext?.reason ?? 'Daily market context unavailable' },
         manualOrTrailingInvalidation: stopPrice
       }
     }
@@ -3791,7 +3797,7 @@ function recomputeWatchStatus() {
   watchSnapshot.gapContext = window.EtfDcaDecisionJournal?.calculateGapContext(watchSnapshot) || null;
   window._watchSnapshot = watchSnapshot;
   watchSnapshot.activeZoneSource = selectedActiveZoneSource;
-  renderCurrentActiveZone(activeZoneSelection);
+  renderCurrentActiveZone(activeZoneSelection, rrDailyContext);
   window.EtfDcaDecisionJournal?.recordSetupSnapshot(watchSnapshot);
   window.EtfDcaDecisionJournal?.renderPanel(document.getElementById('decision-journal'), watchSnapshot);
   window.EtfDcaReviewJournal?.renderControls(document.getElementById('review-journal'), {

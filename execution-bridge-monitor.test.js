@@ -150,6 +150,7 @@ const refreshedRrContext = {
     structuralRrV1: {
       dailyResistance: { asOf: '2026-07-24', levels: [] },
       etfBroadInvalidation: null,
+      dailyContext: { asOf: '2026-07-24', context: 'bearish', reason: 'LL + LH with declining EMA context' },
       manualOrTrailingInvalidation: 218.9
     }
   }
@@ -158,6 +159,8 @@ bridge = monitor.syncStoredBridgeContext(refreshedRrContext, Date.parse('2026-07
 assert.equal(bridge.lifecycle.status, 'ACTIVE');
 assert.equal(bridge.extensions.structuralRrV1.etfBroadInvalidation, null,
   'an active legacy bridge receives the current daily broad-invalidation result');
+assert.equal(bridge.extensions.structuralRrV1.dailyContext.context, 'bearish',
+  'the linked monitor retains the reason for an unavailable broad invalidation');
 assert.equal(bridge.extensions.structuralRrV1.manualOrTrailingInvalidation, 218.9);
 bridge = monitor.syncStoredBridgeContext({
   ...refreshedRrContext,
