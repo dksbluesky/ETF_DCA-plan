@@ -144,6 +144,35 @@ assert.equal(bridge.notificationState.dataUnavailableSince, null);
 assert.equal(bridge.extensions.futureField, true);
 assert.ok(Number.isFinite(Date.parse(bridge.extensions.sourceContextUpdatedAt)));
 
+const refreshedRrContext = {
+  ...liveContext,
+  extensions: {
+    structuralRrV1: {
+      dailyResistance: { asOf: '2026-07-24', levels: [] },
+      etfBroadInvalidation: null,
+      manualOrTrailingInvalidation: 218.9
+    }
+  }
+};
+bridge = monitor.syncStoredBridgeContext(refreshedRrContext, Date.parse('2026-07-27T03:00:20.000Z'));
+assert.equal(bridge.lifecycle.status, 'ACTIVE');
+assert.equal(bridge.extensions.structuralRrV1.etfBroadInvalidation, null,
+  'an active legacy bridge receives the current daily broad-invalidation result');
+assert.equal(bridge.extensions.structuralRrV1.manualOrTrailingInvalidation, 218.9);
+bridge = monitor.syncStoredBridgeContext({
+  ...refreshedRrContext,
+  extensions: {
+    structuralRrV1: {
+      ...refreshedRrContext.extensions.structuralRrV1,
+      etfBroadInvalidation: 217.5
+    }
+  }
+}, Date.parse('2026-07-27T03:00:25.000Z'));
+assert.equal(bridge.extensions.structuralRrV1.etfBroadInvalidation, 217.5,
+  'a newly confirmed daily structure refreshes the existing active bridge');
+assert.deepEqual(bridge.monitorResult, tarOwnedState.monitorResult,
+  'refreshing reference prices preserves the TAR-owned monitor result');
+
 bridge = monitor.syncStoredBridgeContext(liveContext, Date.parse('2026-07-27T03:00:30.000Z'));
 assert.equal(bridge.extensions.sourceContextUpdatedAt, '2026-07-27T03:00:30.000Z', 'unchanged source context still refreshes the heartbeat');
 

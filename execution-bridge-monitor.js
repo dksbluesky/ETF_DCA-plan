@@ -433,6 +433,9 @@
       extensions: {
         ...(bridge.extensions || {}),
         ...(context.extensions?.marketContextV1 ? { marketContextV1: context.extensions.marketContextV1 } : {}),
+        ...(Object.prototype.hasOwnProperty.call(context.extensions || {}, 'structuralRrV1')
+          ? { structuralRrV1: context.extensions.structuralRrV1 }
+          : {}),
         sourceContextUpdatedAt: isoTime(now)
       }
     };
